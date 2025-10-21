@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 215 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 20% 20%;
+
+    /* Duolingo-inspired colors */
+    --primary: 142 76% 58%; /* Success green #58cc02 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 199 89% 48%; /* Action blue #1cb0f6 */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 43 100% 50%; /* Gold/Coin yellow */
+    --accent-foreground: 215 20% 20%;
+
+    --destructive: 4 90% 58%; /* Error red #ea2b2b */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 142 76% 58%;
+
+    --radius: 1rem;
+
+    /* Quiz-specific colors */
+    --success: 142 76% 58%;
+    --success-light: 142 76% 95%;
+    --error: 4 90% 58%;
+    --error-light: 4 90% 95%;
+    --coin: 43 100% 50%;
+    --coin-glow: 43 100% 60%;
+    --heart: 0 100% 60%;
+    --progress-bar: 220 13% 91%;
+    --monkey-brown: 25 50% 40%;
+    --chest: 30 60% 45%;
+
+    /* Gradients */
+    --gradient-success: linear-gradient(180deg, hsl(142 76% 58%) 0%, hsl(142 76% 48%) 100%);
+    --gradient-error: linear-gradient(180deg, hsl(4 90% 58%) 0%, hsl(4 90% 48%) 100%);
+    --gradient-primary: linear-gradient(180deg, hsl(199 89% 48%) 0%, hsl(199 89% 38%) 100%);
+    --gradient-coin: linear-gradient(135deg, hsl(43 100% 60%) 0%, hsl(43 100% 50%) 50%, hsl(43 100% 40%) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+    --shadow-coin: 0 4px 12px rgba(255, 193, 7, 0.4);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 76% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 43 100% 50%;
+    --accent-foreground: 215 20% 20%;
+    --destructive: 4 90% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142 76% 58%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
