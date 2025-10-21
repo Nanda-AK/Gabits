@@ -43,7 +43,7 @@ export const QuestionCard = ({
   const coinValue = getDifficultyCoins(question.difficulty);
 
   return (
-    <div className="bg-gradient-to-br from-card to-card/90 rounded-3xl shadow-2xl p-8 border-2 border-primary/20 animate-slide-up backdrop-blur-sm">
+    <div className="relative bg-gradient-to-br from-card to-card/90 rounded-3xl shadow-2xl p-8 border-2 border-primary/20 animate-slide-up backdrop-blur-sm">
       {/* Question Number & Difficulty Badge */}
       <div className="flex items-center justify-between mb-6">
         <div className="text-sm font-semibold text-muted-foreground">
@@ -119,25 +119,8 @@ export const QuestionCard = ({
         </div>
       )}
 
-      {/* Result Message */}
-      {showResult && (
-        <div className={`mb-6 rounded-2xl p-4 animate-slide-up ${
-          isCorrect 
-            ? "bg-primary/20 border-2 border-primary" 
-            : "bg-destructive/20 border-2 border-destructive"
-        }`}>
-          <p className={`font-bold text-center ${
-            isCorrect ? "text-primary" : "text-destructive"
-          }`}>
-            {isCorrect ? "🎉 Correct! Great job!" : "❌ Incorrect. Keep trying!"}
-          </p>
-          {!isCorrect && (
-            <p className="text-sm text-center mt-2 text-muted-foreground">
-              Correct answer: <span className="font-bold">{question.options[question.correctAnswer]}</span>
-            </p>
-          )}
-        </div>
-      )}
+      {/* Coin animation start anchor (invisible) */}
+      <div id="coin-source" className="absolute bottom-5 right-6 w-3 h-3"></div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
@@ -145,7 +128,7 @@ export const QuestionCard = ({
           onClick={onSkip}
           variant="outline"
           disabled={showResult}
-          className="rounded-xl border-2 hover:bg-muted"
+          className="rounded-xl border-2 hover:bg-muted hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-secondary/40 shadow-sm hover:shadow-md"
         >
           <SkipForward className="w-4 h-4 mr-2" />
           Skip
@@ -155,7 +138,7 @@ export const QuestionCard = ({
           onClick={onHint}
           variant="outline"
           disabled={showResult || showHint || coins < hintCost}
-          className="rounded-xl border-2 border-accent/30 text-accent hover:bg-accent/10"
+          className="rounded-xl border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Lightbulb className="w-4 h-4 mr-2" />
           Hint (-{hintCost} coins)
@@ -167,7 +150,7 @@ export const QuestionCard = ({
           <Button
             onClick={onCheckAnswer}
             disabled={selectedAnswer === null}
-            className="rounded-xl px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-secondary/50 active:scale-[0.98]"
           >
             <CheckCircle2 className="w-4 h-4 mr-2" />
             Check Answer
@@ -175,7 +158,7 @@ export const QuestionCard = ({
         ) : (
           <Button
             onClick={onNext}
-            className="rounded-xl px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all"
+            className="rounded-xl px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-primary/50 active:scale-[0.98]"
           >
             Next
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -184,4 +167,4 @@ export const QuestionCard = ({
       </div>
     </div>
   );
-};
+}

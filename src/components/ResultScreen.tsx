@@ -51,8 +51,26 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver }: Res
             <div className="text-sm font-semibold text-foreground">Correct Answers</div>
           </div>
           <div className="bg-gradient-to-br from-accent via-accent/90 to-accent/70 rounded-2xl p-6 border-2 border-accent shadow-lg">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-4xl">🪙</span>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 64 64"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="Coins"
+                role="img"
+              >
+                <defs>
+                  <radialGradient id="goldGradientRS" cx="50%" cy="35%" r="60%">
+                    <stop offset="0%" stopColor="#FFF6B7" />
+                    <stop offset="45%" stopColor="#FFD54A" />
+                    <stop offset="100%" stopColor="#F6A700" />
+                  </radialGradient>
+                </defs>
+                <circle cx="32" cy="32" r="28" fill="url(#goldGradientRS)" stroke="#B7791F" strokeWidth="4" />
+                <circle cx="32" cy="24" r="10" fill="rgba(255,255,255,0.22)" />
+                <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
+              </svg>
               <span className="text-6xl font-black text-amber-900">{coins}</span>
             </div>
             <div className="text-sm font-semibold text-amber-900">Total Coins</div>

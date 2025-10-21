@@ -28,10 +28,29 @@ export const GameHeader = ({ hearts, coins }: GameHeaderProps) => {
             <span className="text-lg font-bold text-destructive ml-1">{hearts}</span>
           </div>
 
-          {/* Coins with gold styling */}
-          <div className="flex items-center gap-3 bg-gradient-to-br from-accent via-accent/90 to-accent/70 rounded-2xl px-6 py-3 border-2 border-accent shadow-xl shadow-accent/30">
-            <span className="text-3xl animate-coin-increment" id="coin-counter">
-              🪙
+          {/* Coins - simple circular coin + count */}
+          <div className="flex items-center gap-2">
+            <span id="coin-counter" className="inline-flex items-center">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 64 64"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-8 h-8 animate-coin-increment"
+                aria-label="Coins"
+                role="img"
+              >
+                <defs>
+                  <radialGradient id="goldGradient" cx="50%" cy="35%" r="60%">
+                    <stop offset="0%" stopColor="#FFF6B7" />
+                    <stop offset="45%" stopColor="#FFD54A" />
+                    <stop offset="100%" stopColor="#F6A700" />
+                  </radialGradient>
+                </defs>
+                <circle cx="32" cy="32" r="28" fill="url(#goldGradient)" stroke="#B7791F" strokeWidth="4" />
+                <circle cx="32" cy="24" r="10" fill="rgba(255,255,255,0.25)" />
+                <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
+              </svg>
             </span>
             <span className="text-2xl font-black text-amber-900">
               {coins}

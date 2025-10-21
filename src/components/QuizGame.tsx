@@ -1,11 +1,34 @@
 import { useState, useEffect } from "react";
 import { questions, getDifficultyCoins, getHintCost } from "@/data/questions";
+import type { Question } from "@/data/questions";
 import { QuestionCard } from "./QuestionCard";
 import { GameHeader } from "./GameHeader";
 import { MonkeyProgress } from "./MonkeyProgress";
 import { TreasureChest } from "./TreasureChest";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
+
+// Utility: Fisher-Yates shuffle
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Shuffle question order and each question's options, remapping correctAnswer
+function shuffleQuestionSet(src: Question[]): Question[] {
+  const ordered = shuffleArray(src);
+  return ordered.map((q) => {
+    const idxs = q.options.map((_, i) => i);
+    const shuffledIdxs = shuffleArray(idxs);
+    const newOptions = shuffledIdxs.map((i) => q.options[i]);
+    const newCorrect = shuffledIdxs.indexOf(q.correctAnswer);
+    return { ...q, options: newOptions, correctAnswer: newCorrect };
+  });
+}
 
 export const QuizGame = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -19,15 +42,17 @@ export const QuizGame = () => {
   const [gameCompleted, setGameCompleted] = useState(false);
   const [coinAnimations, setCoinAnimations] = useState<Array<{ id: number; amount: number }>>([]);
 
-  const question = questions[currentQuestion];
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => shuffleQuestionSet(questions));
+  const total = shuffledQuestions.length || questions.length;
+  const question = shuffledQuestions[currentQuestion];
+  const progress = ((currentQuestion + 1) / total) * 100;
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
     setCoinAnimations(prev => [...prev, { id, amount }]);
     setTimeout(() => {
       setCoinAnimations(prev => prev.filter(anim => anim.id !== id));
-    }, 800);
+    }, 1900);
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -56,7 +81,7 @@ export const QuizGame = () => {
   };
 
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
       setSelectedAnswer(null);
       setShowResult(false);
@@ -88,6 +113,7 @@ export const QuizGame = () => {
     setCorrectAnswers(0);
     setShowHint(false);
     setGameCompleted(false);
+    setShuffledQuestions(shuffleQuestionSet(questions));
   };
 
   if (gameCompleted) {
@@ -118,7 +144,7 @@ export const QuizGame = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
           {/* Left: Monkey Progress */}
           <div className="lg:col-span-2 flex justify-center lg:justify-start">
-            <MonkeyProgress progress={correctAnswers} total={questions.length} />
+            <MonkeyProgress progress={correctAnswers} total={total} />
           </div>
 
           {/* Center: Question */}
@@ -136,13 +162,35 @@ export const QuizGame = () => {
               showHint={showHint}
               coins={coins}
               questionNumber={currentQuestion + 1}
-              totalQuestions={questions.length}
+              totalQuestions={total}
             />
+
+            {/* Result message BELOW the question card */}
+            {showResult && (
+              <div
+                className={`mt-4 rounded-2xl p-4 animate-slide-up ${
+                  isCorrect ? "bg-primary/20 border-2 border-primary" : "bg-destructive/20 border-2 border-destructive"
+                }`}
+              >
+                <p
+                  className={`font-bold text-center ${
+                    isCorrect ? "text-primary" : "text-destructive"
+                  }`}
+                >
+                  {isCorrect ? "🎉 Correct! Great job!" : "❌ Incorrect. Keep trying!"}
+                </p>
+                {!isCorrect && (
+                  <p className="text-sm text-center mt-2 text-muted-foreground">
+                    Correct answer: <span className="font-bold">{question.options[question.correctAnswer]}</span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right: Treasure & Info */}
           <div className="lg:col-span-3 flex flex-col items-center gap-8">
-            <TreasureChest unlocked={correctAnswers === questions.length} />
+            <TreasureChest unlocked={correctAnswers === total} />
             
             <div className="bg-gradient-to-br from-card to-card/80 rounded-3xl p-6 shadow-xl border-2 border-primary/20 w-full max-w-xs backdrop-blur-sm">
               <h3 className="font-bold text-base mb-4 text-foreground flex items-center gap-2">
