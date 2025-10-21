@@ -28,8 +28,13 @@ export const GameHeader = ({ hearts, coins }: GameHeaderProps) => {
             <span className="text-lg font-bold text-destructive ml-1">{hearts}</span>
           </div>
 
-          {/* Coins - simple circular coin + count */}
-          <div className="flex items-center gap-2">
+          {/* Chest + Coins */}
+          <div className="flex items-center gap-4">
+            <img
+              src="/treasureboximg.png"
+              alt="Treasure Chest"
+              className="w-14 h-15 object-contain drop-shadow"
+            />
             <span id="coin-counter" className="inline-flex items-center">
               <svg
                 width="32"

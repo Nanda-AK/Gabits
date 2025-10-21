@@ -122,8 +122,16 @@ export const QuestionCard = ({
       {/* Coin animation start anchor (invisible) */}
       <div id="coin-source" className="absolute bottom-5 right-6 w-3 h-3"></div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-3">
+      {/* Action Buttons with inline result status */}
+      <div
+        className={`flex flex-wrap items-center gap-3 rounded-2xl p-3 border-2 ${
+          showResult
+            ? isCorrect
+              ? "bg-emerald-100/70 border-emerald-300"
+              : "bg-rose-100/70 border-rose-300"
+            : "border-muted/30"
+        }`}
+      >
         <Button
           onClick={onSkip}
           variant="outline"
@@ -144,7 +152,18 @@ export const QuestionCard = ({
           Hint (-{hintCost} coins)
         </Button>
 
-        <div className="flex-1" />
+        {/* Center status */}
+        <div className="flex-1 text-center">
+          {showResult && (
+            <span
+              className={`font-extrabold text-lg tracking-wide ${
+                isCorrect ? "text-emerald-700" : "text-rose-700"
+              }`}
+            >
+              {isCorrect ? "Correct" : "Wrong"}
+            </span>
+          )}
+        </div>
 
         {!showResult ? (
           <Button

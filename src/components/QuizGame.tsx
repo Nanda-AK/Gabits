@@ -4,7 +4,6 @@ import type { Question } from "@/data/questions";
 import { QuestionCard } from "./QuestionCard";
 import { GameHeader } from "./GameHeader";
 import { MonkeyProgress } from "./MonkeyProgress";
-import { TreasureChest } from "./TreasureChest";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
 
@@ -165,63 +164,10 @@ export const QuizGame = () => {
               totalQuestions={total}
             />
 
-            {/* Result message BELOW the question card */}
-            {showResult && (
-              <div
-                className={`mt-4 rounded-2xl p-4 animate-slide-up ${
-                  isCorrect ? "bg-primary/20 border-2 border-primary" : "bg-destructive/20 border-2 border-destructive"
-                }`}
-              >
-                <p
-                  className={`font-bold text-center ${
-                    isCorrect ? "text-primary" : "text-destructive"
-                  }`}
-                >
-                  {isCorrect ? "🎉 Correct! Great job!" : "❌ Incorrect. Keep trying!"}
-                </p>
-                {!isCorrect && (
-                  <p className="text-sm text-center mt-2 text-muted-foreground">
-                    Correct answer: <span className="font-bold">{question.options[question.correctAnswer]}</span>
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Right: Treasure & Info */}
-          <div className="lg:col-span-3 flex flex-col items-center gap-8">
-            <TreasureChest unlocked={correctAnswers === total} />
-            
-            <div className="bg-gradient-to-br from-card to-card/80 rounded-3xl p-6 shadow-xl border-2 border-primary/20 w-full max-w-xs backdrop-blur-sm">
-              <h3 className="font-bold text-base mb-4 text-foreground flex items-center gap-2">
-                <span className="text-2xl">🪙</span>
-                Coin Rewards
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary shadow-sm"></div>
-                    <span className="text-foreground font-medium">Easy</span>
-                  </div>
-                  <span className="text-primary font-bold">+3 🪙</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/10 border border-secondary/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-secondary shadow-sm"></div>
-                    <span className="text-foreground font-medium">Moderate</span>
-                  </div>
-                  <span className="text-secondary font-bold">+5 🪙</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/10 border border-destructive/20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-destructive shadow-sm"></div>
-                    <span className="text-foreground font-medium">Difficult</span>
-                  </div>
-                  <span className="text-destructive font-bold">+8 🪙</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Right column intentionally left empty (design no longer shows rewards box) */}
+          <div className="lg:col-span-3" />
         </div>
       </div>
     </div>
