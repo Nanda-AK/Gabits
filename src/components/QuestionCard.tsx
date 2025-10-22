@@ -14,6 +14,7 @@ interface QuestionCardProps {
   onHint: () => void;
   showHint: boolean;
   coins: number;
+  questionReward: number;
   questionNumber: number;
   totalQuestions: number;
 }
@@ -30,6 +31,7 @@ export const QuestionCard = ({
   onHint,
   showHint,
   coins,
+  questionReward,
   questionNumber,
   totalQuestions
 }: QuestionCardProps) => {
@@ -49,8 +51,12 @@ export const QuestionCard = ({
         <div className="text-sm font-semibold text-muted-foreground">
           Question {questionNumber} of {totalQuestions}
         </div>
-        <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
-          {question.difficulty.toUpperCase()} • {coinValue} coins
+        <div className="relative flex flex-col items-end">
+          <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
+            {question.difficulty.toUpperCase()} • {showHint ? questionReward : coinValue} coins
+          </div>
+          {/* Coin animation start anchor near difficulty badge */}
+          <div id="coin-source" className="absolute -right-2 top-1/2 w-3 h-3"></div>
         </div>
       </div>
 
@@ -119,8 +125,7 @@ export const QuestionCard = ({
         </div>
       )}
 
-      {/* Coin animation start anchor (invisible) */}
-      <div id="coin-source" className="absolute bottom-5 right-6 w-3 h-3"></div>
+      {/* Coin animation anchor moved to difficulty badge */}
 
       {/* Action Buttons with inline result status */}
       <div
@@ -145,7 +150,7 @@ export const QuestionCard = ({
         <Button
           onClick={onHint}
           variant="outline"
-          disabled={showResult || showHint || coins < hintCost}
+          disabled={showResult || showHint || questionReward < hintCost}
           className="rounded-xl border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Lightbulb className="w-4 h-4 mr-2" />

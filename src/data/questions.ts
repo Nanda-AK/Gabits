@@ -662,10 +662,11 @@ export const getDifficultyCoins = (difficulty: Difficulty): number => {
 };
 
 export const getHintCost = (difficulty: Difficulty): number => {
+  // Per-difficulty hint deduction from the per-question reward pool
   const costMap = {
-    easy: 2,
-    moderate: 3,
-    difficult: 5
-  };
+    easy: 1,
+    moderate: 2,
+    difficult: 4,
+  } as const;
   return costMap[difficulty];
 };

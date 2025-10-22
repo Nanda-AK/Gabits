@@ -29,12 +29,12 @@ export const CoinAnimation = ({ amount }: CoinAnimationProps) => {
 
   useEffect(() => {
     if (!coinRef.current || !delta) return;
-    const duration = 1600;
+    const duration = 2400;
     const anim = coinRef.current.animate(
       [
-        { transform: "translate(0, 0) scale(1) rotate(0deg)", opacity: 1 },
-        { transform: `translate(${delta.dx * 0.6}px, ${delta.dy * 0.6}px) scale(0.8) rotate(180deg)`, opacity: 1 },
-        { transform: `translate(${delta.dx}px, ${delta.dy}px) scale(0.45) rotate(360deg)`, opacity: 0 }
+        { offset: 0, transform: "translate(0, 0) scale(1) rotate(0deg)", opacity: 1 },
+        { offset: 0.8, transform: `translate(${delta.dx * 0.7}px, ${delta.dy * 0.7}px) scale(0.85) rotate(220deg)`, opacity: 1 },
+        { offset: 1, transform: `translate(${delta.dx}px, ${delta.dy}px) scale(0.5) rotate(360deg)`, opacity: 0 }
       ],
       {
         duration,

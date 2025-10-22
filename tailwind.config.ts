@@ -72,6 +72,16 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "heart-blink": {
+          "0%, 100%": {
+            filter: "drop-shadow(0 0 0 rgba(220,38,38,0)) brightness(1)",
+            transform: "scale(1) rotate(0deg)"
+          },
+          "50%": {
+            filter: "drop-shadow(0 0 10px rgba(220,38,38,0.9)) brightness(1.35)",
+            transform: "scale(1.15) rotate(-2deg)"
+          }
+        },
         "coin-fly": {
           "0%": { 
             transform: "translate(0, 0) scale(1) rotate(0deg)",
@@ -154,6 +164,7 @@ export default {
         "coin-fly": "coin-fly 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards",
         "coin-increment": "coin-increment 0.3s ease-out",
         "heart-destroy": "heart-destroy 0.5s ease-out forwards",
+        "heart-blink": "heart-blink 1s ease-in-out infinite",
         "monkey-climb": "monkey-climb 0.5s ease-out forwards",
         "chest-bounce": "chest-bounce 0.6s ease-out",
         "shake": "shake 0.4s ease-in-out",
