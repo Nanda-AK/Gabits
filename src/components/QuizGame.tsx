@@ -72,12 +72,6 @@ export const QuizGame = () => {
   const [secondChanceOpen, setSecondChanceOpen] = useState(false);
   const [questionReward, setQuestionReward] = useState(0);
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
-  // Global progress across all days
-  const [globalCorrect, setGlobalCorrect] = useState<number>(() => {
-    const v = localStorage.getItem("globalCorrect");
-    return v ? parseInt(v, 10) || 0 : 0;
-  });
-  const totalAll = questions.length;
 
   const daily = useMemo(() => pickDailyQuestions(questions, 10), []);
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => shuffleQuestionSet(daily));
@@ -96,17 +90,8 @@ export const QuizGame = () => {
     setShowResult(false);
   }, [currentQuestion, baseReward]);
 
-  // Track awarded milestones to avoid duplicate rewards (persisted)
+  // Track awarded milestones for the current daily set only
   const milestonesAwarded = useRef({ m10: false, m25: false, m50: false, m75: false, m100: false });
-  useEffect(() => {
-    const raw = localStorage.getItem("milestonesAwarded");
-    if (raw) {
-      try { milestonesAwarded.current = JSON.parse(raw); } catch {}
-    }
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("globalCorrect", String(globalCorrect));
-  }, [globalCorrect]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -138,10 +123,9 @@ export const QuizGame = () => {
         // clear badge after a moment
         setTimeout(() => setCoinGain(cg => (cg && cg.id ? null : null)), 1800);
       }
-      setCorrectAnswers(prev => prev + 1);
-      const newGlobal = globalCorrect + 1;
-      setGlobalCorrect(newGlobal);
-      const ratio = newGlobal / totalAll; // 0..1 across all days
+      setCorrectAnswers(prev => {
+        const newCount = prev + 1;
+        const ratio = newCount / total; // 0..1 for the daily set of 10
         // 10% milestone: +5 coins
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
           milestonesAwarded.current.m10 = true;
@@ -170,9 +154,10 @@ export const QuizGame = () => {
           milestonesAwarded.current.m100 = true;
           toast({ title: "Milestone reached!", description: "100% complete — Diamond earned" });
         }
-      localStorage.setItem("milestonesAwarded", JSON.stringify(milestonesAwarded.current));
-      // Restore one heart on correct (up to 5)
-      if (hearts < 5) {
+        return newCount;
+      });
+      // Restore one heart ONLY if correct on first try (not during second chance)
+      if (!secondChance && hearts < 5) {
         setHearts(h => Math.min(5, h + 1));
       }
       setBlinkHeart(false);
@@ -263,7 +248,7 @@ export const QuizGame = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
           {/* Left: Monkey Progress */}
           <div className="lg:col-span-2 flex justify-center lg:justify-start">
-            <MonkeyProgress progress={globalCorrect} total={totalAll} />
+            <MonkeyProgress progress={correctAnswers} total={total} />
           </div>
 
           {/* Center: Question */}

@@ -29,7 +29,28 @@ export const MonkeyProgress = ({ progress, total }: MonkeyProgressProps) => {
           {/* 25% Silver bar */}
           <img src="/assets/silverimage.png" alt="Silver" className="w-16 h-9 object-contain drop-shadow" />
           {/* 10% Coin marker */}
-          <img src="/assets/goldimage.png" alt="Coin" className="w-12 h-12 object-contain drop-shadow" />
+          <div className="w-12 h-12 drop-shadow">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 64 64"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-label="Coin"
+              role="img"
+              className="w-12 h-12"
+            >
+              <defs>
+                <radialGradient id="goldGradientBar" cx="50%" cy="35%" r="60%">
+                  <stop offset="0%" stopColor="#FFF6B7" />
+                  <stop offset="45%" stopColor="#FFD54A" />
+                  <stop offset="100%" stopColor="#F6A700" />
+                </radialGradient>
+              </defs>
+              <circle cx="32" cy="32" r="28" fill="url(#goldGradientBar)" stroke="#B7791F" strokeWidth="4" />
+              <circle cx="32" cy="24" r="10" fill="rgba(255,255,255,0.22)" />
+              <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
+            </svg>
+          </div>
         </div>
 
         {/* The Climbing Pole */}
