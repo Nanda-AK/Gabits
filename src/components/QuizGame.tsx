@@ -6,6 +6,7 @@ import { GameHeader } from "./GameHeader";
 import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
+import { AchievementModal } from "./AchievementModal";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -72,8 +73,31 @@ export const QuizGame = () => {
   const [secondChanceOpen, setSecondChanceOpen] = useState(false);
   const [questionReward, setQuestionReward] = useState(0);
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [overallTime, setOverallTime] = useState(0);
+  const [questionTime, setQuestionTime] = useState(0);
+  const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
+  const [overallTimeLimit] = useState(600); // 10 minutes total
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
-  const daily = useMemo(() => pickDailyQuestions(questions, 10), []);
+  // Load or generate daily questions with localStorage persistence
+  const daily = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const storedData = localStorage.getItem('dailyQuizData');
+    
+    if (storedData) {
+      const { date, questions: storedQuestions } = JSON.parse(storedData);
+      if (date === today) {
+        return storedQuestions;
+      }
+    }
+    
+    // Generate new questions for today
+    const newQuestions = pickDailyQuestions(questions, 10);
+    localStorage.setItem('dailyQuizData', JSON.stringify({ date: today, questions: newQuestions }));
+    return newQuestions;
+  }, []);
+  
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => shuffleQuestionSet(daily));
   const total = shuffledQuestions.length || daily.length;
   const question = shuffledQuestions[currentQuestion];
@@ -88,10 +112,51 @@ export const QuizGame = () => {
     setSecondChance(false);
     setBlinkHeart(false);
     setShowResult(false);
-  }, [currentQuestion, baseReward]);
+    setQuestionTime(0); // Reset question timer
+    
+    // Set time limit based on difficulty
+    if (question) {
+      const timeLimit = question.difficulty === 'easy' ? 45 : question.difficulty === 'moderate' ? 35 : 25;
+      setQuestionTimeLimit(timeLimit);
+    }
+  }, [currentQuestion, baseReward, question]);
 
   // Track awarded milestones for the current daily set only
   const milestonesAwarded = useRef({ m10: false, m25: false, m50: false, m75: false, m100: false });
+  
+  // Timer effects
+  useEffect(() => {
+    const overallInterval = setInterval(() => {
+      setOverallTime(prev => prev + 1);
+    }, 1000);
+    
+    return () => clearInterval(overallInterval);
+  }, []);
+  
+  useEffect(() => {
+    if (!showResult && !gameCompleted) {
+      const questionInterval = setInterval(() => {
+        setQuestionTime(prev => {
+          const newTime = prev + 1;
+          // Auto-skip when question time limit reached
+          if (newTime >= questionTimeLimit) {
+            handleTimeUp();
+          }
+          return newTime;
+        });
+      }, 1000);
+      
+      return () => clearInterval(questionInterval);
+    }
+  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit]);
+  
+  // Overall time limit check
+  useEffect(() => {
+    if (overallTime >= overallTimeLimit && !gameCompleted) {
+      setIsTimeUp(true);
+      setGameCompleted(true);
+    }
+  }, [overallTime, overallTimeLimit, gameCompleted]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -99,6 +164,20 @@ export const QuizGame = () => {
     setTimeout(() => {
       setCoinAnimations(prev => prev.filter(anim => anim.id !== id));
     }, 2600);
+  };
+  
+  const handleTimeUp = () => {
+    // Auto-skip question when time runs out
+    if (showResult || gameCompleted) return;
+    
+    setIsCorrect(false);
+    setShowResult(true);
+    
+    // Lose a heart
+    const newHearts = hearts - 1;
+    setHearts(newHearts);
+    setBlinkHeart(true);
+    setTimeout(() => setBlinkHeart(false), 1000);
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -218,10 +297,13 @@ export const QuizGame = () => {
     setBlinkHeart(false);
     setSecondChance(false);
     setCoinGain(null);
+    setOverallTime(0);
+    setQuestionTime(0);
+    setIsTimeUp(false);
   };
 
   if (gameCompleted) {
-    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} />;
+    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver={isTimeUp} />;
   }
 
   if (hearts === 0) {
@@ -241,7 +323,25 @@ export const QuizGame = () => {
       ))}
 
       {/* Game Header */}
-      <GameHeader hearts={hearts} coins={coins} progress={progress} blinkHeart={blinkHeart} coinGain={coinGain} />
+      <GameHeader 
+        hearts={hearts} 
+        coins={coins} 
+        progress={progress} 
+        blinkHeart={blinkHeart} 
+        coinGain={coinGain}
+        onTreasureClick={() => setShowAchievements(true)}
+        overallTime={overallTime}
+        overallTimeLimit={overallTimeLimit}
+      />
+      
+      {/* Achievement Modal */}
+      <AchievementModal
+        open={showAchievements}
+        onOpenChange={setShowAchievements}
+        coins={coins}
+        correctAnswers={correctAnswers}
+        totalQuestions={total}
+      />
 
       {/* Main Game Area */}
       <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
@@ -268,6 +368,8 @@ export const QuizGame = () => {
               questionReward={questionReward}
               questionNumber={currentQuestion + 1}
               totalQuestions={total}
+              questionTime={questionTime}
+              questionTimeLimit={questionTimeLimit}
             />
 
           </div>

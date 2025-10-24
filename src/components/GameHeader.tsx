@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, Timer } from "lucide-react";
 
 interface GameHeaderProps {
   hearts: number;
@@ -6,13 +6,25 @@ interface GameHeaderProps {
   progress: number;
   blinkHeart?: boolean;
   coinGain?: { amount: number; id: number } | null;
+  onTreasureClick?: () => void;
+  overallTime?: number;
+  overallTimeLimit?: number;
 }
 
-export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderProps) => {
+export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600 }: GameHeaderProps) => {
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  const timeRemaining = overallTimeLimit - overallTime;
+  const isOverallTimeCritical = timeRemaining <= 60; // Last minute warning
   return (
     <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-md border-b-2 border-primary/20 z-50 shadow-xl">
       <div className="container mx-auto px-2 sm:px-3 py-1.5 sm:py-2 lg:py-3">
-        <div className="flex items-center justify-between max-w-5xl xl:max-w-6xl mx-auto">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-5xl xl:max-w-6xl mx-auto">
           {/* Hearts */}
           <div className="flex items-center gap-1.5 sm:gap-2 bg-destructive/10 rounded-lg sm:rounded-xl px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-2.5 border-2 border-destructive/30 shadow-lg">
             <div className="flex items-center gap-0.5 sm:gap-1">
@@ -40,13 +52,41 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderPr
             </div>
             <span className="text-sm sm:text-base font-bold text-destructive ml-0.5 sm:ml-1">{hearts}</span>
           </div>
+          {/* Overall Timer - Clean minimal design with time limit indicator */}
+          <div className={`flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 border-2 shadow-sm transition-all duration-300 ${
+            isOverallTimeCritical 
+              ? 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/40 animate-pulse' 
+              : 'bg-gradient-to-br from-accent/10 to-accent/5 border-accent/30'
+          }`}>
+            <Timer className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+              isOverallTimeCritical ? 'text-destructive' : 'text-accent'
+            }`} />
+            <div className="flex flex-col items-center">
+              <span className={`text-xs sm:text-sm font-bold tabular-nums transition-colors ${
+                isOverallTimeCritical ? 'text-destructive' : 'text-foreground'
+              }`}>
+                {formatTime(timeRemaining)}
+              </span>
+              {isOverallTimeCritical && (
+                <span className="text-[8px] text-destructive/70 font-semibold">Time Left!</span>
+              )}
+            </div>
+          </div>
+
           {/* Chest + Coins */}
           <div className="relative flex items-center gap-1.5 sm:gap-2 lg:gap-3">
-            <img
-              src="/treasureboximg.png"
-              alt="Treasure Chest"
-              className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain drop-shadow"
-            />
+            <button
+              onClick={onTreasureClick}
+              className="relative group cursor-pointer hover:scale-110 transition-transform duration-200 active:scale-95"
+              aria-label="View Achievements"
+            >
+              <img
+                src="/treasureboximg.png"
+                alt="Treasure Chest"
+                className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain drop-shadow-lg"
+              />
+              <div className="absolute inset-0 rounded-full bg-amber-400/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
             <span id="coin-counter" className="inline-flex items-center">
               <svg
                 width="32"

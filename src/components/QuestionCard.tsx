@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Question, getDifficultyCoins, getHintCost } from "@/data/questions";
-import { Lightbulb, SkipForward, CheckCircle2, ArrowRight } from "lucide-react";
+import { Lightbulb, SkipForward, CheckCircle2, ArrowRight, Timer } from "lucide-react";
 
 interface QuestionCardProps {
   question: Question;
@@ -17,6 +17,8 @@ interface QuestionCardProps {
   questionReward: number;
   questionNumber: number;
   totalQuestions: number;
+  questionTime?: number;
+  questionTimeLimit?: number;
 }
 
 export const QuestionCard = ({
@@ -33,8 +35,20 @@ export const QuestionCard = ({
   coins,
   questionReward,
   questionNumber,
-  totalQuestions
+  totalQuestions,
+  questionTime = 0,
+  questionTimeLimit = 30
 }: QuestionCardProps) => {
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  const timeRemaining = questionTimeLimit - questionTime;
+  const isTimeCritical = timeRemaining <= 10;
+  const progressPercentage = (questionTime / questionTimeLimit) * 100;
   const difficultyColors = {
     easy: "bg-primary/10 text-primary border-primary/30",
     moderate: "bg-secondary/10 text-secondary border-secondary/30",
@@ -45,11 +59,46 @@ export const QuestionCard = ({
   const coinValue = getDifficultyCoins(question.difficulty);
 
   return (
-    <div className="relative bg-gradient-to-br from-card to-card/90 rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-6 border-2 border-primary/20 animate-slide-up backdrop-blur-sm">
+    <div className="relative bg-gradient-to-br from-card to-card/90 rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-6 border-2 border-primary/20 animate-slide-up backdrop-blur-sm hover:shadow-primary/10 transition-all duration-300">
+      {/* Subtle corner accents */}
+      <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-tl-xl pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-secondary/5 to-transparent rounded-br-xl pointer-events-none" />
+      
       {/* Question Number & Difficulty Badge */}
-      <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-        <div className="text-xs sm:text-sm font-semibold text-muted-foreground">
-          Question {questionNumber} of {totalQuestions}
+      <div className="relative flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+        <div className="flex flex-col gap-1">
+          <div className="text-xs sm:text-sm font-semibold text-muted-foreground">
+            Question {questionNumber} of {totalQuestions}
+          </div>
+          {/* Per-Question Timer with Countdown */}
+          <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${
+            isTimeCritical 
+              ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse' 
+              : 'bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20'
+          }`}>
+            <Timer className={`w-3.5 h-3.5 transition-colors ${
+              isTimeCritical ? 'text-destructive' : 'text-secondary'
+            }`} />
+            <div className="flex flex-col items-start">
+              <span className={`text-[10px] sm:text-xs font-extrabold tabular-nums transition-colors ${
+                isTimeCritical ? 'text-destructive' : 'text-secondary'
+              }`}>
+                {timeRemaining}s
+              </span>
+              {isTimeCritical && (
+                <span className="text-[8px] text-destructive/70 font-semibold">Hurry up!</span>
+              )}
+            </div>
+            {/* Progress bar showing time used */}
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ${
+                  isTimeCritical ? 'bg-destructive' : 'bg-secondary'
+                }`}
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
         </div>
         <div className="relative flex flex-col items-end">
           <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
