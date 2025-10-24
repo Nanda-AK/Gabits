@@ -16,8 +16,12 @@ export const MonkeyProgress = ({ progress, total }: MonkeyProgressProps) => {
   
   return (
     <div className="relative flex flex-col items-center scale-100 mt-4 sm:mt-6">
-      {/* Diamond at top */}
-      <div className="text-2xl sm:text-3xl mb-1 animate-bounce">💎</div>
+      {/* Diamond at top (standardized size) */}
+      <div className="mb-1 animate-bounce">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center">
+          <span className="text-[22px] sm:text-[28px] lg:text-[32px] leading-none">💎</span>
+        </div>
+      </div>
 
       <div className="relative w-16 sm:w-20 lg:w-24 h-[220px] sm:h-[280px] lg:h-[320px]">
 
@@ -28,28 +32,35 @@ export const MonkeyProgress = ({ progress, total }: MonkeyProgressProps) => {
             className="absolute left-1/2 ml-3 sm:ml-5 lg:ml-6 translate-y-1/2"
             style={{ bottom: '75%' }}
           >
-            <img src="/assets/platinuumimage.png" alt="Platinum" className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 object-contain drop-shadow-lg" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center drop-shadow-lg">
+              <img src="/assets/platinuumimage.png" alt="Platinum" className="w-full h-full object-contain" />
+            </div>
           </div>
           {/* 50% Gold bar */}
           <div
             className="absolute left-1/2 ml-3 sm:ml-5 lg:ml-6 translate-y-1/2"
             style={{ bottom: '50%' }}
           >
-            <img src="/assets/goldimage.png" alt="Gold" className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 object-contain drop-shadow-lg" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center drop-shadow-lg">
+              <img src="/assets/goldimage.png" alt="Gold" className="w-full h-full object-contain" />
+            </div>
           </div>
           {/* 25% Silver bar */}
           <div
             className="absolute left-1/2 ml-3 sm:ml-5 lg:ml-6 translate-y-1/2"
             style={{ bottom: '25%' }}
           >
-            <img src="/assets/silverimage.png" alt="Silver" className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 object-contain drop-shadow-lg" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center drop-shadow-lg">
+              <img src="/assets/silverimage.png" alt="Silver" className="w-full h-full object-contain" />
+            </div>
           </div>
           {/* 10% Coin marker */}
           <div
             className="absolute left-1/2 ml-3 sm:ml-5 lg:ml-6 translate-y-1/2"
             style={{ bottom: '10%' }}
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 drop-shadow-lg">
+            {/* Padding added so the SVG (with no transparent margins) visually matches PNG icons */}
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 p-1 sm:p-1.5 lg:p-2 flex items-center justify-center drop-shadow-lg">
               <svg
                 width="48"
                 height="48"
