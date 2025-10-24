@@ -17,7 +17,7 @@ const Index = () => {
     return <HomePage onStartGame={handleStartGame} />;
   }
 
-  return <QuizGame />;
+  return <QuizGame difficulty={selectedDifficulty} />;
 };
 
 export default Index;

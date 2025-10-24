@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { questions, getDifficultyCoins, getHintCost } from "@/data/questions";
-import type { Question } from "@/data/questions";
+import type { Question, Difficulty } from "@/data/questions";
 import { QuestionCard } from "./QuestionCard";
 import { GameHeader } from "./GameHeader";
 import { MonkeyProgress } from "./MonkeyProgress";
@@ -57,7 +57,11 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
   return chosen;
 }
 
-export const QuizGame = () => {
+interface QuizGameProps {
+  difficulty?: Difficulty;
+}
+
+export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -80,28 +84,37 @@ export const QuizGame = () => {
   const [overallTimeLimit] = useState(600); // 10 minutes total
   const [isTimeUp, setIsTimeUp] = useState(false);
 
-  // Load or generate daily questions with localStorage persistence
+  // Load or generate daily questions with localStorage persistence, per difficulty
   const daily = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const storedData = localStorage.getItem('dailyQuizData');
+    const key = `dailyQuizData:${difficulty}`;
+    const storedData = localStorage.getItem(key);
+
+    const pool = questions.filter(q => q.difficulty === difficulty);
     
     if (storedData) {
       const { date, questions: storedQuestions } = JSON.parse(storedData);
       if (date === today) {
-        return storedQuestions;
+        return storedQuestions as Question[];
       }
     }
     
-    // Generate new questions for today
-    const newQuestions = pickDailyQuestions(questions, 10);
-    localStorage.setItem('dailyQuizData', JSON.stringify({ date: today, questions: newQuestions }));
+    // Generate new questions for today for the selected difficulty
+    const newQuestions = pickDailyQuestions(pool, 10);
+    localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions }));
     return newQuestions;
-  }, []);
+  }, [difficulty]);
   
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => shuffleQuestionSet(daily));
   const total = shuffledQuestions.length || daily.length;
   const question = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / total) * 100;
+
+  // If the difficulty changes (or daily set refreshes), refresh the shuffled questions
+  useEffect(() => {
+    setShuffledQuestions(shuffleQuestionSet(daily));
+    setCurrentQuestion(0);
+  }, [daily]);
 
   // Initialize per-question reward when question changes
   const baseReward = question ? getDifficultyCoins(question.difficulty) : 0;
@@ -292,7 +305,8 @@ export const QuizGame = () => {
     setCorrectAnswers(0);
     setShowHint(false);
     setGameCompleted(false);
-    const nextDaily = pickDailyQuestions(questions, 10);
+    const pool = questions.filter(q => q.difficulty === difficulty);
+    const nextDaily = pickDailyQuestions(pool, 10);
     setShuffledQuestions(shuffleQuestionSet(nextDaily));
     setBlinkHeart(false);
     setSecondChance(false);

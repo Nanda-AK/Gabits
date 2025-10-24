@@ -100,7 +100,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden overflow-y-auto bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen relative overflow-x-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Animated gradient orbs with enhanced shadows */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-float shadow-2xl" />
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-pink-400/20 to-orange-400/20 rounded-full blur-3xl animate-float shadow-2xl" style={{ animationDelay: '2s' }} />
