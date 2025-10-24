@@ -244,15 +244,15 @@ export const QuizGame = () => {
       <GameHeader hearts={hearts} coins={coins} progress={progress} blinkHeart={blinkHeart} coinGain={coinGain} />
 
       {/* Main Game Area */}
-      <div className="container mx-auto px-4 pt-28 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
+      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
           {/* Left: Monkey Progress */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-start">
+          <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
             <MonkeyProgress progress={correctAnswers} total={total} />
           </div>
 
           {/* Center: Question */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 min-w-0">
             <QuestionCard
               question={question}
               selectedAnswer={selectedAnswer}

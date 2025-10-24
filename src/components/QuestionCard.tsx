@@ -45,10 +45,10 @@ export const QuestionCard = ({
   const coinValue = getDifficultyCoins(question.difficulty);
 
   return (
-    <div className="relative bg-gradient-to-br from-card to-card/90 rounded-3xl shadow-2xl p-8 border-2 border-primary/20 animate-slide-up backdrop-blur-sm">
+    <div className="relative bg-gradient-to-br from-card to-card/90 rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-6 border-2 border-primary/20 animate-slide-up backdrop-blur-sm">
       {/* Question Number & Difficulty Badge */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-sm font-semibold text-muted-foreground">
+      <div className="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
+        <div className="text-xs sm:text-sm font-semibold text-muted-foreground">
           Question {questionNumber} of {totalQuestions}
         </div>
         <div className="relative flex flex-col items-end">
@@ -61,13 +61,13 @@ export const QuestionCard = ({
       </div>
 
       {/* Question Text with Character */}
-      <div className="mb-8">
-        <div className="flex gap-4 items-start">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-secondary via-secondary to-secondary/80 flex items-center justify-center text-3xl flex-shrink-0 shadow-lg border-2 border-secondary/30">
+      <div className="mb-3 sm:mb-4 lg:mb-6">
+        <div className="flex gap-2 sm:gap-3 items-start">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-secondary via-secondary to-secondary/80 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 shadow-lg border-2 border-secondary/30">
             🦉
           </div>
-          <div className="flex-1 bg-gradient-to-br from-muted/60 to-muted/40 rounded-2xl p-5 rounded-tl-none shadow-md border border-muted-foreground/10">
-            <p className="text-xl font-semibold text-foreground leading-relaxed">
+          <div className="flex-1 min-w-0 bg-gradient-to-br from-muted/60 to-muted/40 rounded-lg sm:rounded-xl p-2.5 sm:p-3 lg:p-4 rounded-tl-none shadow-md border border-muted-foreground/10">
+            <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground leading-snug">
               {question.question}
             </p>
           </div>
@@ -75,12 +75,12 @@ export const QuestionCard = ({
       </div>
 
       {/* Answer Options */}
-      <div className="space-y-3 mb-6">
+      <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
         {question.options.map((option, index) => {
           const isSelected = selectedAnswer === index;
           const isCorrectAnswer = index === question.correctAnswer;
           
-          let buttonClass = "w-full justify-start text-left h-auto py-4 px-6 text-base font-medium transition-all duration-200 rounded-2xl border-2 ";
+          let buttonClass = "w-full justify-start text-left h-auto py-1.5 sm:py-2 lg:py-3 px-2.5 sm:px-3 lg:px-4 text-xs sm:text-sm lg:text-base font-medium transition-all duration-200 rounded-lg sm:rounded-xl border-2 ";
           
           if (!showResult) {
             buttonClass += isSelected
@@ -115,10 +115,10 @@ export const QuestionCard = ({
 
       {/* Hint Section */}
       {showHint && (
-        <div className="mb-6 bg-accent/10 border-2 border-accent/30 rounded-2xl p-4 animate-slide-up">
-          <div className="flex items-start gap-3">
-            <Lightbulb className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-foreground">
+        <div className="mb-3 sm:mb-4 bg-accent/10 border-2 border-accent/30 rounded-lg sm:rounded-xl p-2 sm:p-3 animate-slide-up">
+          <div className="flex items-start gap-2">
+            <Lightbulb className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-foreground">
               <span className="font-bold">Hint:</span> {question.hint}
             </p>
           </div>
@@ -129,7 +129,7 @@ export const QuestionCard = ({
 
       {/* Action Buttons with inline result status */}
       <div
-        className={`flex flex-wrap items-center gap-3 rounded-2xl p-3 border-2 ${
+        className={`flex flex-wrap items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl p-1.5 sm:p-2 border-2 ${
           showResult
             ? isCorrect
               ? "bg-emerald-100/70 border-emerald-300"
@@ -141,9 +141,9 @@ export const QuestionCard = ({
           onClick={onSkip}
           variant="outline"
           disabled={showResult}
-          className="rounded-xl border-2 hover:bg-muted hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-secondary/40 shadow-sm hover:shadow-md"
+          className="text-xs sm:text-sm rounded-lg border-2 hover:bg-muted hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-secondary/40 shadow-sm hover:shadow-md py-1 sm:py-1.5 px-2 sm:px-3"
         >
-          <SkipForward className="w-4 h-4 mr-2" />
+          <SkipForward className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
           Skip
         </Button>
 
@@ -151,17 +151,17 @@ export const QuestionCard = ({
           onClick={onHint}
           variant="outline"
           disabled={showResult || showHint || questionReward < hintCost}
-          className="rounded-xl border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-xs sm:text-sm rounded-lg border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed py-1 sm:py-1.5 px-2 sm:px-3"
         >
-          <Lightbulb className="w-4 h-4 mr-2" />
-          Hint (-{hintCost} coins)
+          <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+          Hint (-{hintCost})
         </Button>
 
         {/* Center status */}
         <div className="flex-1 text-center">
           {showResult && (
             <span
-              className={`font-extrabold text-lg tracking-wide ${
+              className={`font-extrabold text-sm sm:text-base lg:text-lg tracking-wide ${
                 isCorrect ? "text-emerald-700" : "text-rose-700"
               }`}
             >
@@ -174,18 +174,18 @@ export const QuestionCard = ({
           <Button
             onClick={onCheckAnswer}
             disabled={selectedAnswer === null}
-            className="rounded-xl px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-secondary/50 active:scale-[0.98]"
+            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-secondary/50 active:scale-[0.98] py-1 sm:py-1.5"
           >
-            <CheckCircle2 className="w-4 h-4 mr-2" />
-            Check Answer
+            <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            Check
           </Button>
         ) : (
           <Button
             onClick={onNext}
-            className="rounded-xl px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-primary/50 active:scale-[0.98]"
+            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-primary/50 active:scale-[0.98] py-1 sm:py-1.5"
           >
             Next
-            <ArrowRight className="w-4 h-4 ml-2" />
+            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
           </Button>
         )}
       </div>

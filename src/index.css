@@ -109,7 +109,51 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-size: 15px; /* Slightly smaller base font for compact layout */
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    min-height: 100vh;
+    max-width: 100vw;
+  }
+
+  /* Ensure root container fits viewport */
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all containers respect viewport bounds */
+  .container {
+    max-width: 100%;
+  }
+
+  /* Allow flex and grid children to shrink properly */
+  [class*="flex"] > *,
+  [class*="grid"] > * {
+    min-width: 0;
+  }
+
+  img, svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Responsive viewport height adjustments for very small screens */
+  @media (max-height: 700px) {
+    html {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-height: 600px) {
+    html {
+      font-size: 13px;
+    }
   }
 }

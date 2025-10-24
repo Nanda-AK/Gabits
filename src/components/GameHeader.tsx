@@ -11,15 +11,15 @@ interface GameHeaderProps {
 export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderProps) => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-md border-b-2 border-primary/20 z-50 shadow-xl">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
+      <div className="container mx-auto px-2 sm:px-3 py-1.5 sm:py-2 lg:py-3">
+        <div className="flex items-center justify-between max-w-5xl xl:max-w-6xl mx-auto">
           {/* Hearts */}
-          <div className="flex items-center gap-3 bg-destructive/10 rounded-2xl px-5 py-3 border-2 border-destructive/30 shadow-lg">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-destructive/10 rounded-lg sm:rounded-xl px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-2.5 border-2 border-destructive/30 shadow-lg">
+            <div className="flex items-center gap-0.5 sm:gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="relative">
                   <Heart
-                    className={`w-7 h-7 transition-all duration-300 ${
+                    className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 transition-all duration-300 ${
                       i < hearts
                         ? `${blinkHeart && i === hearts - 1 ? "animate-heart-blink drop-shadow" : ""} fill-destructive text-destructive scale-110`
                         : "text-muted-foreground/30 scale-90"
@@ -38,14 +38,14 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderPr
                 </div>
               ))}
             </div>
-            <span className="text-lg font-bold text-destructive ml-1">{hearts}</span>
+            <span className="text-sm sm:text-base font-bold text-destructive ml-0.5 sm:ml-1">{hearts}</span>
           </div>
           {/* Chest + Coins */}
-          <div className="relative flex items-center gap-4">
+          <div className="relative flex items-center gap-1.5 sm:gap-2 lg:gap-3">
             <img
               src="/treasureboximg.png"
               alt="Treasure Chest"
-              className="w-10 h-10 object-contain drop-shadow"
+              className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain drop-shadow"
             />
             <span id="coin-counter" className="inline-flex items-center">
               <svg
@@ -53,7 +53,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderPr
                 height="32"
                 viewBox="0 0 64 64"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 animate-coin-increment"
+                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 animate-coin-increment"
                 aria-label="Coins"
                 role="img"
               >
@@ -69,7 +69,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain }: GameHeaderPr
                 <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
               </svg>
             </span>
-            <span className="text-2xl font-black text-amber-900">
+            <span className="text-base sm:text-lg lg:text-xl font-black text-amber-900">
               {coins}
             </span>
             {coinGain && coinGain.amount > 0 && (
