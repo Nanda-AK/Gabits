@@ -6,9 +6,11 @@ interface ResultScreenProps {
   correctAnswers: number;
   onRestart: () => void;
   gameOver?: boolean;
+  aiScore?: number;
+  opponentName?: string;
 }
 
-export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver }: ResultScreenProps) => {
+export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot" }: ResultScreenProps) => {
   const isPerfectScore = correctAnswers === 10;
   
   return (
@@ -76,6 +78,23 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver }: Res
             <div className="text-sm font-semibold text-amber-900">Total Coins</div>
           </div>
         </div>
+
+        {/* Final Standings (Battle AI) */}
+        {typeof aiScore === 'number' && (
+          <div className="mb-8">
+            <h3 className="text-lg font-bold mb-3">Final Standings</h3>
+            <div className="rounded-2xl border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <div className="font-semibold">You</div>
+                <div className="font-extrabold">{correctAnswers}</div>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="font-semibold text-muted-foreground">{opponentName}</div>
+                <div className="font-extrabold text-muted-foreground">{aiScore}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Performance Message */}
         <div className="mb-8 p-4 bg-muted/50 rounded-2xl">

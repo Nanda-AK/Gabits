@@ -9,6 +9,9 @@ import { CoinAnimation } from "./CoinAnimation";
 import { AchievementModal } from "./AchievementModal";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
+import { aiBattlePick } from "@/services/openrouter";
+import { useAuth } from "@/contexts/AuthContext";
+import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
 
 // Utility: Fisher-Yates shuffle
 function shuffleArray<T>(arr: T[]): T[] {
@@ -57,11 +60,31 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
   return chosen;
 }
 
-interface QuizGameProps {
-  difficulty?: Difficulty;
+// Local fallback using localStorage for guests/offline
+function fallbackLocal(pool: Question[], difficulty: Difficulty): Question[] {
+  const today = new Date().toISOString().split('T')[0];
+  const key = `dailyQuizData:${difficulty}`;
+  const storedData = localStorage.getItem(key);
+  if (storedData) {
+    try {
+      const { date, questions: storedQuestions } = JSON.parse(storedData);
+      if (date === today) return storedQuestions as Question[];
+    } catch {}
+  }
+  const newQuestions = pickDailyQuestions(pool, 10);
+  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions })); } catch {}
+  return newQuestions;
 }
 
-export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
+interface QuizGameProps {
+  difficulty?: Difficulty;
+  mode?: 'practice' | 'speed' | 'battle-ai';
+}
+
+export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGameProps) => {
+  const { user, guest } = useAuth();
+  const userId = user?.id;
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -83,38 +106,50 @@ export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
   const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
   const [overallTimeLimit] = useState(600); // 10 minutes total
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const [aiCorrectAnswers, setAiCorrectAnswers] = useState(0);
+  const aiAnsweredFor = useRef<Set<number>>(new Set());
+  const [milestonesState, setMilestonesState] = useState({ m10: false, m25: false, m50: false, m75: false, m100: false });
 
-  // Load or generate daily questions with localStorage persistence, per difficulty
-  const daily = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `dailyQuizData:${difficulty}`;
-    const storedData = localStorage.getItem(key);
-
-    const pool = questions.filter(q => q.difficulty === difficulty);
-    
-    if (storedData) {
-      const { date, questions: storedQuestions } = JSON.parse(storedData);
-      if (date === today) {
-        return storedQuestions as Question[];
+  // Load daily set from Supabase for authenticated users; fallback to local for guests
+  const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
+  const [loadingDaily, setLoadingDaily] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingDaily(true);
+      const pool = questions.filter(q => q.difficulty === difficulty);
+      if (userId && !guest) {
+        try {
+          const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
+          if (cancelled) return;
+          const mapped = ids.map(id => pool.find(q => q.id === id)).filter(Boolean) as Question[];
+          const arr = mapped.length ? mapped : pool.slice(0, Math.min(10, pool.length));
+          setDailyQuestions(arr);
+        } catch {
+          const arr = fallbackLocal(pool, difficulty);
+          setDailyQuestions(arr);
+        }
+      } else {
+        const arr = fallbackLocal(pool, difficulty);
+        setDailyQuestions(arr);
       }
+      setLoadingDaily(false);
     }
-    
-    // Generate new questions for today for the selected difficulty
-    const newQuestions = pickDailyQuestions(pool, 10);
-    localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions }));
-    return newQuestions;
-  }, [difficulty]);
-  
-  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>(() => shuffleQuestionSet(daily));
-  const total = shuffledQuestions.length || daily.length;
+    load();
+    return () => { cancelled = true; };
+  }, [difficulty, userId, guest, today]);
+
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
+  const total = shuffledQuestions.length || dailyQuestions.length;
   const question = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / total) * 100;
 
-  // If the difficulty changes (or daily set refreshes), refresh the shuffled questions
+  // When daily set loads or refreshes, refresh the shuffled questions
   useEffect(() => {
-    setShuffledQuestions(shuffleQuestionSet(daily));
+    setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
-  }, [daily]);
+    aiAnsweredFor.current = new Set();
+  }, [dailyQuestions]);
 
   // Initialize per-question reward when question changes
   const baseReward = question ? getDifficultyCoins(question.difficulty) : 0;
@@ -129,13 +164,65 @@ export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
     
     // Set time limit based on difficulty
     if (question) {
-      const timeLimit = question.difficulty === 'easy' ? 45 : question.difficulty === 'moderate' ? 35 : 25;
-      setQuestionTimeLimit(timeLimit);
+      if (mode === 'speed' || mode === 'battle-ai') {
+        setQuestionTimeLimit(30); // fixed for speed/battle
+      } else {
+        const timeLimit = question.difficulty === 'easy' ? 45 : question.difficulty === 'moderate' ? 35 : 25;
+        setQuestionTimeLimit(timeLimit);
+      }
     }
-  }, [currentQuestion, baseReward, question]);
+  }, [currentQuestion, baseReward, question, mode]);
+
+  // Battle-AI: have the bot pick an answer for the current question once
+  useEffect(() => {
+    if (mode !== 'battle-ai' || !question) return;
+    if (aiAnsweredFor.current.has(question.id)) return;
+    let cancelled = false;
+    const qid = question.id;
+    (async () => {
+      try {
+        const res = await aiBattlePick(question);
+        if (cancelled) return;
+        aiAnsweredFor.current.add(qid);
+        if (typeof res.index === 'number' && res.index === question.correctAnswer) {
+          setAiCorrectAnswers(prev => prev + 1);
+        }
+        if (res.commentary) {
+          toast({ title: "AI Bot", description: res.commentary });
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [mode, question]);
 
   // Track awarded milestones for the current daily set only
   const milestonesAwarded = useRef({ m10: false, m25: false, m50: false, m75: false, m100: false });
+
+  // Load existing daily progress for authenticated users to resume
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!userId || guest) return;
+      try {
+        const p = await getDailyProgress(userId, today, difficulty);
+        if (cancelled || !p) return;
+        setCorrectAnswers(p.correct_count || 0);
+        setCoins(p.coins_earned || 0);
+        const loaded = {
+          m10: !!(p.milestones as any)?.m10,
+          m25: !!(p.milestones as any)?.m25,
+          m50: !!(p.milestones as any)?.m50,
+          m75: !!(p.milestones as any)?.m75,
+          m100: !!(p.milestones as any)?.m100,
+        };
+        setMilestonesState(loaded);
+        milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [userId, guest, today, difficulty]);
   
   // Timer effects
   useEffect(() => {
@@ -221,6 +308,7 @@ export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
         // 10% milestone: +5 coins
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
           milestonesAwarded.current.m10 = true;
+          setMilestonesState(s => ({ ...s, m10: true }));
           setCoins(c => c + 5);
           setCoinGain({ amount: 5, id: Date.now() + 1 });
           triggerCoinAnimation(5);
@@ -229,21 +317,25 @@ export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
         // 25% Silver
         if (!milestonesAwarded.current.m25 && ratio >= 0.25) {
           milestonesAwarded.current.m25 = true;
+          setMilestonesState(s => ({ ...s, m25: true }));
           toast({ title: "Milestone reached!", description: "25% complete — Silver bar earned" });
         }
         // 50% Gold
         if (!milestonesAwarded.current.m50 && ratio >= 0.50) {
           milestonesAwarded.current.m50 = true;
+          setMilestonesState(s => ({ ...s, m50: true }));
           toast({ title: "Milestone reached!", description: "50% complete — Gold bar earned" });
         }
         // 75% Platinum
         if (!milestonesAwarded.current.m75 && ratio >= 0.75) {
           milestonesAwarded.current.m75 = true;
+          setMilestonesState(s => ({ ...s, m75: true }));
           toast({ title: "Milestone reached!", description: "75% complete — Platinum bar earned" });
         }
         // 100% Diamond
         if (!milestonesAwarded.current.m100 && ratio >= 1.0) {
           milestonesAwarded.current.m100 = true;
+          setMilestonesState(s => ({ ...s, m100: true }));
           toast({ title: "Milestone reached!", description: "100% complete — Diamond earned" });
         }
         return newCount;
@@ -305,19 +397,48 @@ export const QuizGame = ({ difficulty = 'moderate' }: QuizGameProps) => {
     setCorrectAnswers(0);
     setShowHint(false);
     setGameCompleted(false);
-    const pool = questions.filter(q => q.difficulty === difficulty);
-    const nextDaily = pickDailyQuestions(pool, 10);
-    setShuffledQuestions(shuffleQuestionSet(nextDaily));
+    setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setBlinkHeart(false);
     setSecondChance(false);
     setCoinGain(null);
     setOverallTime(0);
     setQuestionTime(0);
     setIsTimeUp(false);
+    setAiCorrectAnswers(0);
+    aiAnsweredFor.current = new Set();
   };
 
+  // Persist progress snapshot for authenticated users
+  useEffect(() => {
+    if (!userId || guest) return;
+    const snapshot = {
+      correct_count: correctAnswers,
+      coins_earned: coins,
+      milestones: milestonesState as Record<string, boolean>,
+      completed: gameCompleted,
+    };
+    saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => {});
+  }, [userId, guest, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
+
+  if (loadingDaily) {
+    return <div className="min-h-screen flex items-center justify-center">Loading daily set...</div>;
+  }
+
+  if (!shuffledQuestions.length) {
+    return <div className="min-h-screen flex items-center justify-center">No questions available.</div>;
+  }
+
   if (gameCompleted) {
-    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver={isTimeUp} />;
+    return (
+      <ResultScreen
+        coins={coins}
+        correctAnswers={correctAnswers}
+        aiScore={mode === 'battle-ai' ? aiCorrectAnswers : undefined}
+        opponentName={mode === 'battle-ai' ? 'AI Bot' : undefined}
+        onRestart={handleRestart}
+        gameOver={isTimeUp}
+      />
+    );
   }
 
   if (hearts === 0) {

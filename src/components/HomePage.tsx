@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlayCircle, Trophy, Brain, Zap, Star, User } from "lucide-react";
+import { AuthPanel } from "@/components/auth/AuthPanel";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 
 interface FloatingElementProps {
   children: React.ReactNode;
@@ -46,6 +51,10 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'difficult'>('moderate');
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const [showForm, setShowForm] = useState(false);
+  const { user, guest, loading } = useAuth();
+  const { toast } = useToast();
+  const [authOpen, setAuthOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Mouse tracking for parallax effect
   useEffect(() => {
@@ -58,6 +67,11 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  // Auto-close auth dialog once authenticated or guest selected
+  useEffect(() => {
+    if ((user || guest) && authOpen) setAuthOpen(false);
+  }, [user, guest, authOpen]);
 
   // Generate floating elements with depth for parallax (25 total elements)
   const mathElements = [
@@ -92,11 +106,26 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
   ];
 
   const handleStartGame = () => {
+    // Gate starting the game behind authentication or guest mode
+    if (!user && !guest) {
+      setAuthOpen(true);
+      setShowForm(false);
+      return;
+    }
     if (name.trim().length < 2) {
       alert("Please enter your name (at least 2 characters)");
       return;
     }
     onStartGame(name.trim(), difficulty);
+  };
+
+  const handleGetStarted = () => {
+    if (!user && !guest) {
+      setAuthOpen(true);
+      return;
+    }
+    // Move to modes selection page
+    navigate("/modes");
   };
 
   return (
@@ -166,6 +195,13 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
                 <div className="absolute -top-8 -left-8 text-2xl opacity-20 animate-bounce" style={{ animationDelay: '0.5s' }}>📐</div>
                 <div className="absolute -bottom-6 -right-6 text-2xl opacity-20 animate-bounce" style={{ animationDelay: '1s' }}>📊</div>
               </div>
+
+          {/* Auth entry button */}
+          {!loading && !user && !guest && (
+            <div className="mt-6 flex justify-center">
+              <Button variant="outline" onClick={() => setAuthOpen(true)}>Sign in / Create account</Button>
+            </div>
+          )}
             </div>
             
             <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-700 max-w-2xl mx-auto leading-relaxed">
@@ -177,7 +213,8 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
             </p>
           </div>
 
-          {/* Feature Cards */}
+          {/* Feature Cards */
+          }
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 my-12">
             {[
               { 
@@ -233,7 +270,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
           {!showForm ? (
             <div className="flex flex-col items-center gap-6 mt-12">
               <Button
-                onClick={() => setShowForm(true)}
+                onClick={handleGetStarted}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 size="lg"
@@ -383,6 +420,16 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
 
       {/* Bottom decoration */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/60 to-transparent backdrop-blur-sm" />
+
+      {/* Auth Dialog */}
+      <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sign in to Quest Coin Rise</DialogTitle>
+          </DialogHeader>
+          <AuthPanel />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
