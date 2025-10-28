@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins, Award, Medal, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 
 function useSnapshot() {
   const [coins, setCoins] = useState(0);
@@ -22,6 +24,18 @@ const Treasure = () => {
   const navigate = useNavigate();
   const { coins, correct, total } = useSnapshot();
   const pct = useMemo(() => (total > 0 ? (correct / total) * 100 : 0), [correct, total]);
+  const { user, guest } = useAuth();
+  const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setCounts({ silver: 0, gold: 0, platinum: 0, diamond: 0 }); return; }
+      const c = await getMilestoneCounts(user.id);
+      if (!cancelled) setCounts(c);
+    })();
+    return () => { cancelled = true; };
+  }, [user, guest]);
 
   const achievements = [
     { icon: <Medal className="w-10 h-10 text-amber-600" />, name: "10% Progress", description: "+5 Coins", unlocked: pct >= 10, image: null },
@@ -66,6 +80,35 @@ const Treasure = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Lifetime Achievement Counts (RPC) */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Lifetime Achievements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100">
+                <img src="/assets/silverimage.png" alt="Silver" className="w-20 h-16 object-contain drop-shadow" />
+                <div className="mt-2 text-sm font-semibold text-muted-foreground">Silver</div>
+                <div className="text-2xl font-extrabold text-slate-700">{counts.silver}</div>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-amber-50 to-yellow-50">
+                <img src="/assets/goldimage.png" alt="Gold" className="w-20 h-16 object-contain drop-shadow" />
+                <div className="mt-2 text-sm font-semibold text-muted-foreground">Gold</div>
+                <div className="text-2xl font-extrabold text-amber-700">{counts.gold}</div>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-indigo-50 to-slate-100">
+                <img src="/assets/platinuumimage.png" alt="Platinum" className="w-20 h-16 object-contain drop-shadow" />
+                <div className="mt-2 text-sm font-semibold text-muted-foreground">Platinum</div>
+                <div className="text-2xl font-extrabold text-indigo-700">{counts.platinum}</div>
+              </div>
+            </div>
+            {(!user || guest) && (
+              <div className="text-center text-xs text-muted-foreground mt-2">Sign in to track lifetime counts.</div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

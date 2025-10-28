@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
-import { Target, Swords, Trophy, ChartNoAxesGantt, Sparkles } from "lucide-react";
+import { Target, Swords, Trophy, ChartNoAxesGantt, Sparkles, BookOpen, Timer, Bot, Users } from "lucide-react";
 
 const GlowTile: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; onClick: () => void; gradient: string }> = ({ title, subtitle, icon, onClick, gradient }) => (
   <button onClick={onClick} className="group relative w-full text-left">
@@ -20,6 +22,8 @@ const GlowTile: React.FC<{ title: string; subtitle: string; icon: React.ReactNod
 
 const Modes = () => {
   const navigate = useNavigate();
+  const [soloOpen, setSoloOpen] = useState(false);
+  const [competeOpen, setCompeteOpen] = useState(false);
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
@@ -39,8 +43,95 @@ const Modes = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          <GlowTile title="Solo" subtitle="Practice at your own pace" icon={<Target className="w-7 h-7"/>} onClick={() => navigate("/modes/solo")} gradient="bg-gradient-to-r from-indigo-400/40 to-purple-400/40" />
-          <GlowTile title="Compete" subtitle="Challenge others" icon={<Swords className="w-7 h-7"/>} onClick={() => navigate("/modes/compete")} gradient="bg-gradient-to-r from-emerald-400/40 to-cyan-400/40" />
+          {/* Solo with hover/tap menu */}
+          <div
+            onMouseEnter={() => setSoloOpen(true)}
+            onMouseLeave={() => setSoloOpen(false)}
+            className="w-full"
+          >
+            <Popover open={soloOpen} onOpenChange={setSoloOpen}>
+              <PopoverTrigger asChild>
+                <div>
+                  <GlowTile
+                    title="Solo"
+                    subtitle="Practice at your own pace"
+                    icon={<Target className="w-7 h-7"/>}
+                    onClick={() => setSoloOpen(o => !o)}
+                    gradient="bg-gradient-to-r from-indigo-400/40 to-purple-400/40"
+                  />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent align="center" sideOffset={10} className="rounded-2xl border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl shadow-xl p-2 w-72">
+                <div className="space-y-1">
+                  <button
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
+                    onClick={() => { setSoloOpen(false); navigate('/modes/solo/practice'); }}
+                  >
+                    <div className="rounded-lg p-2 bg-indigo-100 text-indigo-700"><BookOpen className="w-4 h-4"/></div>
+                    <div>
+                      <div className="font-semibold">Practice</div>
+                      <div className="text-xs text-muted-foreground">Your own pace</div>
+                    </div>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
+                    onClick={() => { setSoloOpen(false); navigate('/modes/solo/speed'); }}
+                  >
+                    <div className="rounded-lg p-2 bg-emerald-100 text-emerald-700"><Timer className="w-4 h-4"/></div>
+                    <div>
+                      <div className="font-semibold">Speed Drive</div>
+                      <div className="text-xs text-muted-foreground">10 Qs • 30s each</div>
+                    </div>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Compete with hover/tap menu */}
+          <div
+            onMouseEnter={() => setCompeteOpen(true)}
+            onMouseLeave={() => setCompeteOpen(false)}
+            className="w-full"
+          >
+            <Popover open={competeOpen} onOpenChange={setCompeteOpen}>
+              <PopoverTrigger asChild>
+                <div>
+                  <GlowTile
+                    title="Compete"
+                    subtitle="Challenge others"
+                    icon={<Swords className="w-7 h-7"/>}
+                    onClick={() => setCompeteOpen(o => !o)}
+                    gradient="bg-gradient-to-r from-emerald-400/40 to-cyan-400/40"
+                  />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent align="center" sideOffset={10} className="rounded-2xl border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl shadow-xl p-2 w-72">
+                <div className="space-y-1">
+                  <button
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
+                    onClick={() => { setCompeteOpen(false); navigate('/modes/compete/ai'); }}
+                  >
+                    <div className="rounded-lg p-2 bg-purple-100 text-purple-700"><Bot className="w-4 h-4"/></div>
+                    <div>
+                      <div className="font-semibold">Battle AI</div>
+                      <div className="text-xs text-muted-foreground">Challenge a clever bot</div>
+                    </div>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
+                    onClick={() => { setCompeteOpen(false); navigate('/modes/compete/friends'); }}
+                  >
+                    <div className="rounded-lg p-2 bg-cyan-100 text-cyan-700"><Users className="w-4 h-4"/></div>
+                    <div>
+                      <div className="font-semibold">Battle Friends</div>
+                      <div className="text-xs text-muted-foreground">Create or join a lobby</div>
+                    </div>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
     </div>
