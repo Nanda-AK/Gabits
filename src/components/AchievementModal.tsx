@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Trophy, Award, Medal, Coins } from "lucide-react";
+import type { AchievementKey } from "@/services/achievements";
 
 interface AchievementModalProps {
   open: boolean;
@@ -7,6 +8,7 @@ interface AchievementModalProps {
   coins: number;
   correctAnswers: number;
   totalQuestions: number;
+  lifetime?: Set<AchievementKey>;
 }
 
 export const AchievementModal = ({
@@ -14,45 +16,51 @@ export const AchievementModal = ({
   onOpenChange,
   coins,
   correctAnswers,
-  totalQuestions
+  totalQuestions,
+  lifetime
 }: AchievementModalProps) => {
   const progressPercentage = (correctAnswers / totalQuestions) * 100;
   
   // Determine which achievements have been unlocked
   const achievements = [
     {
+      key: "m10" as AchievementKey,
       icon: <Medal className="w-10 h-10 text-amber-600" />,
       name: "10% Progress",
       description: "+5 Coins",
-      unlocked: progressPercentage >= 10,
+      unlocked: (lifetime?.has("m10") ?? false) || progressPercentage >= 10,
       image: null
     },
     {
+      key: "m25" as AchievementKey,
       icon: null,
       name: "Silver Bar",
       description: "25% Complete",
-      unlocked: progressPercentage >= 25,
+      unlocked: (lifetime?.has("m25") ?? false) || progressPercentage >= 25,
       image: "/assets/silverimage.png"
     },
     {
+      key: "m50" as AchievementKey,
       icon: null,
       name: "Gold Bar",
       description: "50% Complete",
-      unlocked: progressPercentage >= 50,
+      unlocked: (lifetime?.has("m50") ?? false) || progressPercentage >= 50,
       image: "/assets/goldimage.png"
     },
     {
+      key: "m75" as AchievementKey,
       icon: null,
       name: "Platinum Bar",
       description: "75% Complete",
-      unlocked: progressPercentage >= 75,
+      unlocked: (lifetime?.has("m75") ?? false) || progressPercentage >= 75,
       image: "/assets/platinuumimage.png"
     },
     {
+      key: "m100" as AchievementKey,
       icon: <Trophy className="w-10 h-10 text-blue-400" />,
       name: "Diamond",
       description: "100% Complete!",
-      unlocked: progressPercentage >= 100,
+      unlocked: (lifetime?.has("m100") ?? false) || progressPercentage >= 100,
       image: null
     }
   ];
@@ -63,7 +71,7 @@ export const AchievementModal = ({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <img src="/treasureboximg.png" alt="Treasure" className="w-8 h-8" />
-            Your Achievements
+            My Treasure
           </DialogTitle>
           <DialogDescription className="text-base">
             Progress: {correctAnswers}/{totalQuestions} • {coins} Coins Collected

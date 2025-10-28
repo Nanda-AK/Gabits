@@ -29,8 +29,14 @@ const Lobby = () => {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (guest || !user) {
+        // Skip Supabase fetch for guests to avoid 400 error
+        const name = guest ? `Guest-${userId.slice(-4)}` : `Player-${userId.slice(-4)}`;
+        if (mounted) displayNameRef.current = name;
+        return;
+      }
       const prof = await getProfile(userId);
-      const name = prof?.full_name || (user?.email?.split("@")[0]) || (guest ? `Guest-${userId.slice(-4)}` : `Player-${userId.slice(-4)}`);
+      const name = prof?.full_name || (user?.email?.split("@")[0]) || `Player-${userId.slice(-4)}`;
       if (mounted) displayNameRef.current = name;
     })();
     return () => { mounted = false; };

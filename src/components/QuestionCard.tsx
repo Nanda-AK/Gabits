@@ -19,6 +19,7 @@ interface QuestionCardProps {
   totalQuestions: number;
   questionTime?: number;
   questionTimeLimit?: number;
+  showTimer?: boolean;
 }
 
 export const QuestionCard = ({
@@ -37,7 +38,8 @@ export const QuestionCard = ({
   questionNumber,
   totalQuestions,
   questionTime = 0,
-  questionTimeLimit = 30
+  questionTimeLimit = 30,
+  showTimer = true
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -70,35 +72,37 @@ export const QuestionCard = ({
           <div className="text-xs sm:text-sm font-semibold text-muted-foreground">
             Question {questionNumber} of {totalQuestions}
           </div>
-          {/* Per-Question Timer with Countdown */}
-          <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${
-            isTimeCritical 
-              ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse' 
-              : 'bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20'
-          }`}>
-            <Timer className={`w-3.5 h-3.5 transition-colors ${
-              isTimeCritical ? 'text-destructive' : 'text-secondary'
-            }`} />
-            <div className="flex flex-col items-start">
-              <span className={`text-[10px] sm:text-xs font-extrabold tabular-nums transition-colors ${
+          {/* Per-Question Timer with Countdown (hidden in practice mode) */}
+          {showTimer && (
+            <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${
+              isTimeCritical 
+                ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse' 
+                : 'bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20'
+            }`}>
+              <Timer className={`w-3.5 h-3.5 transition-colors ${
                 isTimeCritical ? 'text-destructive' : 'text-secondary'
-              }`}>
-                {timeRemaining}s
-              </span>
-              {isTimeCritical && (
-                <span className="text-[8px] text-destructive/70 font-semibold">Hurry up!</span>
-              )}
+              }`} />
+              <div className="flex flex-col items-start">
+                <span className={`text-[10px] sm:text-xs font-extrabold tabular-nums transition-colors ${
+                  isTimeCritical ? 'text-destructive' : 'text-secondary'
+                }`}>
+                  {timeRemaining}s
+                </span>
+                {isTimeCritical && (
+                  <span className="text-[8px] text-destructive/70 font-semibold">Hurry up!</span>
+                )}
+              </div>
+              {/* Progress bar showing time used */}
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-1000 ${
+                    isTimeCritical ? 'bg-destructive' : 'bg-secondary'
+                  }`}
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
             </div>
-            {/* Progress bar showing time used */}
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-1000 ${
-                  isTimeCritical ? 'bg-destructive' : 'bg-secondary'
-                }`}
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
+          )}
         </div>
         <div className="relative flex flex-col items-end">
           <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>

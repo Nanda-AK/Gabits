@@ -9,7 +9,7 @@ async function callOpenRouter(body: unknown): Promise<any | null> {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": typeof window !== "undefined" ? window.location.origin : "",
-      "X-Title": "Quest Coin Rise",
+      "X-Title": "Let's Mine",
     },
     body: JSON.stringify(body),
   });

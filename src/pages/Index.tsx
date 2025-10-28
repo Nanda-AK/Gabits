@@ -9,6 +9,7 @@ const Index = () => {
 
   const handleStartGame = (name: string, difficulty: 'easy' | 'moderate' | 'difficult') => {
     setPlayerName(name);
+    try { localStorage.setItem('player:name', name); } catch {}
     setSelectedDifficulty(difficulty);
     setGameStarted(true);
   };

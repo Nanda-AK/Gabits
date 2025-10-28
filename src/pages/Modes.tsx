@@ -30,12 +30,12 @@ const Modes = () => {
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5" /> Choose Mode
             </div>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">How do you want to play?</h1>
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Choose your path to mine more treasures</h1>
             <p className="text-muted-foreground mt-2">Select a mode to begin your journey.</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" className="rounded-full"><ChartNoAxesGantt className="w-4 h-4 mr-2"/>My Progress</Button>
-            <Button variant="secondary" className="rounded-full"><Trophy className="w-4 h-4 mr-2"/>Top Players</Button>
+            <Button onClick={() => navigate('/treasure')} variant="secondary" className="rounded-full"><ChartNoAxesGantt className="w-4 h-4 mr-2"/>My Treasure</Button>
+            <Button onClick={() => navigate('/leaderboard')} variant="secondary" className="rounded-full"><Trophy className="w-4 h-4 mr-2"/>Leaderboard</Button>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

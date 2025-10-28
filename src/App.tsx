@@ -5,10 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AccountMenu } from "@/components/auth/AccountMenu";
+import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import AuthCallback from "./pages/AuthCallback";
-import { AuthProvider } from "./contexts/AuthContext";
-import { AccountMenu } from "./components/auth/AccountMenu";
-import { OnboardingGate } from "./components/onboarding/OnboardingGate";
+import Leaderboard from "./pages/Leaderboard";
+import Treasure from "./pages/Treasure";
+import { GlobalLogo } from "@/components/GlobalLogo";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Modes from "./pages/Modes";
 import SoloMode from "./pages/SoloMode";
@@ -27,9 +30,9 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
-        <AccountMenu />
         <BrowserRouter>
+          <GlobalLogo />
+          <AccountMenu />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
@@ -44,9 +47,11 @@ const App = () => (
               <Route path="/modes/compete/friends" element={<BattleFriends />} />
               <Route path="/play" element={<Play />} />
               <Route path="/lobby/:code" element={<Lobby />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/treasure" element={<Treasure />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
             </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
         <OnboardingGate />

@@ -9,9 +9,10 @@ interface GameHeaderProps {
   onTreasureClick?: () => void;
   overallTime?: number;
   overallTimeLimit?: number;
+  showTimer?: boolean;
 }
 
-export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600 }: GameHeaderProps) => {
+export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600, showTimer = true }: GameHeaderProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -52,26 +53,28 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
             </div>
             <span className="text-sm sm:text-base font-bold text-destructive ml-0.5 sm:ml-1">{hearts}</span>
           </div>
-          {/* Overall Timer - Clean minimal design with time limit indicator */}
-          <div className={`flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 border-2 shadow-sm transition-all duration-300 ${
-            isOverallTimeCritical 
-              ? 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/40 animate-pulse' 
-              : 'bg-gradient-to-br from-accent/10 to-accent/5 border-accent/30'
-          }`}>
-            <Timer className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
-              isOverallTimeCritical ? 'text-destructive' : 'text-accent'
-            }`} />
-            <div className="flex flex-col items-center">
-              <span className={`text-xs sm:text-sm font-bold tabular-nums transition-colors ${
-                isOverallTimeCritical ? 'text-destructive' : 'text-foreground'
-              }`}>
-                {formatTime(timeRemaining)}
-              </span>
-              {isOverallTimeCritical && (
-                <span className="text-[8px] text-destructive/70 font-semibold">Time Left!</span>
-              )}
+          {/* Overall Timer - hidden in practice mode */}
+          {showTimer && (
+            <div className={`flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 border-2 shadow-sm transition-all duration-300 ${
+              isOverallTimeCritical 
+                ? 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/40 animate-pulse' 
+                : 'bg-gradient-to-br from-accent/10 to-accent/5 border-accent/30'
+            }`}>
+              <Timer className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                isOverallTimeCritical ? 'text-destructive' : 'text-accent'
+              }`} />
+              <div className="flex flex-col items-center">
+                <span className={`text-xs sm:text-sm font-bold tabular-nums transition-colors ${
+                  isOverallTimeCritical ? 'text-destructive' : 'text-foreground'
+                }`}>
+                  {formatTime(timeRemaining)}
+                </span>
+                {isOverallTimeCritical && (
+                  <span className="text-[8px] text-destructive/70 font-semibold">Time Left!</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Chest + Coins */}
           <div className="relative flex items-center gap-1.5 sm:gap-2 lg:gap-3">

@@ -1,4 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+
 import { questions, getDifficultyCoins, getHintCost } from "@/data/questions";
 import type { Question, Difficulty } from "@/data/questions";
 import { QuestionCard } from "./QuestionCard";
@@ -12,6 +14,14 @@ import { toast } from "@/hooks/use-toast";
 import { aiBattlePick } from "@/services/openrouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
+import { getAchievements, unlockAchievement } from "@/services/achievements";
+import type { AchievementKey } from "@/services/achievements";
+import { incrementTotals } from "@/services/totals";
+
+interface QuizGameProps {
+  difficulty?: Difficulty;
+  mode?: 'practice' | 'speed' | 'battle-ai';
+}
 
 // Utility: Fisher-Yates shuffle
 function shuffleArray<T>(arr: T[]): T[] {
@@ -76,12 +86,9 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty): Question[] {
   return newQuestions;
 }
 
-interface QuizGameProps {
-  difficulty?: Difficulty;
-  mode?: 'practice' | 'speed' | 'battle-ai';
-}
-
 export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGameProps) => {
+  const location = useLocation();
+  const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
   const userId = user?.id;
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -109,6 +116,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [aiCorrectAnswers, setAiCorrectAnswers] = useState(0);
   const aiAnsweredFor = useRef<Set<number>>(new Set());
   const [milestonesState, setMilestonesState] = useState({ m10: false, m25: false, m50: false, m75: false, m100: false });
+  const [lifetimeAchievements, setLifetimeAchievements] = useState<Set<AchievementKey>>(new Set());
 
   // Load daily set from Supabase for authenticated users; fallback to local for guests
   const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
@@ -223,17 +231,31 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     })();
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
-  
-  // Timer effects
+
+  // Load lifetime achievements for authenticated users
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!userId || guest) { setLifetimeAchievements(new Set()); return; }
+      try {
+        const set = await getAchievements(userId);
+        if (!cancelled) setLifetimeAchievements(set);
+      } catch { if (!cancelled) setLifetimeAchievements(new Set()); }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, guest]);
+  
+  // Timer effects (disabled in Solo Practice route)
+  useEffect(() => {
+    if (practiceMode) return; // no overall timer in practice
     const overallInterval = setInterval(() => {
       setOverallTime(prev => prev + 1);
     }, 1000);
-    
     return () => clearInterval(overallInterval);
-  }, []);
+  }, [practiceMode]);
   
   useEffect(() => {
+    if (practiceMode) return; // no per-question timer in practice
     if (!showResult && !gameCompleted) {
       const questionInterval = setInterval(() => {
         setQuestionTime(prev => {
@@ -248,15 +270,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       
       return () => clearInterval(questionInterval);
     }
-  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit]);
+  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode]);
   
-  // Overall time limit check
+  // Overall time limit check (disabled in practice mode)
   useEffect(() => {
+    if (practiceMode) return;
     if (overallTime >= overallTimeLimit && !gameCompleted) {
       setIsTimeUp(true);
       setGameCompleted(true);
     }
-  }, [overallTime, overallTimeLimit, gameCompleted]);
+  }, [overallTime, overallTimeLimit, gameCompleted, practiceMode]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -264,6 +287,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setTimeout(() => {
       setCoinAnimations(prev => prev.filter(anim => anim.id !== id));
     }, 2600);
+  };
+
+  // Persist wallet coins in localStorage (cumulative outside the current session)
+  const addToWallet = (amount: number) => {
+    try {
+      const curr = Number(localStorage.getItem('player:coins') || '0');
+      const next = Math.max(0, curr + amount);
+      localStorage.setItem('player:coins', String(next));
+    } catch {}
   };
   
   const handleTimeUp = () => {
@@ -299,43 +331,71 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         setCoins(prev => prev + earned);
         setCoinGain({ amount: earned, id: Date.now() });
         triggerCoinAnimation(earned);
-        // clear badge after a moment
-        setTimeout(() => setCoinGain(cg => (cg && cg.id ? null : null)), 1800);
+        addToWallet(earned);
+        if (userId && !guest) {
+          incrementTotals(userId, earned, 0).catch(() => {});
+        }
       }
+      // Increment correct count and award milestones
       setCorrectAnswers(prev => {
         const newCount = prev + 1;
         const ratio = newCount / total; // 0..1 for the daily set of 10
+        if (userId && !guest) {
+          incrementTotals(userId, 0, 1).catch(() => {});
+        }
         // 10% milestone: +5 coins
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
           milestonesAwarded.current.m10 = true;
           setMilestonesState(s => ({ ...s, m10: true }));
           setCoins(c => c + 5);
+          addToWallet(5);
           setCoinGain({ amount: 5, id: Date.now() + 1 });
           triggerCoinAnimation(5);
+          if (userId && !guest) {
+            incrementTotals(userId, 5, 0).catch(() => {});
+            unlockAchievement(userId, "m10", { date: today, correct: newCount, total }).catch(() => {});
+            setLifetimeAchievements(prev => new Set(prev).add("m10"));
+          }
           toast({ title: "Milestone reached!", description: "10% complete — +5 coins" });
         }
         // 25% Silver
         if (!milestonesAwarded.current.m25 && ratio >= 0.25) {
           milestonesAwarded.current.m25 = true;
           setMilestonesState(s => ({ ...s, m25: true }));
+          if (userId && !guest) {
+            unlockAchievement(userId, "m25", { date: today, correct: newCount, total }).catch(() => {});
+            setLifetimeAchievements(prev => new Set(prev).add("m25"));
+          }
           toast({ title: "Milestone reached!", description: "25% complete — Silver bar earned" });
         }
         // 50% Gold
         if (!milestonesAwarded.current.m50 && ratio >= 0.50) {
           milestonesAwarded.current.m50 = true;
           setMilestonesState(s => ({ ...s, m50: true }));
+          if (userId && !guest) {
+            unlockAchievement(userId, "m50", { date: today, correct: newCount, total }).catch(() => {});
+            setLifetimeAchievements(prev => new Set(prev).add("m50"));
+          }
           toast({ title: "Milestone reached!", description: "50% complete — Gold bar earned" });
         }
         // 75% Platinum
         if (!milestonesAwarded.current.m75 && ratio >= 0.75) {
           milestonesAwarded.current.m75 = true;
           setMilestonesState(s => ({ ...s, m75: true }));
+          if (userId && !guest) {
+            unlockAchievement(userId, "m75", { date: today, correct: newCount, total }).catch(() => {});
+            setLifetimeAchievements(prev => new Set(prev).add("m75"));
+          }
           toast({ title: "Milestone reached!", description: "75% complete — Platinum bar earned" });
         }
         // 100% Diamond
         if (!milestonesAwarded.current.m100 && ratio >= 1.0) {
           milestonesAwarded.current.m100 = true;
           setMilestonesState(s => ({ ...s, m100: true }));
+          if (userId && !guest) {
+            unlockAchievement(userId, "m100", { date: today, correct: newCount, total }).catch(() => {});
+            setLifetimeAchievements(prev => new Set(prev).add("m100"));
+          }
           toast({ title: "Milestone reached!", description: "100% complete — Diamond earned" });
         }
         return newCount;
@@ -420,6 +480,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => {});
   }, [userId, guest, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
 
+  // Persist last seen progress snapshot for Treasure page (local)
+  useEffect(() => {
+    try {
+      localStorage.setItem('player:lastProgressCorrect', String(correctAnswers));
+      localStorage.setItem('player:lastProgressTotal', String(total));
+    } catch {}
+  }, [correctAnswers, total]);
+
   if (loadingDaily) {
     return <div className="min-h-screen flex items-center justify-center">Loading daily set...</div>;
   }
@@ -467,6 +535,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         onTreasureClick={() => setShowAchievements(true)}
         overallTime={overallTime}
         overallTimeLimit={overallTimeLimit}
+        showTimer={!practiceMode}
       />
       
       {/* Achievement Modal */}
@@ -476,6 +545,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         coins={coins}
         correctAnswers={correctAnswers}
         totalQuestions={total}
+        lifetime={lifetimeAchievements}
       />
 
       {/* Main Game Area */}
@@ -503,8 +573,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               questionReward={questionReward}
               questionNumber={currentQuestion + 1}
               totalQuestions={total}
-              questionTime={questionTime}
-              questionTimeLimit={questionTimeLimit}
+              questionTime={!practiceMode ? questionTime : undefined}
+              questionTimeLimit={!practiceMode ? questionTimeLimit : undefined}
+              showTimer={!practiceMode}
             />
 
           </div>

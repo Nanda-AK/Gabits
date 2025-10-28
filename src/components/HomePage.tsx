@@ -187,7 +187,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
             <div className="inline-block">
               <div className="relative">
                 <h1 className="text-6xl sm:text-7xl md:text-8xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient drop-shadow-2xl">
-                  Quest Coin Rise
+                  Let’s Mine
                 </h1>
                 <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 blur-2xl -z-10 animate-pulse shadow-2xl" />
                 
@@ -203,14 +203,6 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
             </div>
           )}
             </div>
-            
-            <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-700 max-w-2xl mx-auto leading-relaxed">
-              Master Math & Logic Through Gamified Learning
-            </p>
-            
-            <p className="text-base sm:text-lg text-gray-600 max-w-xl mx-auto">
-              Challenge yourself with 10 engaging questions daily. Collect coins, unlock achievements, and climb to the top!
-            </p>
           </div>
 
           {/* Feature Cards */
@@ -278,7 +270,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
               >
                 <span className="relative z-10 flex items-center gap-3">
                   <PlayCircle className={`w-8 h-8 transition-transform duration-300 ${isHovered ? 'rotate-90' : ''}`} />
-                  Get Started
+                  Let's Start Mining
                   <PlayCircle className={`w-8 h-8 transition-transform duration-300 ${isHovered ? '-rotate-90' : ''}`} />
                 </span>
                 
@@ -425,7 +417,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Sign in to Quest Coin Rise</DialogTitle>
+            <DialogTitle>Sign in to Let’s Mine</DialogTitle>
           </DialogHeader>
           <AuthPanel />
         </DialogContent>
