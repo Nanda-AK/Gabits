@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlayCircle, Trophy, Brain, Zap, Star, User } from "lucide-react";
+import { PlayCircle, Brain, User } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -205,58 +205,7 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
             </div>
           </div>
 
-          {/* Feature Cards */
-          }
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 my-12">
-            {[
-              { 
-                icon: <Brain className="w-8 h-8" />, 
-                label: "Smart Questions", 
-                color: "from-blue-500 to-cyan-500",
-                emoji: "🧠",
-                description: "AI-curated challenges"
-              },
-              { 
-                icon: <Trophy className="w-8 h-8" />, 
-                label: "Achievements", 
-                color: "from-purple-500 to-pink-500",
-                emoji: "🏆",
-                description: "Unlock rewards"
-              },
-              { 
-                icon: <Zap className="w-8 h-8" />, 
-                label: "Live Timers", 
-                color: "from-orange-500 to-red-500",
-                emoji: "⚡",
-                description: "Track your speed"
-              },
-              { 
-                icon: <Star className="w-8 h-8" />, 
-                label: "Daily Rewards", 
-                color: "from-green-500 to-teal-500",
-                emoji: "⭐",
-                description: "Earn daily coins"
-              },
-            ].map((feature, idx) => (
-              <div
-                key={idx}
-                className="group relative bg-white/70 backdrop-blur-md rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-white/50 hover:border-white/80"
-                style={{
-                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06)'
-                }}
-              >
-                <div className="absolute -top-3 -right-3 text-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:rotate-12">
-                  {feature.emoji}
-                </div>
-                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${feature.color} text-white mb-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg`}>
-                  {feature.icon}
-                </div>
-                <p className="font-bold text-gray-800 text-sm sm:text-base mb-1">{feature.label}</p>
-                <p className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{feature.description}</p>
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 to-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            ))}
-          </div>
+          {/* Feature Cards removed per product requirements */}
 
           {/* Name & Difficulty Form */}
           {!showForm ? (

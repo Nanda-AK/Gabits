@@ -105,6 +105,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [blinkHeart, setBlinkHeart] = useState(false);
   const [secondChance, setSecondChance] = useState(false);
   const [secondChanceOpen, setSecondChanceOpen] = useState(false);
+  const [lockedWrongIndex, setLockedWrongIndex] = useState<number | null>(null);
   const [questionReward, setQuestionReward] = useState(0);
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -166,6 +167,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setShowHint(false);
     setSelectedAnswer(null);
     setSecondChance(false);
+    setLockedWrongIndex(null);
     setBlinkHeart(false);
     setShowResult(false);
     setQuestionTime(0); // Reset question timer
@@ -412,6 +414,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         setSecondChance(true);
         setBlinkHeart(true);
         setSecondChanceOpen(true);
+        setLockedWrongIndex(selectedAnswer);
+        setSelectedAnswer(null); // force new selection from remaining options
         // do not show result yet, and do not change hearts
         return;
       }
@@ -576,6 +580,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               questionTime={!practiceMode ? questionTime : undefined}
               questionTimeLimit={!practiceMode ? questionTimeLimit : undefined}
               showTimer={!practiceMode}
+              lockedWrongIndex={lockedWrongIndex}
+              secondChance={secondChance}
             />
 
           </div>

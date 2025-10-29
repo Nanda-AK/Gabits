@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins, Award, Medal, Trophy } from "lucide-react";
+import { Coins } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
@@ -22,8 +22,7 @@ function useSnapshot() {
 
 const Treasure = () => {
   const navigate = useNavigate();
-  const { coins, correct, total } = useSnapshot();
-  const pct = useMemo(() => (total > 0 ? (correct / total) * 100 : 0), [correct, total]);
+  const { coins } = useSnapshot();
   const { user, guest } = useAuth();
   const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
 
@@ -37,13 +36,7 @@ const Treasure = () => {
     return () => { cancelled = true; };
   }, [user, guest]);
 
-  const achievements = [
-    { icon: <Medal className="w-10 h-10 text-amber-600" />, name: "10% Progress", description: "+5 Coins", unlocked: pct >= 10, image: null },
-    { icon: null, name: "Silver Bar", description: "25% Complete", unlocked: pct >= 25, image: "/assets/silverimage.png" },
-    { icon: null, name: "Gold Bar", description: "50% Complete", unlocked: pct >= 50, image: "/assets/goldimage.png" },
-    { icon: null, name: "Platinum Bar", description: "75% Complete", unlocked: pct >= 75, image: "/assets/platinuumimage.png" },
-    { icon: <Trophy className="w-10 h-10 text-blue-400" />, name: "Diamond", description: "100% Complete!", unlocked: pct >= 100, image: null },
-  ];
+  // Note: Weekly progress data not yet tracked server-side; showing required UI only
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
@@ -58,12 +51,19 @@ const Treasure = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Progress</CardTitle>
+              <CardTitle className="text-lg">Week Progress</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-muted-foreground mb-2">{correct}/{total} correct</div>
-              <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
-                <div className="h-full bg-amber-500" style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+              <div className="flex items-baseline gap-3 mb-3">
+                <div className="text-4xl font-black text-amber-600">7</div>
+                <div className="text-xs text-muted-foreground">days</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
+                  <div key={d} className="px-2.5 py-1 rounded-full border bg-white/70 text-xs font-semibold text-gray-700">
+                    {d}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -110,37 +110,7 @@ const Treasure = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Achievements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {achievements.map((a) => (
-                <div key={a.name} className={`relative flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${a.unlocked ? 'bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/40' : 'bg-muted/20 border-muted/30 opacity-40 grayscale'}`}>
-                  {a.unlocked && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg">
-                      <Award className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <div className="mb-2">
-                    {a.image ? (
-                      <img src={a.image} alt={a.name} className="w-16 h-12 object-contain drop-shadow" />
-                    ) : a.icon ? (
-                      <div className="w-16 h-12 flex items-center justify-center">{a.icon}</div>
-                    ) : (
-                      <div className="w-16 h-12 text-4xl flex items-center justify-center">💎</div>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs font-bold">{a.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{a.description}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Bottom Achievements grid removed; lifetime section above is the only achievements display */}
       </div>
     </div>
   );

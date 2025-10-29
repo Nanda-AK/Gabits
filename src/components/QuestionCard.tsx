@@ -20,6 +20,8 @@ interface QuestionCardProps {
   questionTime?: number;
   questionTimeLimit?: number;
   showTimer?: boolean;
+  lockedWrongIndex?: number | null;
+  secondChance?: boolean;
 }
 
 export const QuestionCard = ({
@@ -39,7 +41,9 @@ export const QuestionCard = ({
   totalQuestions,
   questionTime = 0,
   questionTimeLimit = 30,
-  showTimer = true
+  showTimer = true,
+  lockedWrongIndex = null,
+  secondChance = false,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -132,13 +136,18 @@ export const QuestionCard = ({
         {question.options.map((option, index) => {
           const isSelected = selectedAnswer === index;
           const isCorrectAnswer = index === question.correctAnswer;
+          const isLockedWrong = !!secondChance && lockedWrongIndex === index;
           
           let buttonClass = "w-full justify-start text-left h-auto py-1.5 sm:py-2 lg:py-3 px-2.5 sm:px-3 lg:px-4 text-xs sm:text-sm lg:text-base font-medium transition-all duration-200 rounded-lg sm:rounded-xl border-2 ";
           
           if (!showResult) {
-            buttonClass += isSelected
-              ? "bg-secondary/20 border-secondary text-secondary-foreground shadow-md scale-[1.02]"
-              : "bg-card border-border hover:border-secondary/50 hover:bg-muted/50 hover:scale-[1.01]";
+            if (isLockedWrong) {
+              buttonClass += "bg-destructive/20 border-destructive text-destructive-foreground cursor-not-allowed";
+            } else {
+              buttonClass += isSelected
+                ? "bg-secondary/20 border-secondary text-secondary-foreground shadow-md scale-[1.02]"
+                : "bg-card border-border hover:border-secondary/50 hover:bg-muted/50 hover:scale-[1.01]";
+            }
           } else {
             if (isCorrectAnswer) {
               buttonClass += "bg-primary/20 border-primary text-primary-foreground animate-pulse-success";
@@ -153,7 +162,7 @@ export const QuestionCard = ({
             <Button
               key={index}
               onClick={() => onAnswerSelect(index)}
-              disabled={showResult}
+              disabled={showResult || isLockedWrong}
               className={buttonClass}
               variant="outline"
             >
@@ -235,9 +244,9 @@ export const QuestionCard = ({
         ) : (
           <Button
             onClick={onNext}
-            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-primary/50 active:scale-[0.98] py-1 sm:py-1.5"
+            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500/50 active:scale-[0.98] py-1 sm:py-1.5"
           >
-            Next
+            {questionNumber === totalQuestions ? 'Finish' : 'Next'}
             <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
           </Button>
         )}
