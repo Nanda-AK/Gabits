@@ -11,7 +11,6 @@ import { CoinAnimation } from "./CoinAnimation";
 import { AchievementModal } from "./AchievementModal";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { aiBattlePick } from "@/services/openrouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
 import { getAchievements, unlockAchievement } from "@/services/achievements";
@@ -114,8 +113,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
   const [overallTimeLimit] = useState(600); // 10 minutes total
   const [isTimeUp, setIsTimeUp] = useState(false);
-  const [aiCorrectAnswers, setAiCorrectAnswers] = useState(0);
-  const aiAnsweredFor = useRef<Set<number>>(new Set());
+  const [aiScore, setAiScore] = useState(0);
+  const [playerPoints, setPlayerPoints] = useState(0);
+  const questionStartAtRef = useRef<number>(Date.now());
+  const studentWinProbRef = useRef<number>(0.6 + Math.random() * 0.1); // 60-70% student win bias
   const [milestonesState, setMilestonesState] = useState({ m10: false, m25: false, m50: false, m75: false, m100: false });
   const [lifetimeAchievements, setLifetimeAchievements] = useState<Set<AchievementKey>>(new Set());
 
@@ -157,7 +158,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   useEffect(() => {
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
-    aiAnsweredFor.current = new Set();
   }, [dailyQuestions]);
 
   // Initialize per-question reward when question changes
@@ -183,29 +183,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     }
   }, [currentQuestion, baseReward, question, mode]);
 
-  // Battle-AI: have the bot pick an answer for the current question once
-  useEffect(() => {
-    if (mode !== 'battle-ai' || !question) return;
-    if (aiAnsweredFor.current.has(question.id)) return;
-    let cancelled = false;
-    const qid = question.id;
-    (async () => {
-      try {
-        const res = await aiBattlePick(question);
-        if (cancelled) return;
-        aiAnsweredFor.current.add(qid);
-        if (typeof res.index === 'number' && res.index === question.correctAnswer) {
-          setAiCorrectAnswers(prev => prev + 1);
-        }
-        if (res.commentary) {
-          toast({ title: "AI Bot", description: res.commentary });
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [mode, question]);
+  // Battle-AI: we no longer pre-pick AI answers; decision happens on Check click per round
 
   // Track awarded milestones for the current daily set only
   const milestonesAwarded = useRef({ m10: false, m25: false, m50: false, m75: false, m100: false });
@@ -249,15 +227,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   
   // Timer effects (disabled in Solo Practice route)
   useEffect(() => {
-    if (practiceMode) return; // no overall timer in practice
+    if (practiceMode || mode === 'battle-ai') return; // no overall timer in practice or battle AI
     const overallInterval = setInterval(() => {
       setOverallTime(prev => prev + 1);
     }, 1000);
     return () => clearInterval(overallInterval);
-  }, [practiceMode]);
+  }, [practiceMode, mode]);
   
   useEffect(() => {
-    if (practiceMode) return; // no per-question timer in practice
+    if (practiceMode || mode === 'battle-ai') return; // no per-question timer in practice or battle AI
     if (!showResult && !gameCompleted) {
       const questionInterval = setInterval(() => {
         setQuestionTime(prev => {
@@ -272,7 +250,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       
       return () => clearInterval(questionInterval);
     }
-  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode]);
+  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode, mode]);
   
   // Overall time limit check (disabled in practice mode)
   useEffect(() => {
@@ -327,13 +305,40 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     if (correct) {
       setIsCorrect(true);
       setShowResult(true);
+      // Battle AI round resolution when student correct
+      if (mode === 'battle-ai') {
+        const studentElapsed = Date.now() - questionStartAtRef.current;
+        const studentShouldWin = Math.random() < studentWinProbRef.current;
+        // Decide AI correctness and speed
+        const aiWillBeCorrect = studentShouldWin ? Math.random() < 0.5 : true; // sometimes let AI be wrong even if student should win
+        let aiElapsed = Math.max(1200, Math.min(8000, Math.round(studentElapsed + (studentShouldWin ? 500 + Math.random()*1500 : -500 - Math.random()*1500))));
+        let studentWinsRound = false;
+        if (!aiWillBeCorrect) {
+          // AI wrong => student wins the point implicitly
+          studentWinsRound = true;
+        } else {
+          // both correct, tiebreaker: faster time wins the round point
+          if (aiElapsed < studentElapsed) {
+            setAiScore(prev => prev + 1);
+            studentWinsRound = false;
+          } else {
+            studentWinsRound = true;
+          }
+        }
+        if (studentWinsRound) setPlayerPoints(p => p + 1);
+      }
       // Add remaining per-question reward (after hints used)
       const earned = Math.max(0, questionReward);
       if (earned > 0) {
         setCoins(prev => prev + earned);
-        setCoinGain({ amount: earned, id: Date.now() });
+        const gainId = Date.now();
+        setCoinGain({ amount: earned, id: gainId });
         triggerCoinAnimation(earned);
         addToWallet(earned);
+        // Clear coin gain notification after 2 seconds
+        setTimeout(() => {
+          setCoinGain(prev => prev?.id === gainId ? null : prev);
+        }, 2000);
         if (userId && !guest) {
           incrementTotals(userId, earned, 0).catch(() => {});
         }
@@ -351,8 +356,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           setMilestonesState(s => ({ ...s, m10: true }));
           setCoins(c => c + 5);
           addToWallet(5);
-          setCoinGain({ amount: 5, id: Date.now() + 1 });
+          const gainId = Date.now() + 1;
+          setCoinGain({ amount: 5, id: gainId });
           triggerCoinAnimation(5);
+          // Clear coin gain notification after 2 seconds
+          setTimeout(() => {
+            setCoinGain(prev => prev?.id === gainId ? null : prev);
+          }, 2000);
           if (userId && !guest) {
             incrementTotals(userId, 5, 0).catch(() => {});
             unlockAchievement(userId, "m10", { date: today, correct: newCount, total }).catch(() => {});
@@ -422,6 +432,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       // Second wrong: lose one heart and end question
       setIsCorrect(false);
       setShowResult(true);
+      if (mode === 'battle-ai') {
+        // Student wrong on final attempt: decide AI outcome in favor of AI unless studentShouldWin flips it
+        const studentShouldWin = Math.random() < studentWinProbRef.current;
+        if (!studentShouldWin) {
+          setAiScore(prev => prev + 1);
+        }
+        // if studentShouldWin, we treat as both wrong: no AI point
+      }
       setHearts(prev => Math.max(0, prev - 1));
       setBlinkHeart(false);
       setSecondChance(false);
@@ -468,8 +486,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setOverallTime(0);
     setQuestionTime(0);
     setIsTimeUp(false);
-    setAiCorrectAnswers(0);
-    aiAnsweredFor.current = new Set();
+    setAiScore(0);
+    setPlayerPoints(0);
+    questionStartAtRef.current = Date.now();
   };
 
   // Persist progress snapshot for authenticated users
@@ -504,8 +523,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     return (
       <ResultScreen
         coins={coins}
-        correctAnswers={correctAnswers}
-        aiScore={mode === 'battle-ai' ? aiCorrectAnswers : undefined}
+        correctAnswers={mode === 'battle-ai' ? playerPoints : correctAnswers}
+        aiScore={mode === 'battle-ai' ? aiScore : undefined}
         opponentName={mode === 'battle-ai' ? 'AI Bot' : undefined}
         onRestart={handleRestart}
         gameOver={isTimeUp}
@@ -539,7 +558,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         onTreasureClick={() => setShowAchievements(true)}
         overallTime={overallTime}
         overallTimeLimit={overallTimeLimit}
-        showTimer={!practiceMode}
+        showTimer={!practiceMode && mode !== 'battle-ai'}
       />
       
       {/* Achievement Modal */}
@@ -555,9 +574,17 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       {/* Main Game Area */}
       <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
-          {/* Left: Monkey Progress */}
+          {/* Left: AI Panel in Battle-AI, else Monkey Progress */}
           <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
-            <MonkeyProgress progress={correctAnswers} total={total} />
+            {mode === 'battle-ai' ? (
+              <div className="w-full max-w-[180px] bg-white/70 backdrop-blur rounded-xl border p-3 shadow flex flex-col items-center gap-3">
+                <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
+                <div className="text-sm font-bold">AI Answer:</div>
+                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold">Answer Masked</div>
+              </div>
+            ) : (
+              <MonkeyProgress progress={correctAnswers} total={total} />
+            )}
           </div>
 
           {/* Center: Question */}
@@ -577,17 +604,28 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               questionReward={questionReward}
               questionNumber={currentQuestion + 1}
               totalQuestions={total}
-              questionTime={!practiceMode ? questionTime : undefined}
-              questionTimeLimit={!practiceMode ? questionTimeLimit : undefined}
-              showTimer={!practiceMode}
+              questionTime={mode !== 'battle-ai' && !practiceMode ? questionTime : undefined}
+              questionTimeLimit={mode !== 'battle-ai' && !practiceMode ? questionTimeLimit : undefined}
+              showTimer={mode !== 'battle-ai' && !practiceMode}
               lockedWrongIndex={lockedWrongIndex}
               secondChance={secondChance}
+              difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
             />
 
           </div>
 
-          {/* Right column intentionally left empty (design no longer shows rewards box) */}
-          <div className="lg:col-span-3" />
+          {/* Right column: User panel in Battle-AI */}
+          <div className="lg:col-span-3">
+            {mode === 'battle-ai' && (
+              <div className="w-full bg-white/70 backdrop-blur rounded-xl border p-4 shadow flex flex-col items-center gap-3">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl">🙂</div>
+                <div className="text-sm font-bold">Your Answer:</div>
+                <div className="min-w-[72px] text-center px-4 py-2 rounded-md border bg-gray-50 text-gray-800 text-base font-extrabold">
+                  {selectedAnswer === null ? '-' : String.fromCharCode(65 + selectedAnswer)}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       {/* Second chance modal */}

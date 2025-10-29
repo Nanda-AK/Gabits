@@ -44,11 +44,11 @@ const BattleAI = () => {
             <p className="text-muted-foreground">{loading ? "Summoning your rival..." : taunt}</p>
           </div>
           <div>
-            <p className="text-sm mb-2">Select Difficulty</p>
+            <p className="text-sm mb-2">Select AI Type</p>
             <div className="space-y-3">
-              <DiffBtn v="easy" cur={difficulty} onPick={setDifficulty}>Easy</DiffBtn>
-              <DiffBtn v="moderate" cur={difficulty} onPick={setDifficulty}>Moderate</DiffBtn>
-              <DiffBtn v="difficult" cur={difficulty} onPick={setDifficulty}>Hard</DiffBtn>
+              <DiffBtn v="easy" cur={difficulty} onPick={setDifficulty}>Steady AI</DiffBtn>
+              <DiffBtn v="moderate" cur={difficulty} onPick={setDifficulty}>Smart AI</DiffBtn>
+              <DiffBtn v="difficult" cur={difficulty} onPick={setDifficulty}>Speed AI</DiffBtn>
             </div>
           </div>
           <Button className="w-full rounded-full" onClick={start} disabled={!difficulty}>Start Battle</Button>

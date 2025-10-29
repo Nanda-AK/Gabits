@@ -116,7 +116,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
               {coins}
             </span>
             {coinGain && coinGain.amount > 0 && (
-              <div className="absolute -bottom-4 right-0 px-2 py-0.5 text-xs font-extrabold rounded-full bg-amber-100 text-amber-800 border border-amber-300 shadow">
+              <div className="absolute -bottom-4 right-0 px-2 py-0.5 text-xs font-extrabold rounded-full bg-amber-100 text-amber-800 border border-amber-300 shadow animate-fade-out">
                 +{coinGain.amount}
               </div>
             )}

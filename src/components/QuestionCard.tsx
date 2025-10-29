@@ -22,6 +22,7 @@ interface QuestionCardProps {
   showTimer?: boolean;
   lockedWrongIndex?: number | null;
   secondChance?: boolean;
+  difficultyLabel?: string;
 }
 
 export const QuestionCard = ({
@@ -44,6 +45,7 @@ export const QuestionCard = ({
   showTimer = true,
   lockedWrongIndex = null,
   secondChance = false,
+  difficultyLabel,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -110,7 +112,7 @@ export const QuestionCard = ({
         </div>
         <div className="relative flex flex-col items-end">
           <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
-            {question.difficulty.toUpperCase()} • {showHint ? questionReward : coinValue} coins
+            {(difficultyLabel ?? question.difficulty.toUpperCase())} • {showHint ? questionReward : coinValue} coins
           </div>
           {/* Coin animation start anchor near difficulty badge */}
           <div id="coin-source" className="absolute -right-2 top-1/2 w-3 h-3"></div>
