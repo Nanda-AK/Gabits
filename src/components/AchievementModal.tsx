@@ -39,7 +39,7 @@ export const AchievementModal = ({ open, onOpenChange }: AchievementModalProps) 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 py-2">
           <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100">
             <img src="/assets/silverimage.png" alt="Silver" className="w-20 h-16 object-contain drop-shadow" />
             <div className="mt-2 text-sm font-semibold text-muted-foreground">Silver</div>
@@ -54,6 +54,23 @@ export const AchievementModal = ({ open, onOpenChange }: AchievementModalProps) 
             <img src="/assets/platinuumimage.png" alt="Platinum" className="w-20 h-16 object-contain drop-shadow" />
             <div className="mt-2 text-sm font-semibold text-muted-foreground">Platinum</div>
             <div className="text-2xl font-extrabold text-indigo-700">{counts.platinum}</div>
+          </div>
+          <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-cyan-50 to-blue-50">
+            {/* Diamond icon (inline SVG) */}
+            <svg width="80" height="64" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg" aria-label="Diamond" role="img" className="drop-shadow">
+              <defs>
+                <linearGradient id="gradDiamond" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#E0F7FA" />
+                  <stop offset="50%" stopColor="#B2EBF2" />
+                  <stop offset="100%" stopColor="#81D4FA" />
+                </linearGradient>
+              </defs>
+              <polygon points="8,16 20,2 44,2 56,16 32,46" fill="url(#gradDiamond)" stroke="#4FC3F7" strokeWidth="2" />
+              <polyline points="20,2 32,16 44,2" fill="none" stroke="#4FC3F7" strokeWidth="2" />
+              <polyline points="8,16 32,16 56,16" fill="none" stroke="#4FC3F7" strokeWidth="2" />
+            </svg>
+            <div className="mt-2 text-sm font-semibold text-muted-foreground">Diamond</div>
+            <div className="text-2xl font-extrabold text-sky-700">{counts.diamond}</div>
           </div>
         </div>
       </DialogContent>

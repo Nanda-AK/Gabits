@@ -9,13 +9,15 @@ import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
 import { AchievementModal } from "./AchievementModal";
+import { BattleSummary } from "./BattleSummary";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
 import { getAchievements, unlockAchievement } from "@/services/achievements";
 import type { AchievementKey } from "@/services/achievements";
 import { incrementTotals } from "@/services/totals";
+import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
+import type { Winner } from "@/services/battle";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
@@ -119,6 +121,35 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const studentWinProbRef = useRef<number>(0.6 + Math.random() * 0.1); // 60-70% student win bias
   const [milestonesState, setMilestonesState] = useState({ m10: false, m25: false, m50: false, m75: false, m100: false });
   const [lifetimeAchievements, setLifetimeAchievements] = useState<Set<AchievementKey>>(new Set());
+  // Battle AI (post-quiz resolution)
+  const [battleStarted, setBattleStarted] = useState(mode !== 'battle-ai');
+  const [studentCorrectList, setStudentCorrectList] = useState<boolean[]>([]);
+  const [studentTimesList, setStudentTimesList] = useState<number[]>([]);
+  const [aiCorrectList, setAiCorrectList] = useState<boolean[]>([]);
+  const [aiTimesList, setAiTimesList] = useState<number[]>([]);
+  const [winnersList, setWinnersList] = useState<Winner[]>([]);
+  const [battleDone, setBattleDone] = useState(false);
+
+  // Infer a simple math type for HR summary from the active question set
+  const inferMathType = (qs: Question[]): string => {
+    let add = 0, sub = 0, mul = 0, div = 0;
+    const inc = (h: string, q: string) => {
+      const H = (h || '').toLowerCase();
+      const Q = (q || '').toLowerCase();
+      if (H.includes('add') || Q.includes('add') || Q.includes('sum') || Q.includes('total')) add++;
+      if (H.includes('subtract') || Q.includes('remain') || Q.includes('left')) sub++;
+      if (H.includes('multiply') || Q.includes('multiply') || Q.includes('per hour')) mul++;
+      if (H.includes('divide') || Q.includes('divide') || Q.includes('each')) div++;
+    };
+    qs.forEach(q => inc(q.hint, q.question));
+    const arr = [
+      { k: 'addition', v: add },
+      { k: 'subtraction', v: sub },
+      { k: 'multiplication', v: mul },
+      { k: 'division', v: div },
+    ].sort((a,b) => b.v - a.v);
+    return arr[0].v === 0 ? 'mixed' : arr[0].k;
+  };
 
   // Load daily set from Supabase for authenticated users; fallback to local for guests
   const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
@@ -180,6 +211,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         const timeLimit = question.difficulty === 'easy' ? 45 : question.difficulty === 'moderate' ? 35 : 25;
         setQuestionTimeLimit(timeLimit);
       }
+    }
+    if (mode === 'battle-ai') {
+      // Start timing immediately when question becomes visible
+      questionStartAtRef.current = Date.now();
     }
   }, [currentQuestion, baseReward, question, mode]);
 
@@ -368,7 +403,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             unlockAchievement(userId, "m10", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m10"));
           }
-          toast({ title: "Milestone reached!", description: "10% complete — +5 coins" });
+          // removed milestone toast
         }
         // 25% Silver
         if (!milestonesAwarded.current.m25 && ratio >= 0.25) {
@@ -378,7 +413,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             unlockAchievement(userId, "m25", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m25"));
           }
-          toast({ title: "Milestone reached!", description: "25% complete — Silver bar earned" });
+          // removed milestone toast
         }
         // 50% Gold
         if (!milestonesAwarded.current.m50 && ratio >= 0.50) {
@@ -388,7 +423,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             unlockAchievement(userId, "m50", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m50"));
           }
-          toast({ title: "Milestone reached!", description: "50% complete — Gold bar earned" });
+          // removed milestone toast
         }
         // 75% Platinum
         if (!milestonesAwarded.current.m75 && ratio >= 0.75) {
@@ -398,7 +433,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             unlockAchievement(userId, "m75", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m75"));
           }
-          toast({ title: "Milestone reached!", description: "75% complete — Platinum bar earned" });
+          // removed milestone toast
         }
         // 100% Diamond
         if (!milestonesAwarded.current.m100 && ratio >= 1.0) {
@@ -408,7 +443,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             unlockAchievement(userId, "m100", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m100"));
           }
-          toast({ title: "Milestone reached!", description: "100% complete — Diamond earned" });
+          // removed milestone toast
         }
         return newCount;
       });
@@ -461,6 +496,136 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     handleNext();
   };
 
+  // Battle mode handlers (post-quiz resolution)
+  const handleNextBattle = () => {
+    if (mode !== 'battle-ai') return handleNext();
+    if (selectedAnswer === null) return; // Next disabled until selected
+    const idx = currentQuestion;
+    const elapsed = Date.now() - questionStartAtRef.current;
+    const isLocalCorrect = selectedAnswer === question.correctAnswer;
+
+    setStudentCorrectList(prev => {
+      const next = prev.slice();
+      next[idx] = isLocalCorrect;
+      return next;
+    });
+    setStudentTimesList(prev => {
+      const next = prev.slice();
+      next[idx] = elapsed;
+      return next;
+    });
+
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+      setSelectedAnswer(null);
+      setShowHint(false);
+      setShowResult(false);
+    } else {
+      const sc = [...studentCorrectList];
+      sc[idx] = isLocalCorrect;
+      const st = [...studentTimesList];
+      st[idx] = elapsed;
+      const res = resolveBattleResults(difficulty, sc, st);
+      setAiCorrectList(res.aiCorrect);
+      setAiTimesList(res.aiTimesMs);
+      setWinnersList(res.winners);
+      setPlayerPoints(res.studentPoints);
+      setAiScore(res.aiPoints);
+      // Save to Supabase (non-blocking)
+      if (userId && !guest) {
+        saveBattleMatch({
+          user_id: userId,
+          date: today,
+          difficulty,
+          student_correct: sc,
+          student_times_ms: st,
+          ai_correct: res.aiCorrect,
+          ai_times_ms: res.aiTimesMs,
+          winners: res.winners,
+          student_points: res.studentPoints,
+          ai_points: res.aiPoints,
+        });
+        saveBattlePerformance({
+          user_id: userId,
+          date: today,
+          difficulty,
+          math_type: inferMathType(shuffledQuestions),
+          student_points: res.studentPoints,
+          ai_points: res.aiPoints,
+          result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
+        });
+        // Lifetime totals: count correct answers from this battle (no coins here)
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        // Unlock milestone achievements based on final ratio (safe due to unique on user_id,key)
+        const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
+        if (ratio >= 0.10) { unlockAchievement(userId, "m10", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m10: true })); setLifetimeAchievements(prev => new Set(prev).add("m10")); }
+        if (ratio >= 0.25) { unlockAchievement(userId, "m25", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m25: true })); setLifetimeAchievements(prev => new Set(prev).add("m25")); }
+        if (ratio >= 0.50) { unlockAchievement(userId, "m50", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m50: true })); setLifetimeAchievements(prev => new Set(prev).add("m50")); }
+        if (ratio >= 0.75) { unlockAchievement(userId, "m75", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m75: true })); setLifetimeAchievements(prev => new Set(prev).add("m75")); }
+        if (ratio >= 1.00) { unlockAchievement(userId, "m100", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m100: true })); setLifetimeAchievements(prev => new Set(prev).add("m100")); }
+      }
+      setBattleDone(true);
+      // Mark daily progress as completed so Week Progress can reflect it
+      setGameCompleted(true);
+    }
+  };
+
+  const handleSkipBattle = () => {
+    if (mode !== 'battle-ai') return handleSkip();
+    const idx = currentQuestion;
+    const elapsed = Date.now() - questionStartAtRef.current;
+    setSelectedAnswer(null);
+    setStudentCorrectList(prev => { const next = prev.slice(); next[idx] = false; return next; });
+    setStudentTimesList(prev => { const next = prev.slice(); next[idx] = elapsed; return next; });
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+      setShowHint(false);
+      setShowResult(false);
+    } else {
+      const sc = [...studentCorrectList]; sc[idx] = false;
+      const st = [...studentTimesList]; st[idx] = elapsed;
+      const res = resolveBattleResults(difficulty, sc, st);
+      setAiCorrectList(res.aiCorrect);
+      setAiTimesList(res.aiTimesMs);
+      setWinnersList(res.winners);
+      setPlayerPoints(res.studentPoints);
+      setAiScore(res.aiPoints);
+      if (userId && !guest) {
+        saveBattleMatch({
+          user_id: userId,
+          date: today,
+          difficulty,
+          student_correct: sc,
+          student_times_ms: st,
+          ai_correct: res.aiCorrect,
+          ai_times_ms: res.aiTimesMs,
+          winners: res.winners,
+          student_points: res.studentPoints,
+          ai_points: res.aiPoints,
+        });
+        saveBattlePerformance({
+          user_id: userId,
+          date: today,
+          difficulty,
+          math_type: inferMathType(shuffledQuestions),
+          student_points: res.studentPoints,
+          ai_points: res.aiPoints,
+          result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
+        });
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
+        if (ratio >= 0.10) { unlockAchievement(userId, "m10", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m10: true })); setLifetimeAchievements(prev => new Set(prev).add("m10")); }
+        if (ratio >= 0.25) { unlockAchievement(userId, "m25", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m25: true })); setLifetimeAchievements(prev => new Set(prev).add("m25")); }
+        if (ratio >= 0.50) { unlockAchievement(userId, "m50", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m50: true })); setLifetimeAchievements(prev => new Set(prev).add("m50")); }
+        if (ratio >= 0.75) { unlockAchievement(userId, "m75", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m75: true })); setLifetimeAchievements(prev => new Set(prev).add("m75")); }
+        if (ratio >= 1.00) { unlockAchievement(userId, "m100", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m100: true })); setLifetimeAchievements(prev => new Set(prev).add("m100")); }
+      }
+      setBattleDone(true);
+      // Mark daily progress as completed so Week Progress can reflect it
+      setGameCompleted(true);
+    }
+  };
+
   const handleHint = () => {
     const cost = getHintCost(question.difficulty);
     if (!showHint && questionReward >= cost) {
@@ -489,6 +654,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setAiScore(0);
     setPlayerPoints(0);
     questionStartAtRef.current = Date.now();
+    // Reset battle state
+    setStudentCorrectList([]);
+    setStudentTimesList([]);
+    setAiCorrectList([]);
+    setAiTimesList([]);
+    setWinnersList([]);
+    setBattleDone(false);
+    if (mode === 'battle-ai') setBattleStarted(false);
   };
 
   // Persist progress snapshot for authenticated users
@@ -517,6 +690,64 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
 
   if (!shuffledQuestions.length) {
     return <div className="min-h-screen flex items-center justify-center">No questions available.</div>;
+  }
+
+  // Battle AI: start screen and summary
+  if (mode === 'battle-ai') {
+    const aiTypeLabel = difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI');
+    if (!battleStarted) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+          <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
+              <p className="text-muted-foreground">{aiTypeLabel} Vs {user?.user_metadata?.full_name || user?.email || 'You'}</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl mx-auto">
+              <div className="lg:col-span-2 flex justify-center">
+                <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
+                  <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
+                  <div className="text-sm font-bold text-muted-foreground">Status: Ready</div>
+                </div>
+              </div>
+              <div className="lg:col-span-7 min-w-0">
+                <div className="bg-white/90 border-2 border-secondary/20 rounded-3xl p-10 shadow-2xl flex items-center justify-center">
+                  <button onClick={() => { setBattleStarted(true); questionStartAtRef.current = Date.now(); }} className="px-10 py-3 rounded-full bg-green-600 hover:bg-green-700 text-white font-extrabold shadow-lg">
+                    Start Game
+                  </button>
+                </div>
+              </div>
+              <div className="lg:col-span-3 flex justify-center">
+                <div className="w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-5 shadow-lg flex flex-col items-center gap-3">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl shadow">🙂</div>
+                  <div className="text-sm font-bold">Your Answer:</div>
+                  <div className="min-w-[72px] text-center px-5 py-2 rounded-md border bg-gray-50 text-gray-800 text-base font-extrabold">-</div>
+                  <div className="text-xs text-muted-foreground">Status: Ready</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (battleDone) {
+      const rows = shuffledQuestions.map((q, i) => ({
+        index: i,
+        student: { correct: !!studentCorrectList[i], timeMs: studentTimesList[i] ?? 0 },
+        ai: { correct: !!aiCorrectList[i], timeMs: aiTimesList[i] ?? 0 },
+        winner: winnersList[i] as Winner,
+      }));
+      return (
+        <BattleSummary
+          aiTypeLabel={aiTypeLabel}
+          studentName={user?.user_metadata?.full_name || user?.email || 'You'}
+          studentPoints={playerPoints}
+          aiPoints={aiScore}
+          rows={rows}
+          onRestart={handleRestart}
+        />
+      );
+    }
   }
 
   if (gameCompleted) {
@@ -548,18 +779,20 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         <CoinAnimation key={anim.id} amount={anim.amount} />
       ))}
 
-      {/* Game Header */}
-      <GameHeader 
-        hearts={hearts} 
-        coins={coins} 
-        progress={progress} 
-        blinkHeart={blinkHeart} 
-        coinGain={coinGain}
-        onTreasureClick={() => setShowAchievements(true)}
-        overallTime={overallTime}
-        overallTimeLimit={overallTimeLimit}
-        showTimer={!practiceMode && mode !== 'battle-ai'}
-      />
+      {/* Game Header (hidden in Battle AI) */}
+      {mode !== 'battle-ai' && (
+        <GameHeader 
+          hearts={hearts} 
+          coins={coins} 
+          progress={progress} 
+          blinkHeart={blinkHeart} 
+          coinGain={coinGain}
+          onTreasureClick={() => setShowAchievements(true)}
+          overallTime={overallTime}
+          overallTimeLimit={overallTimeLimit}
+          showTimer={!practiceMode}
+        />
+      )}
       
       {/* Achievement Modal */}
       <AchievementModal
@@ -571,16 +804,26 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         lifetime={lifetimeAchievements}
       />
 
+      {/* Battle header (visible during match) */}
+      {mode === 'battle-ai' && (
+        <div className="pt-14 sm:pt-16 lg:pt-20 text-center">
+          <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
+          <p className="text-muted-foreground">
+            {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {user?.user_metadata?.full_name || user?.email || 'You'}
+          </p>
+        </div>
+      )}
+
       {/* Main Game Area */}
       <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
           {/* Left: AI Panel in Battle-AI, else Monkey Progress */}
           <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
             {mode === 'battle-ai' ? (
-              <div className="w-full max-w-[180px] bg-white/70 backdrop-blur rounded-xl border p-3 shadow flex flex-col items-center gap-3">
+              <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
                 <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
                 <div className="text-sm font-bold">AI Answer:</div>
-                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold">Answer Masked</div>
+                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
               </div>
             ) : (
               <MonkeyProgress progress={correctAnswers} total={total} />
@@ -596,8 +839,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               isCorrect={isCorrect}
               onAnswerSelect={handleAnswerSelect}
               onCheckAnswer={handleCheckAnswer}
-              onNext={handleNext}
-              onSkip={handleSkip}
+              onNext={mode === 'battle-ai' ? handleNextBattle : handleNext}
+              onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
               onHint={handleHint}
               showHint={showHint}
               coins={coins}
@@ -610,6 +853,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               lockedWrongIndex={lockedWrongIndex}
               secondChance={secondChance}
               difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
+              battleMode={mode === 'battle-ai'}
             />
 
           </div>
@@ -617,10 +861,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           {/* Right column: User panel in Battle-AI */}
           <div className="lg:col-span-3">
             {mode === 'battle-ai' && (
-              <div className="w-full bg-white/70 backdrop-blur rounded-xl border p-4 shadow flex flex-col items-center gap-3">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl">🙂</div>
+              <div className="w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-5 shadow-lg flex flex-col items-center gap-3">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl shadow">🙂</div>
                 <div className="text-sm font-bold">Your Answer:</div>
-                <div className="min-w-[72px] text-center px-4 py-2 rounded-md border bg-gray-50 text-gray-800 text-base font-extrabold">
+                <div className="min-w-[72px] text-center px-4 py-2 rounded-md border bg-gray-50 text-gray-800 text-base font-extrabold shadow-sm">
                   {selectedAnswer === null ? '-' : String.fromCharCode(65 + selectedAnswer)}
                 </div>
               </div>

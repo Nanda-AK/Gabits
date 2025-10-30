@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile, needsOnboarding } from "@/services/profile";
@@ -8,24 +8,27 @@ export const OnboardingGate = () => {
   const { user, guest } = useAuth();
   const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState(false);
+  const canCloseRef = useRef(false);
 
-  // Only trigger onboarding for authenticated users (not guests), and only right after login/signup
-  const userId = useMemo(() => (guest ? undefined : user?.id), [user, guest]);
+  // Trigger onboarding for authenticated users and guests (guests saved locally)
+  const userId = useMemo(() => (user?.id ?? (guest ? ((): string => {
+    const k = "guestId";
+    const existing = localStorage.getItem(k);
+    if (existing) return existing;
+    const id = `guest-${Math.random().toString(36).slice(2, 10)}`;
+    try { localStorage.setItem(k, id); } catch {}
+    return id;
+  })() : undefined)), [user, guest]);
 
   useEffect(() => {
     let alive = true;
     const run = async () => {
-      // Only proceed if authenticated and a recent login/signup occurred
       if (!userId) { setOpen(false); setChecked(true); return; }
-      const shouldTrigger = sessionStorage.getItem('onboarding:trigger') === '1';
-      if (!shouldTrigger) { setOpen(false); setChecked(true); return; }
-
       const p = await getProfile(userId);
       if (!alive) return;
       const need = needsOnboarding(p);
       setOpen(need);
-      // Consume the trigger so it doesn't keep popping up
-      try { sessionStorage.removeItem('onboarding:trigger'); } catch {}
+      canCloseRef.current = !need;
       setChecked(true);
     };
     run();
@@ -35,12 +38,23 @@ export const OnboardingGate = () => {
   if (!checked) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Prevent closing while profile is incomplete
+        if (!next) {
+          if (canCloseRef.current) setOpen(false);
+          else setOpen(true);
+        } else {
+          setOpen(true);
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Tell us about you</DialogTitle>
         </DialogHeader>
-        <ProfileOnboarding onComplete={() => setOpen(false)} />
+        <ProfileOnboarding onComplete={() => { canCloseRef.current = true; setOpen(false); }} />
       </DialogContent>
     </Dialog>
   );

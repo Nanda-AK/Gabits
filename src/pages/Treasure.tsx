@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
+import { supabase } from "@/lib/supabase";
 
 function useSnapshot() {
   const [coins, setCoins] = useState(0);
@@ -25,6 +26,52 @@ const Treasure = () => {
   const { coins } = useSnapshot();
   const { user, guest } = useAuth();
   const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
+
+  const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
+  const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
+
+  // Build current week (Mon-Sun) dates
+  useEffect(() => {
+    const today = new Date();
+    const jsDay = today.getDay(); // 0..6, Sun=0
+    const diffToMonday = jsDay === 0 ? -6 : (1 - jsDay);
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+    const arr: Array<{ label: string; date: string; done: boolean }> = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ymd = d.toISOString().split('T')[0];
+      arr.push({ label: weekLabels[i], date: ymd, done: false });
+    }
+    setWeekDays(arr);
+  }, [weekLabels.join('|')]);
+
+  // Fetch completions for current week (authenticated users only)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest || weekDays.length === 0) return;
+      const start = weekDays[0].date;
+      const end = weekDays[6].date;
+      const { data, error } = await supabase
+        .from('daily_progress')
+        .select('date, completed')
+        .eq('user_id', user.id)
+        .gte('date', start)
+        .lte('date', end);
+      if (error || !data) return;
+      const byDate = new Map<string, boolean>();
+      for (const row of data as Array<{ date: string; completed: boolean }>) {
+        if (!byDate.has(row.date)) byDate.set(row.date, !!row.completed);
+        else byDate.set(row.date, byDate.get(row.date)! || !!row.completed);
+      }
+      if (!cancelled) {
+        setWeekDays(prev => prev.map(w => ({ ...w, done: !!byDate.get(w.date) })));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, guest, weekDays.map(w => w.date).join('|')]);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,9 +106,17 @@ const Treasure = () => {
                 <div className="text-xs text-muted-foreground">days</div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (
-                  <div key={d} className="px-2.5 py-1 rounded-full border bg-white/70 text-xs font-semibold text-gray-700">
-                    {d}
+                {weekDays.map(({ label, date, done }) => (
+                  <div
+                    key={date}
+                    className={
+                      done
+                        ? "px-2.5 py-1 rounded-full border text-xs font-semibold bg-green-100 border-green-300 text-green-800"
+                        : "px-2.5 py-1 rounded-full border bg-white/70 text-xs font-semibold text-gray-700"
+                    }
+                    title={date + (done ? " — completed" : "")}
+                  >
+                    {label}
                   </div>
                 ))}
               </div>
@@ -87,7 +142,7 @@ const Treasure = () => {
             <CardTitle className="text-lg">Lifetime Achievements</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100">
                 <img src="/assets/silverimage.png" alt="Silver" className="w-20 h-16 object-contain drop-shadow" />
                 <div className="mt-2 text-sm font-semibold text-muted-foreground">Silver</div>
@@ -102,6 +157,23 @@ const Treasure = () => {
                 <img src="/assets/platinuumimage.png" alt="Platinum" className="w-20 h-16 object-contain drop-shadow" />
                 <div className="mt-2 text-sm font-semibold text-muted-foreground">Platinum</div>
                 <div className="text-2xl font-extrabold text-indigo-700">{counts.platinum}</div>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-cyan-50 to-blue-50">
+                {/* Diamond icon (inline SVG) */}
+                <svg width="80" height="64" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg" aria-label="Diamond" role="img" className="drop-shadow">
+                  <defs>
+                    <linearGradient id="gradDiamondTreasure" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#E0F7FA" />
+                      <stop offset="50%" stopColor="#B2EBF2" />
+                      <stop offset="100%" stopColor="#81D4FA" />
+                    </linearGradient>
+                  </defs>
+                  <polygon points="8,16 20,2 44,2 56,16 32,46" fill="url(#gradDiamondTreasure)" stroke="#4FC3F7" strokeWidth="2" />
+                  <polyline points="20,2 32,16 44,2" fill="none" stroke="#4FC3F7" strokeWidth="2" />
+                  <polyline points="8,16 32,16 56,16" fill="none" stroke="#4FC3F7" strokeWidth="2" />
+                </svg>
+                <div className="mt-2 text-sm font-semibold text-muted-foreground">Diamond</div>
+                <div className="text-2xl font-extrabold text-sky-700">{counts.diamond}</div>
               </div>
             </div>
             {(!user || guest) && (

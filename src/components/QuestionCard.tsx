@@ -23,6 +23,7 @@ interface QuestionCardProps {
   lockedWrongIndex?: number | null;
   secondChance?: boolean;
   difficultyLabel?: string;
+  battleMode?: boolean;
 }
 
 export const QuestionCard = ({
@@ -46,6 +47,7 @@ export const QuestionCard = ({
   lockedWrongIndex = null,
   secondChance = false,
   difficultyLabel,
+  battleMode = false,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -79,7 +81,7 @@ export const QuestionCard = ({
             Question {questionNumber} of {totalQuestions}
           </div>
           {/* Per-Question Timer with Countdown (hidden in practice mode) */}
-          {showTimer && (
+          {showTimer && !battleMode && (
             <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${
               isTimeCritical 
                 ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse' 
@@ -223,7 +225,7 @@ export const QuestionCard = ({
 
         {/* Center status */}
         <div className="flex-1 text-center">
-          {showResult && (
+          {!battleMode && showResult && (
             <span
               className={`font-extrabold text-sm sm:text-base lg:text-lg tracking-wide ${
                 isCorrect ? "text-emerald-700" : "text-rose-700"
@@ -234,23 +236,34 @@ export const QuestionCard = ({
           )}
         </div>
 
-        {!showResult ? (
-          <Button
-            onClick={onCheckAnswer}
-            disabled={selectedAnswer === null}
-            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-secondary/50 active:scale-[0.98] py-1 sm:py-1.5"
-          >
-            <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            Check
-          </Button>
-        ) : (
+        {battleMode ? (
           <Button
             onClick={onNext}
-            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500/50 active:scale-[0.98] py-1 sm:py-1.5"
+            disabled={selectedAnswer === null}
+            className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500/50 active:scale-[0.98] py-1 sm:py-1.5"
           >
             {questionNumber === totalQuestions ? 'Finish' : 'Next'}
             <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
           </Button>
+        ) : (
+          !showResult ? (
+            <Button
+              onClick={onCheckAnswer}
+              disabled={selectedAnswer === null}
+              className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-secondary/50 active:scale-[0.98] py-1 sm:py-1.5"
+            >
+              <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Check
+            </Button>
+          ) : (
+            <Button
+              onClick={onNext}
+              className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500/50 active:scale-[0.98] py-1 sm:py-1.5"
+            >
+              {questionNumber === totalQuestions ? 'Finish' : 'Next'}
+              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
+            </Button>
+          )
         )}
       </div>
     </div>

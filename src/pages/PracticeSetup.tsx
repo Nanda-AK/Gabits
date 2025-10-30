@@ -28,7 +28,9 @@ const PracticeSetup = () => {
       <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
       <div className="container mx-auto px-4 py-10 max-w-xl">
-        <Button variant="secondary" className="mb-6 rounded-full" onClick={() => navigate("/modes/solo")}> <ArrowLeft className="w-4 h-4 mr-2"/> Back to Solo</Button>
+        <Button variant="secondary" className="mb-6 rounded-full" onClick={() => navigate("/modes")}>
+          <ArrowLeft className="w-4 h-4 mr-2"/> Back to Modes
+        </Button>
         <Card className="p-8 rounded-3xl border-0 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl shadow-xl">
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-2">
