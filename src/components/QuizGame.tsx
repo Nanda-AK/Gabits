@@ -18,6 +18,7 @@ import type { AchievementKey } from "@/services/achievements";
 import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
+import { getProfile } from "@/services/profile";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
@@ -93,6 +94,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const { user, guest } = useAuth();
   const userId = user?.id;
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [displayName, setDisplayName] = useState<string>('You');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -246,6 +248,27 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     })();
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
+
+  // Resolve display name (prefer profile full_name, then metadata, then email username)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const metaName = (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || (user?.user_metadata?.user_name as string) || (user?.user_metadata?.username as string) || null;
+      const emailName = user?.email ? user.email.split('@')[0] : null;
+      if (!userId || guest) {
+        if (!cancelled) setDisplayName(metaName || emailName || 'You');
+        return;
+      }
+      try {
+        const p = await getProfile(userId);
+        if (!cancelled) setDisplayName(p?.full_name || metaName || emailName || 'You');
+      } catch {
+        if (!cancelled) setDisplayName(metaName || emailName || 'You');
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [userId, guest, user]);
 
   // Load lifetime achievements for authenticated users
   useEffect(() => {
@@ -701,7 +724,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
-              <p className="text-muted-foreground">{aiTypeLabel} Vs {user?.user_metadata?.full_name || user?.email || 'You'}</p>
+              <p className="text-muted-foreground">{aiTypeLabel} Vs {displayName || 'You'}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl mx-auto">
               <div className="lg:col-span-2 flex justify-center">
@@ -740,7 +763,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       return (
         <BattleSummary
           aiTypeLabel={aiTypeLabel}
-          studentName={user?.user_metadata?.full_name || user?.email || 'You'}
+          studentName={displayName || 'You'}
           studentPoints={playerPoints}
           aiPoints={aiScore}
           rows={rows}
@@ -809,7 +832,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         <div className="pt-14 sm:pt-16 lg:pt-20 text-center">
           <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
           <p className="text-muted-foreground">
-            {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {user?.user_metadata?.full_name || user?.email || 'You'}
+            {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {displayName || 'You'}
           </p>
         </div>
       )}
