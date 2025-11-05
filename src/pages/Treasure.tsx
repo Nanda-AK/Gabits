@@ -10,7 +10,7 @@ import { getSpeedDaily } from "@/services/speed";
 import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
 import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
-import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles } from "lucide-react";
+import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles, Gem, Star } from "lucide-react";
 
 function useSnapshot() {
   const [coins, setCoins] = useState(0);
@@ -26,16 +26,17 @@ function useSnapshot() {
   return { coins, correct, total };
 }
 
-// Badge metadata
-function getBadgeInfo(key: string): { name: string; icon: string; desc: string } {
-  const badges: Record<string, { name: string; icon: string; desc: string }> = {
-    focused_learner: { name: "Focused Learner", icon: "🎯", desc: "3-day Practice streak" },
-    math_explorer: { name: "Math Explorer", icon: "🧮", desc: "5-day same-topic streak" },
-    speed_master: { name: "Speed Master", icon: "⚡", desc: "3× Fast & Flawless" },
-    ai_challenger: { name: "AI Challenger", icon: "🤖", desc: "10 AI battles" },
-    social_legend: { name: "Social Legend", icon: "👥", desc: "10 Friend battles" },
+// Badge metadata (use images from public/assets)
+function getBadgeInfo(key: string): { name: string; img: string; desc: string } {
+  const badges: Record<string, { name: string; img: string; desc: string }> = {
+    // Updated to snake_case filenames in public/assets
+    focused_learner: { name: "Focused Learner", img: "/assets/focused_learner.png", desc: "3-day Practice streak" },
+    math_explorer: { name: "Math Explorer", img: "/assets/math_explorer.png", desc: "5-day same-topic streak" },
+    speed_master: { name: "Speed Master", img: "/assets/speed_master.png", desc: "3× Fast & Flawless" },
+    ai_challenger: { name: "AI Challenger", img: "/assets/ai_challenger.png", desc: "10 AI battles" },
+    social_legend: { name: "Social Legend", img: "/assets/social_legend.png", desc: "10 Friend battles" },
   };
-  return badges[key] || { name: key, icon: "🏆", desc: "Special achievement" };
+  return badges[key] || { name: key, img: "/placeholder.svg", desc: "Special achievement" };
 }
 
 const Treasure = () => {
@@ -185,7 +186,7 @@ const Treasure = () => {
       <div className="container mx-auto px-4 py-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2">
-            <img src="/treasureboximg.png" className="w-8 h-8"/> My Treasure
+            <img src="/treasure_close.png" className="w-8 h-8"/> My Treasure
           </h1>
           <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
         </div>
@@ -240,14 +241,14 @@ const Treasure = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <img src="/assets/gem.png" alt="Gems" className="w-6 h-6" />
+                    <Gem className="w-6 h-6 text-fuchsia-600" />
                     <div>
                       <div className="text-xl font-black text-fuchsia-700">{balances?.gems ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Gems</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <img src="/assets/xp.png" alt="XP" className="w-6 h-6" />
+                    <Star className="w-6 h-6 text-indigo-600" />
                     <div>
                       <div className="text-xl font-black text-indigo-700">{balances?.xp ?? 0}</div>
                       <div className="text-xs text-muted-foreground">XP</div>
@@ -355,7 +356,7 @@ const Treasure = () => {
           </Card>
         )}
 
-        {/* HR Badges with counts */}
+        {/* HR Badges with counts (uses images) */}
         {!guest && user && (
           <Card className="mb-6">
             <CardHeader>
@@ -375,8 +376,15 @@ const Treasure = () => {
                       key={key}
                       className={`flex flex-col items-center p-3 rounded-lg border bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow ${unlocked ? '' : 'opacity-60'}`}
                     >
-                      <div className="text-3xl mb-1">{info.icon}</div>
-                      <div className="text-xs font-bold text-center text-gray-800">{info.name}{count > 0 ? ` ×${count}` : ''}</div>
+                      <div className="relative mb-1">
+                        <img src={info.img} alt={info.name} className="w-12 h-12 object-contain" />
+                        {count > 1 && (
+                          <div className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 shadow">
+                            ×{count}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs font-bold text-center text-gray-800">{info.name}{count === 1 ? '' : ''}</div>
                       <div className="text-[10px] text-muted-foreground text-center mt-1">{info.desc}</div>
                     </div>
                   );

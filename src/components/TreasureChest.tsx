@@ -20,8 +20,8 @@ export const TreasureChest = ({ unlocked }: TreasureChestProps) => {
       <div className="relative w-44 h-44 flex items-center justify-center">
         {unlocked && <div className="absolute inset-0 bg-accent/20 rounded-full blur-2xl animate-pulse" />}
         <img
-          src="/treasureboximg.png"
-          alt="Treasure Chest"
+          src={unlocked ? "/treasure_open.png" : "/treasure_close.png"}
+          alt={unlocked ? "Treasure Open" : "Treasure Closed"}
           className={`w-36 h-36 object-contain drop-shadow-2xl transition-transform duration-500 ${
             unlocked ? "animate-chest-bounce" : ""
           }`}

@@ -34,7 +34,7 @@ export const AchievementModal = ({ open, onOpenChange }: AchievementModalProps) 
       <DialogContent className="sm:max-w-md bg-gradient-to-br from-card via-card/95 to-card/90 border-2 border-primary/30 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-            <img src="/treasureboximg.png" alt="Treasure" className="w-8 h-8" />
+            <img src="/treasure_open.png" alt="Treasure" className="w-8 h-8" />
             My Treasure
           </DialogTitle>
         </DialogHeader>

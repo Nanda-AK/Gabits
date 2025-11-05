@@ -865,10 +865,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           progress={progress} 
           blinkHeart={blinkHeart} 
           coinGain={coinGain}
-          onTreasureClick={() => setShowAchievements(true)}
+          onTreasureClick={() => setShowAchievements((o) => !o)}
           overallTime={overallTime}
           overallTimeLimit={overallTimeLimit}
           showTimer={!practiceMode}
+          treasureOpen={showAchievements}
         />
       )}
       

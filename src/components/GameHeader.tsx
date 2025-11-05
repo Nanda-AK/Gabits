@@ -10,9 +10,10 @@ interface GameHeaderProps {
   overallTime?: number;
   overallTimeLimit?: number;
   showTimer?: boolean;
+  treasureOpen?: boolean;
 }
 
-export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600, showTimer = true }: GameHeaderProps) => {
+export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600, showTimer = true, treasureOpen = false }: GameHeaderProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -84,8 +85,8 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
               aria-label="View Achievements"
             >
               <img
-                src="/treasureboximg.png"
-                alt="Treasure Chest"
+                src={treasureOpen ? "/treasure_open.png" : "/treasure_close.png"}
+                alt={treasureOpen ? "Treasure Open" : "Treasure Closed"}
                 className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain drop-shadow-lg"
               />
               <div className="absolute inset-0 rounded-full bg-amber-400/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
