@@ -903,8 +903,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
                 <div className="text-sm font-bold">AI Answer:</div>
                 <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
               </div>
+            ) : mode === 'practice' ? (
+              <div className="w-full max-w-[200px]" aria-hidden="true" />
             ) : (
-              <MonkeyProgress progress={correctAnswers} total={total} showBase={mode !== 'practice'} />
+              <MonkeyProgress progress={correctAnswers} total={total} />
             )}
           </div>
 
