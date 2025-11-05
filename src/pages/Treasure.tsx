@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { supabase } from "@/lib/supabase";
 import { getUserBalances } from "@/services/rewards";
 import { getSpeedDaily } from "@/services/speed";
-import { getAllAchievements, type Achievement } from "@/services/achievements";
+import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
+import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
 import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles } from "lucide-react";
 
@@ -29,11 +29,6 @@ function useSnapshot() {
 // Badge metadata
 function getBadgeInfo(key: string): { name: string; icon: string; desc: string } {
   const badges: Record<string, { name: string; icon: string; desc: string }> = {
-    m10: { name: "Bronze Start", icon: "🥉", desc: "10% milestone" },
-    m25: { name: "Silver", icon: "🥈", desc: "25% milestone" },
-    m50: { name: "Gold", icon: "🥇", desc: "50% milestone" },
-    m75: { name: "Platinum", icon: "💎", desc: "75% milestone" },
-    m100: { name: "Diamond", icon: "💍", desc: "Perfect 100%" },
     focused_learner: { name: "Focused Learner", icon: "🎯", desc: "3-day Practice streak" },
     math_explorer: { name: "Math Explorer", icon: "🧮", desc: "5-day same-topic streak" },
     speed_master: { name: "Speed Master", icon: "⚡", desc: "3× Fast & Flawless" },
@@ -47,12 +42,13 @@ const Treasure = () => {
   const navigate = useNavigate();
   const { coins } = useSnapshot();
   const { user, guest } = useAuth();
-  const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
   const [balances, setBalances] = useState<{ coins: number; gems: number; xp: number } | null>(null);
   const [speedDaily, setSpeedDaily] = useState<Array<{ date: string; run_count: number; m100_count: number }>>([]);
   const [badges, setBadges] = useState<Achievement[]>([]);
   const [boostTokens, setBoostTokens] = useState<{ available: number; used: number } | null>(null);
   const [seasonWinners, setSeasonWinners] = useState<SeasonalWinner[]>([]);
+  const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
@@ -100,6 +96,7 @@ const Treasure = () => {
     return () => { cancelled = true; };
   }, [user, guest, weekDays.map(w => w.date).join('|')]);
 
+  // Load legacy milestone counts (Silver/Gold/Platinum/Diamond) for Lifetime Achievements section
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -142,6 +139,17 @@ const Treasure = () => {
       if (!user || guest) { setBadges([]); return; }
       const data = await getAllAchievements(user.id);
       if (!cancelled) setBadges(data);
+    })();
+    return () => { cancelled = true; };
+  }, [user, guest]);
+
+  // Load badge counts across all modes (Focused Learner, Math Explorer, Speed Master, AI Challenger, Social Legend)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setBadgeCounts({}); return; }
+      const c = await getBadgeCounts(user.id);
+      if (!cancelled) setBadgeCounts(c);
     })();
     return () => { cancelled = true; };
   }, [user, guest]);
@@ -347,27 +355,28 @@ const Treasure = () => {
           </Card>
         )}
 
-        {/* All Earned Badges */}
-        {!guest && user && badges.length > 0 && (
+        {/* HR Badges with counts */}
+        {!guest && user && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-500" />
-                Badges Earned
+                Badges Earned (All Modes)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {badges.map((badge) => {
-                  const info = getBadgeInfo(badge.key);
+                {["focused_learner","math_explorer","speed_master","ai_challenger","social_legend"].map((key) => {
+                  const info = getBadgeInfo(key);
+                  const count = badgeCounts[key] ?? 0;
+                  const unlocked = count > 0 || badges.some(b => b.key === key);
                   return (
                     <div
-                      key={badge.key}
-                      className="flex flex-col items-center p-3 rounded-lg border bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow"
-                      title={`Unlocked: ${new Date(badge.unlocked_at).toLocaleDateString()}`}
+                      key={key}
+                      className={`flex flex-col items-center p-3 rounded-lg border bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow ${unlocked ? '' : 'opacity-60'}`}
                     >
                       <div className="text-3xl mb-1">{info.icon}</div>
-                      <div className="text-xs font-bold text-center text-gray-800">{info.name}</div>
+                      <div className="text-xs font-bold text-center text-gray-800">{info.name}{count > 0 ? ` ×${count}` : ''}</div>
                       <div className="text-[10px] text-muted-foreground text-center mt-1">{info.desc}</div>
                     </div>
                   );
@@ -377,7 +386,7 @@ const Treasure = () => {
           </Card>
         )}
 
-        {/* Lifetime Achievement Counts (RPC) */}
+        {/* Lifetime Achievement Counts (Silver/Gold/Platinum/Diamond) */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-lg">Lifetime Achievements</CardTitle>

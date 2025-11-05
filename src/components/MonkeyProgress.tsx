@@ -1,9 +1,10 @@
 interface MonkeyProgressProps {
   progress: number;
   total: number;
+  showBase?: boolean;
 }
 
-export const MonkeyProgress = ({ progress, total }: MonkeyProgressProps) => {
+export const MonkeyProgress = ({ progress, total, showBase = true }: MonkeyProgressProps) => {
   const progressPercentage = (progress / total) * 100;
   
   // Define milestone thresholds
@@ -119,10 +120,12 @@ export const MonkeyProgress = ({ progress, total }: MonkeyProgressProps) => {
       </div>
 
       {/* Base label */}
-      <div className="mt-1 sm:mt-2 flex flex-col items-center">
-        <div className="w-14 sm:w-16 h-1.5 sm:h-2 bg-gradient-to-r from-muted via-muted-foreground/20 to-muted rounded-full" />
-        <div className="text-[9px] sm:text-[10px] font-bold text-muted-foreground mt-1">Day Bar</div>
-      </div>
+      {showBase && (
+        <div className="mt-1 sm:mt-2 flex flex-col items-center">
+          <div className="w-14 sm:w-16 h-1.5 sm:h-2 bg-gradient-to-r from-muted via-muted-foreground/20 to-muted rounded-full" />
+          <div className="text-[9px] sm:text-[10px] font-bold text-muted-foreground mt-1">Day Bar</div>
+        </div>
+      )}
     </div>
   );
-};
+}

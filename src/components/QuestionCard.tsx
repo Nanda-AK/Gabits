@@ -24,6 +24,9 @@ interface QuestionCardProps {
   secondChance?: boolean;
   difficultyLabel?: string;
   battleMode?: boolean;
+  // UI controls
+  showCoinInfo?: boolean;
+  hintFree?: boolean;
 }
 
 export const QuestionCard = ({
@@ -48,6 +51,8 @@ export const QuestionCard = ({
   secondChance = false,
   difficultyLabel,
   battleMode = false,
+  showCoinInfo = true,
+  hintFree = false,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -114,7 +119,10 @@ export const QuestionCard = ({
         </div>
         <div className="relative flex flex-col items-end">
           <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
-            {(difficultyLabel ?? question.difficulty.toUpperCase())} • {showHint ? questionReward : coinValue} coins
+            {(difficultyLabel ?? question.difficulty.toUpperCase())}
+            {showCoinInfo && (
+              <> • {showHint ? questionReward : coinValue} coins</>
+            )}
           </div>
           {/* Coin animation start anchor near difficulty badge */}
           <div id="coin-source" className="absolute -right-2 top-1/2 w-3 h-3"></div>
@@ -216,11 +224,11 @@ export const QuestionCard = ({
         <Button
           onClick={onHint}
           variant="outline"
-          disabled={showResult || showHint || questionReward < hintCost}
+          disabled={showResult || showHint || (!hintFree && questionReward < hintCost)}
           className="text-xs sm:text-sm rounded-lg border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed py-1 sm:py-1.5 px-2 sm:px-3"
         >
           <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-          Hint (-{hintCost})
+          {hintFree ? 'Hint' : `Hint (-${hintCost})`}
         </Button>
 
         {/* Center status */}

@@ -13,13 +13,13 @@ import { BattleSummary } from "./BattleSummary";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
-import { getAchievements, unlockAchievement } from "@/services/achievements";
+import { getAchievements } from "@/services/achievements";
 import type { AchievementKey } from "@/services/achievements";
 import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
-import { unlockSpeedAchievement, logSpeedRun } from "@/services/speed";
+import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
 import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 
@@ -345,6 +345,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       topic,
       used_seconds: overallTime,
       date: localDate,
+      question_coins: coins,
     }).catch(() => {});
   }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
 
@@ -468,80 +469,30 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         if (userId && !guest && mode !== 'speed') {
           incrementTotals(userId, 0, 1).catch(() => {});
         }
-        // 10% milestone: +5 coins
+        // 10% milestone: internal flag only for speed logging
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
           milestonesAwarded.current.m10 = true;
           setMilestonesState(s => ({ ...s, m10: true }));
-          setCoins(c => c + 5);
-          addToWallet(5);
-          const gainId = Date.now() + 1;
-          setCoinGain({ amount: 5, id: gainId });
-          triggerCoinAnimation(5);
-          // Clear coin gain notification after 2 seconds
-          setTimeout(() => {
-            setCoinGain(prev => prev?.id === gainId ? null : prev);
-          }, 2000);
-          if (userId && !guest) {
-            incrementTotals(userId, 5, 0).catch(() => {});
-            unlockAchievement(userId, "m10", { date: today, correct: newCount, total }).catch(() => {});
-            setLifetimeAchievements(prev => new Set(prev).add("m10"));
-            if (mode === 'speed') {
-              unlockSpeedAchievement(userId, "m10").catch(() => {});
-            }
-          }
-          // removed milestone toast
         }
         // 25% Silver
         if (!milestonesAwarded.current.m25 && ratio >= 0.25) {
           milestonesAwarded.current.m25 = true;
           setMilestonesState(s => ({ ...s, m25: true }));
-          if (userId && !guest) {
-            unlockAchievement(userId, "m25", { date: today, correct: newCount, total }).catch(() => {});
-            setLifetimeAchievements(prev => new Set(prev).add("m25"));
-            if (mode === 'speed') {
-              unlockSpeedAchievement(userId, "m25").catch(() => {});
-            }
-          }
-          // removed milestone toast
         }
         // 50% Gold
         if (!milestonesAwarded.current.m50 && ratio >= 0.50) {
           milestonesAwarded.current.m50 = true;
           setMilestonesState(s => ({ ...s, m50: true }));
-          if (userId && !guest) {
-            unlockAchievement(userId, "m50", { date: today, correct: newCount, total }).catch(() => {});
-            setLifetimeAchievements(prev => new Set(prev).add("m50"));
-            if (mode === 'speed') {
-              unlockSpeedAchievement(userId, "m50").catch(() => {});
-            }
-          }
-          // removed milestone toast
         }
         // 75% Platinum
         if (!milestonesAwarded.current.m75 && ratio >= 0.75) {
           milestonesAwarded.current.m75 = true;
           setMilestonesState(s => ({ ...s, m75: true }));
-          if (userId && !guest) {
-            unlockAchievement(userId, "m75", { date: today, correct: newCount, total }).catch(() => {});
-            setLifetimeAchievements(prev => new Set(prev).add("m75"));
-            if (mode === 'speed') {
-              unlockSpeedAchievement(userId, "m75").catch(() => {});
-            }
-          }
-          // removed milestone toast
         }
         // 100% Diamond
         if (!milestonesAwarded.current.m100 && ratio >= 1.0) {
           milestonesAwarded.current.m100 = true;
           setMilestonesState(s => ({ ...s, m100: true }));
-          if (userId && !guest) {
-            unlockAchievement(userId, "m100", { date: today, correct: newCount, total }).catch(() => {});
-            setLifetimeAchievements(prev => new Set(prev).add("m100"));
-            if (mode === 'speed') {
-              unlockSpeedAchievement(userId, "m100").catch(() => {});
-            }
-          }
-          // removed milestone toast
         }
         return newCount;
       });
@@ -654,13 +605,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         });
         // Lifetime totals: count correct answers from this battle (no coins here)
         try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
-        // Unlock milestone achievements based on final ratio (safe due to unique on user_id,key)
+        // Internal milestone flags for logging only
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
-        if (ratio >= 0.10) { unlockAchievement(userId, "m10", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m10: true })); setLifetimeAchievements(prev => new Set(prev).add("m10")); }
-        if (ratio >= 0.25) { unlockAchievement(userId, "m25", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m25: true })); setLifetimeAchievements(prev => new Set(prev).add("m25")); }
-        if (ratio >= 0.50) { unlockAchievement(userId, "m50", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m50: true })); setLifetimeAchievements(prev => new Set(prev).add("m50")); }
-        if (ratio >= 0.75) { unlockAchievement(userId, "m75", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m75: true })); setLifetimeAchievements(prev => new Set(prev).add("m75")); }
-        if (ratio >= 1.00) { unlockAchievement(userId, "m100", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m100: true })); setLifetimeAchievements(prev => new Set(prev).add("m100")); }
+        if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
+        if (ratio >= 0.25) { setMilestonesState(s => ({ ...s, m25: true })); }
+        if (ratio >= 0.50) { setMilestonesState(s => ({ ...s, m50: true })); }
+        if (ratio >= 0.75) { setMilestonesState(s => ({ ...s, m75: true })); }
+        if (ratio >= 1.00) { setMilestonesState(s => ({ ...s, m100: true })); }
       }
       setBattleDone(true);
       // Mark daily progress as completed so Week Progress can reflect it
@@ -712,11 +663,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         });
         try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
-        if (ratio >= 0.10) { unlockAchievement(userId, "m10", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m10: true })); setLifetimeAchievements(prev => new Set(prev).add("m10")); }
-        if (ratio >= 0.25) { unlockAchievement(userId, "m25", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m25: true })); setLifetimeAchievements(prev => new Set(prev).add("m25")); }
-        if (ratio >= 0.50) { unlockAchievement(userId, "m50", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m50: true })); setLifetimeAchievements(prev => new Set(prev).add("m50")); }
-        if (ratio >= 0.75) { unlockAchievement(userId, "m75", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m75: true })); setLifetimeAchievements(prev => new Set(prev).add("m75")); }
-        if (ratio >= 1.00) { unlockAchievement(userId, "m100", { date: today, correct: sc.filter(Boolean).length, total: sc.length }).catch(() => {}); setMilestonesState(s => ({ ...s, m100: true })); setLifetimeAchievements(prev => new Set(prev).add("m100")); }
+        if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
+        if (ratio >= 0.25) { setMilestonesState(s => ({ ...s, m25: true })); }
+        if (ratio >= 0.50) { setMilestonesState(s => ({ ...s, m50: true })); }
+        if (ratio >= 0.75) { setMilestonesState(s => ({ ...s, m75: true })); }
+        if (ratio >= 1.00) { setMilestonesState(s => ({ ...s, m100: true })); }
       }
       setBattleDone(true);
       // Mark daily progress as completed so Week Progress can reflect it
@@ -725,6 +676,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   };
 
   const handleHint = () => {
+    // In practice mode, hints are free and do not reduce rewards
+    if (mode === 'practice') {
+      if (!showHint) setShowHint(true);
+      return;
+    }
     const cost = getHintCost(question.difficulty);
     if (!showHint && questionReward >= cost) {
       setQuestionReward(prev => Math.max(0, prev - cost));
@@ -948,7 +904,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
                 <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
               </div>
             ) : (
-              <MonkeyProgress progress={correctAnswers} total={total} />
+              <MonkeyProgress progress={correctAnswers} total={total} showBase={mode !== 'practice'} />
             )}
           </div>
 
@@ -976,6 +932,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               secondChance={secondChance}
               difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
               battleMode={mode === 'battle-ai'}
+              showCoinInfo={mode !== 'practice'}
+              hintFree={mode === 'practice'}
             />
 
           </div>

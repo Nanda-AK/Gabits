@@ -5,12 +5,14 @@ export async function grantPracticeRewards(input: {
   topic: string;
   used_seconds: number;
   date: string; // YYYY-MM-DD local
+  question_coins?: number;
 }): Promise<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null> {
   const { data, error } = await supabase.rpc('grant_practice_rewards', {
     p_user_id: input.user_id,
     p_topic: input.topic,
     p_used_seconds: Math.max(0, Math.floor(input.used_seconds || 0)),
     p_date: input.date,
+    p_question_coins: Math.max(0, Math.floor(input.question_coins || 0)),
   });
   if (error) return null;
   const row = Array.isArray(data) ? data[0] : data;
