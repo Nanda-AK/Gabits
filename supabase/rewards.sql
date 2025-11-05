@@ -636,3 +636,53 @@ create or replace function public.get_xp_leaderboard(
   order by xp desc, coins_sum desc, gems_sum desc
   limit coalesce(limit_n,50);
 $$;
+
+-- GLOBAL COINS LEADERBOARD (restored)
+-- View aggregates coins and correct totals across modes
+create or replace view public.leaderboard_view as
+with ids as (
+  select user_id from public.user_balances
+  union
+  select user_id from public.speed_totals
+  union
+  select user_id from public.daily_progress
+),
+sp as (
+  select user_id, total_correct
+  from public.speed_totals
+),
+dp as (
+  select user_id, sum(correct_count)::int as correct_sum
+  from public.daily_progress
+  group by user_id
+)
+select
+  i.user_id,
+  coalesce(p.full_name, 'Player') as display_name,
+  coalesce(b.coins, 0)::int as total_coins,
+  (coalesce(sp.total_correct, 0) + coalesce(dp.correct_sum, 0))::int as total_correct
+from ids i
+left join public.user_balances b on b.user_id = i.user_id
+left join public.profiles p on p.id = i.user_id
+left join sp on sp.user_id = i.user_id
+left join dp on dp.user_id = i.user_id;
+
+-- RPC: get_leaderboard — ranks by coins desc, then correct desc
+create or replace function public.get_leaderboard(limit_n int default 50)
+returns table (
+  user_id uuid,
+  display_name text,
+  total_coins int,
+  total_correct int,
+  rank int
+) language sql security definer set search_path = public as $$
+  select
+    user_id,
+    display_name,
+    total_coins,
+    total_correct,
+    dense_rank() over (order by total_coins desc, total_correct desc) as rank
+  from public.leaderboard_view
+  order by total_coins desc, total_correct desc
+  limit coalesce(limit_n, 50);
+$$;
