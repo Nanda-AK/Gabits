@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabase";
 
-export type AchievementKey = "m10" | "m25" | "m50" | "m75" | "m100";
+export type AchievementKey = 
+  | "m10" | "m25" | "m50" | "m75" | "m100"  // Milestone badges
+  | "focused_learner" | "math_explorer"     // Practice badges
+  | "speed_master"                           // Speed badges
+  | "ai_challenger" | "social_legend";      // Compete badges
 
 export async function unlockAchievement(
   userId: string,
@@ -30,4 +34,17 @@ export async function getAchievements(userId: string): Promise<Set<AchievementKe
     .eq("user_id", userId);
   if (error || !data) return new Set();
   return new Set((data as Array<{ key: AchievementKey }>).map((r) => r.key));
+}
+
+export type Achievement = {
+  key: AchievementKey;
+  unlocked_at: string;
+  meta: Record<string, any> | null;
+};
+
+export async function getAllAchievements(userId: string): Promise<Achievement[]> {
+  if (!userId) return [];
+  const { data, error } = await supabase.rpc("get_all_achievements", { p_user_id: userId });
+  if (error || !data) return [];
+  return (data as Achievement[]) ?? [];
 }

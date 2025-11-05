@@ -19,6 +19,9 @@ import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
+import { unlockSpeedAchievement, logSpeedRun } from "@/services/speed";
+import { getLocalYMD } from "@/lib/date";
+import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
@@ -60,16 +63,19 @@ function seededRandom(seed: number) {
 
 function pickDailyQuestions(all: Question[], count = 10): Question[] {
   const d = new Date();
-  const ymd = parseInt(`${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`);
+  const ymd = parseInt(
+    `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d
+      .getDate()
+      .toString()
+      .padStart(2, "0")}`
+  );
   const rand = seededRandom(ymd);
   const idxs = all.map((_, i) => i);
-  // shuffle indices with seeded rng
   for (let i = idxs.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
   }
-  const chosen = idxs.slice(0, Math.min(count, all.length)).map(i => all[i]);
-  return chosen;
+  return idxs.slice(0, Math.min(count, all.length)).map((i) => all[i]);
 }
 
 // Local fallback using localStorage for guests/offline
@@ -131,6 +137,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [aiTimesList, setAiTimesList] = useState<number[]>([]);
   const [winnersList, setWinnersList] = useState<Winner[]>([]);
   const [battleDone, setBattleDone] = useState(false);
+  // Speed-only: track whether each answered question met the within-time threshold
+  const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
 
   // Infer a simple math type for HR summary from the active question set
   const inferMathType = (qs: Question[]): string => {
@@ -205,10 +213,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setShowResult(false);
     setQuestionTime(0); // Reset question timer
     
-    // Set time limit based on difficulty
+    // Set time threshold / limit based on difficulty
     if (question) {
-      if (mode === 'speed' || mode === 'battle-ai') {
-        setQuestionTimeLimit(30); // fixed for speed/battle
+      if (mode === 'battle-ai') {
+        setQuestionTimeLimit(30);
+      } else if (mode === 'speed') {
+        const thr = question.difficulty === 'easy' ? 15 : (question.difficulty === 'moderate' ? 25 : 30);
+        setQuestionTimeLimit(thr); // used for UI only; we won't auto-skip in speed
       } else {
         const timeLimit = question.difficulty === 'easy' ? 45 : question.difficulty === 'moderate' ? 35 : 25;
         setQuestionTimeLimit(timeLimit);
@@ -283,9 +294,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     return () => { cancelled = true; };
   }, [userId, guest]);
   
-  // Timer effects (disabled in Solo Practice route)
+  // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
-    if (practiceMode || mode === 'battle-ai') return; // no overall timer in practice or battle AI
+    if (mode === 'battle-ai') return; // no overall timer in battle AI
     const overallInterval = setInterval(() => {
       setOverallTime(prev => prev + 1);
     }, 1000);
@@ -299,7 +310,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         setQuestionTime(prev => {
           const newTime = prev + 1;
           // Auto-skip when question time limit reached
-          if (newTime >= questionTimeLimit) {
+          if (mode !== 'speed' && newTime >= questionTimeLimit) {
             handleTimeUp();
           }
           return newTime;
@@ -318,6 +329,43 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       setGameCompleted(true);
     }
   }, [overallTime, overallTimeLimit, gameCompleted, practiceMode]);
+
+  // Practice: on completion, grant rewards via server (topic, used_seconds, local date)
+  const practiceGrantRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (mode !== 'practice') return;
+    if (!gameCompleted) return;
+    if (!userId || guest) return;
+    if (practiceGrantRef.current) return;
+    practiceGrantRef.current = true;
+    const localDate = getLocalYMD();
+    const topic = inferMathType(shuffledQuestions);
+    grantPracticeRewards({
+      user_id: userId,
+      topic,
+      used_seconds: overallTime,
+      date: localDate,
+    }).catch(() => {});
+  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
+
+  // Compete (AI): after battle resolved and marked done, grant rewards once
+  const competeGrantRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (mode !== 'battle-ai') return;
+    if (!battleDone) return;
+    if (!userId || guest) return;
+    if (competeGrantRef.current) return;
+    competeGrantRef.current = true;
+    const localDate = getLocalYMD();
+    const result: 'win' | 'loss' | 'draw' = playerPoints > aiScore ? 'win' : (playerPoints < aiScore ? 'loss' : 'draw');
+    grantCompeteRewards({
+      user_id: userId,
+      type: 'ai',
+      date: localDate,
+      difficulty,
+      result,
+    }).catch(() => {});
+  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -385,8 +433,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         }
         if (studentWinsRound) setPlayerPoints(p => p + 1);
       }
-      // Add remaining per-question reward (after hints used)
-      const earned = Math.max(0, questionReward);
+      // Coins for this question
+      let earned = 0;
+      if (mode === 'speed') {
+        const thr = question.difficulty === 'easy' ? 15 : (question.difficulty === 'moderate' ? 25 : 30);
+        const within = questionTime <= thr;
+        setWithinTimeList(prev => { const next = prev.slice(); next[currentQuestion] = within; return next; });
+        if (question.difficulty === 'easy') earned = within ? 3 : 1;
+        else if (question.difficulty === 'moderate') earned = within ? 5 : 2;
+        else earned = within ? 8 : 4;
+      } else {
+        // Practice and others: use existing reward minus hint cost
+        earned = Math.max(0, questionReward);
+      }
       if (earned > 0) {
         setCoins(prev => prev + earned);
         const gainId = Date.now();
@@ -397,7 +456,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         setTimeout(() => {
           setCoinGain(prev => prev?.id === gainId ? null : prev);
         }, 2000);
-        if (userId && !guest) {
+        if (userId && !guest && mode !== 'speed') {
+          // Persist only for non-speed here. Speed session is logged at completion.
           incrementTotals(userId, earned, 0).catch(() => {});
         }
       }
@@ -405,7 +465,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       setCorrectAnswers(prev => {
         const newCount = prev + 1;
         const ratio = newCount / total; // 0..1 for the daily set of 10
-        if (userId && !guest) {
+        if (userId && !guest && mode !== 'speed') {
           incrementTotals(userId, 0, 1).catch(() => {});
         }
         // 10% milestone: +5 coins
@@ -425,6 +485,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
             incrementTotals(userId, 5, 0).catch(() => {});
             unlockAchievement(userId, "m10", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m10"));
+            if (mode === 'speed') {
+              unlockSpeedAchievement(userId, "m10").catch(() => {});
+            }
           }
           // removed milestone toast
         }
@@ -435,6 +498,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           if (userId && !guest) {
             unlockAchievement(userId, "m25", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m25"));
+            if (mode === 'speed') {
+              unlockSpeedAchievement(userId, "m25").catch(() => {});
+            }
           }
           // removed milestone toast
         }
@@ -445,6 +511,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           if (userId && !guest) {
             unlockAchievement(userId, "m50", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m50"));
+            if (mode === 'speed') {
+              unlockSpeedAchievement(userId, "m50").catch(() => {});
+            }
           }
           // removed milestone toast
         }
@@ -455,6 +524,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           if (userId && !guest) {
             unlockAchievement(userId, "m75", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m75"));
+            if (mode === 'speed') {
+              unlockSpeedAchievement(userId, "m75").catch(() => {});
+            }
           }
           // removed milestone toast
         }
@@ -465,6 +537,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           if (userId && !guest) {
             unlockAchievement(userId, "m100", { date: today, correct: newCount, total }).catch(() => {});
             setLifetimeAchievements(prev => new Set(prev).add("m100"));
+            if (mode === 'speed') {
+              unlockSpeedAchievement(userId, "m100").catch(() => {});
+            }
           }
           // removed milestone toast
         }
@@ -676,6 +751,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setIsTimeUp(false);
     setAiScore(0);
     setPlayerPoints(0);
+    setWithinTimeList([]);
     questionStartAtRef.current = Date.now();
     // Reset battle state
     setStudentCorrectList([]);
@@ -706,6 +782,29 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       localStorage.setItem('player:lastProgressTotal', String(total));
     } catch {}
   }, [correctAnswers, total]);
+
+  // When a Speed run completes, log it to the server (coins, correct, milestones, fast_flawless)
+  useEffect(() => {
+    if (mode !== 'speed') return;
+    if (!gameCompleted) return;
+    if (!userId || guest) return;
+    const localDate = getLocalYMD();
+    const ff = (correctAnswers === total) && withinTimeList.slice(0, total).every(Boolean);
+    const m = milestonesState;
+    logSpeedRun({
+      user_id: userId,
+      date: localDate,
+      difficulty,
+      correct: correctAnswers,
+      coins,
+      m10: m.m10,
+      m25: m.m25,
+      m50: m.m50,
+      m75: m.m75,
+      m100: m.m100,
+      fast_flawless: ff,
+    }).catch(() => {});
+  }, [mode, gameCompleted, userId, guest, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
 
   if (loadingDaily) {
     return <div className="min-h-screen flex items-center justify-center">Loading daily set...</div>;
