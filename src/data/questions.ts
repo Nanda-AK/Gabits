@@ -6,8 +6,8 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   difficulty: Difficulty;
-  type: string,
-  reward: number,
+  type: string;
+  reward: number;
   hint: string;
 }
 
