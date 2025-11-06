@@ -11,6 +11,7 @@ import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services
 import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
 import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles, Gem, Star } from "lucide-react";
+import { getLocalYMD } from "@/lib/date";
 
 function useSnapshot() {
   const [coins, setCoins] = useState(0);
@@ -54,18 +55,16 @@ const Treasure = () => {
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
 
-  // Build current week (Mon-Sun) dates
+  // Build current week (Mon-Sun) dates using LOCAL dates (not UTC) to match daily_progress.date
   useEffect(() => {
     const today = new Date();
     const jsDay = today.getDay(); // 0..6, Sun=0
     const diffToMonday = jsDay === 0 ? -6 : (1 - jsDay);
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diffToMonday);
+    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMonday);
     const arr: Array<{ label: string; date: string; done: boolean }> = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const ymd = d.toISOString().split('T')[0];
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      const ymd = getLocalYMD(d); // ensure local YYYY-MM-DD, consistent with saved daily_progress.date
       arr.push({ label: weekLabels[i], date: ymd, done: false });
     }
     setWeekDays(arr);
