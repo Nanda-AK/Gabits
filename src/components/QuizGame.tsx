@@ -347,7 +347,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       date: localDate,
       question_coins: coins,
     }).catch(() => {});
-  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
+  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime, coins]);
 
   // Compete (AI): after battle resolved and marked done, grant rewards once
   const competeGrantRef = useRef<boolean>(false);
@@ -717,6 +717,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     setWinnersList([]);
     setBattleDone(false);
     if (mode === 'battle-ai') setBattleStarted(false);
+    // Allow practice rewards to grant again on the next completion
+    practiceGrantRef.current = false;
   };
 
   // Persist progress snapshot for authenticated users
