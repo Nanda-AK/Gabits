@@ -6,6 +6,8 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   difficulty: Difficulty;
+  type: string;
+  reward: number;
   hint: string;
 }
 
@@ -16,6 +18,8 @@ export const questions: Question[] = [
     options: ["₹106", "₹107", "₹105", "₹102"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -24,6 +28,8 @@ export const questions: Question[] = [
     options: ["₹180", "₹188", "₹190", "₹205"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -32,6 +38,8 @@ export const questions: Question[] = [
     options: ["₹49", "₹63", "₹38", "₹48"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -40,6 +48,8 @@ export const questions: Question[] = [
     options: ["₹184", "₹174", "₹189", "₹185"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -48,6 +58,8 @@ export const questions: Question[] = [
     options: ["₹229", "₹224", "₹221", "₹223"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -56,6 +68,8 @@ export const questions: Question[] = [
     options: ["₹139", "₹132", "₹137", "₹134"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -64,6 +78,8 @@ export const questions: Question[] = [
     options: ["₹130", "₹110", "₹117", "₹120"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -72,6 +88,8 @@ export const questions: Question[] = [
     options: ["₹120", "₹117", "₹132", "₹102"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -80,6 +98,8 @@ export const questions: Question[] = [
     options: ["₹101", "₹97", "₹99", "₹100"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -88,6 +108,8 @@ export const questions: Question[] = [
     options: ["₹102", "₹103", "₹88", "₹106"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -96,6 +118,8 @@ export const questions: Question[] = [
     options: ["₹144", "₹129", "₹127", "₹114"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -104,6 +128,8 @@ export const questions: Question[] = [
     options: ["₹89", "₹74", "₹91", "₹94"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Add the two amounts together."
   },
   {
@@ -112,6 +138,8 @@ export const questions: Question[] = [
     options: ["₹694", "₹702", "₹697", "₹700"],
     correctAnswer: 2,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -120,6 +148,8 @@ export const questions: Question[] = [
     options: ["₹1120", "₹1121", "₹1123", "₹1105"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -128,6 +158,8 @@ export const questions: Question[] = [
     options: ["₹423", "₹424", "₹413", "₹425"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -136,6 +168,8 @@ export const questions: Question[] = [
     options: ["₹502", "₹522", "₹510", "₹512"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -144,6 +178,8 @@ export const questions: Question[] = [
     options: ["₹756", "₹771", "₹761", "₹754"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -152,6 +188,8 @@ export const questions: Question[] = [
     options: ["₹719", "₹716", "₹717", "₹704"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Sum all three sales amounts."
   },
   {
@@ -160,6 +198,8 @@ export const questions: Question[] = [
     options: ["₹1038", "₹1036", "₹1033", "₹1046"],
     correctAnswer: 1,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Add all the figures together; returns reversed are still income here."
   },
   {
@@ -168,6 +208,8 @@ export const questions: Question[] = [
     options: ["₹1776", "₹1760", "₹1761", "₹1762"],
     correctAnswer: 2,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Add all the figures together; returns reversed are still income here."
   },
   {
@@ -176,6 +218,8 @@ export const questions: Question[] = [
     options: ["150", "156", "153", "151"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -184,6 +228,8 @@ export const questions: Question[] = [
     options: ["116", "96", "106", "104"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -192,6 +238,8 @@ export const questions: Question[] = [
     options: ["92", "87", "102", "77"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -200,6 +248,8 @@ export const questions: Question[] = [
     options: ["138", "156", "153", "163"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -208,6 +258,8 @@ export const questions: Question[] = [
     options: ["145", "130", "127", "133"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -216,6 +268,8 @@ export const questions: Question[] = [
     options: ["15", "3", "19", "18"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -224,6 +278,8 @@ export const questions: Question[] = [
     options: ["24", "25", "23", "8"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -232,6 +288,8 @@ export const questions: Question[] = [
     options: ["251", "256", "247", "246"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -240,6 +298,8 @@ export const questions: Question[] = [
     options: ["183", "178", "170", "173"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -248,6 +308,8 @@ export const questions: Question[] = [
     options: ["176", "186", "196", "187"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -256,6 +318,8 @@ export const questions: Question[] = [
     options: ["133", "130", "142", "132"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -264,6 +328,8 @@ export const questions: Question[] = [
     options: ["17", "18", "19", "23"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Multiplication",
+    reward: 3,
     hint: "Subtract the number given away from the starting count."
   },
   {
@@ -272,6 +338,8 @@ export const questions: Question[] = [
     options: ["530", "535", "529", "527"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -280,6 +348,8 @@ export const questions: Question[] = [
     options: ["211", "236", "226", "216"],
     correctAnswer: 2,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -288,6 +358,8 @@ export const questions: Question[] = [
     options: ["358", "340", "343", "333"],
     correctAnswer: 2,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -296,6 +368,8 @@ export const questions: Question[] = [
     options: ["494", "503", "501", "504"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -304,6 +378,8 @@ export const questions: Question[] = [
     options: ["710", "730", "726", "725"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -312,6 +388,8 @@ export const questions: Question[] = [
     options: ["438", "435", "453", "436"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "Subtraction",
+    reward: 5,
     hint: "Compute the remaining units by subtraction."
   },
   {
@@ -320,6 +398,8 @@ export const questions: Question[] = [
     options: ["1118", "1120", "1117", "1119"],
     correctAnswer: 2,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Subtract those who got down, then add those who boarded."
   },
   {
@@ -328,6 +408,8 @@ export const questions: Question[] = [
     options: ["1097", "1110", "1115", "1100"],
     correctAnswer: 3,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Subtract those who got down, then add those who boarded."
   },
   {
@@ -336,6 +418,8 @@ export const questions: Question[] = [
     options: ["60", "63", "58", "59"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -344,6 +428,8 @@ export const questions: Question[] = [
     options: ["51", "26", "38", "36"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -352,6 +438,8 @@ export const questions: Question[] = [
     options: ["35", "34", "38", "36"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -360,6 +448,8 @@ export const questions: Question[] = [
     options: ["36", "39", "37", "51"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -368,6 +458,8 @@ export const questions: Question[] = [
     options: ["87", "90", "92", "88"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -376,6 +468,8 @@ export const questions: Question[] = [
     options: ["13", "14", "16", "24"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -384,6 +478,8 @@ export const questions: Question[] = [
     options: ["6", "9", "12", "8"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -392,6 +488,8 @@ export const questions: Question[] = [
     options: ["13", "12", "9", "15"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -400,6 +498,8 @@ export const questions: Question[] = [
     options: ["69", "85", "70", "75"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -408,6 +508,8 @@ export const questions: Question[] = [
     options: ["19", "16", "21", "15"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -416,6 +518,8 @@ export const questions: Question[] = [
     options: ["24", "34", "25", "21"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -424,6 +528,8 @@ export const questions: Question[] = [
     options: ["30", "27", "15", "31"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "add",
+    reward: 3,
     hint: "Multiply number per packet by number of packets."
   },
   {
@@ -432,6 +538,8 @@ export const questions: Question[] = [
     options: ["81", "83", "84", "66"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -440,6 +548,8 @@ export const questions: Question[] = [
     options: ["35", "48", "33", "32"],
     correctAnswer: 2,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -448,6 +558,8 @@ export const questions: Question[] = [
     options: ["389", "399", "387", "384"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -456,6 +568,8 @@ export const questions: Question[] = [
     options: ["52", "49", "42", "57"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -464,6 +578,8 @@ export const questions: Question[] = [
     options: ["153", "171", "183", "168"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -472,6 +588,8 @@ export const questions: Question[] = [
     options: ["252", "237", "257", "255"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "Division",
+    reward: 5,
     hint: "Multiply the hourly rate by hours."
   },
   {
@@ -480,6 +598,8 @@ export const questions: Question[] = [
     options: ["1499", "1500", "1505", "1485"],
     correctAnswer: 1,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Multiply parts/hour × hours × days."
   },
   {
@@ -488,6 +608,8 @@ export const questions: Question[] = [
     options: ["1530", "1515", "1535", "1545"],
     correctAnswer: 0,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Multiply parts/hour × hours × days."
   },
   {
@@ -496,6 +618,8 @@ export const questions: Question[] = [
     options: ["₹192", "₹182", "₹172", "₹183"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -504,6 +628,8 @@ export const questions: Question[] = [
     options: ["₹156", "₹126", "₹144", "₹141"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -512,6 +638,8 @@ export const questions: Question[] = [
     options: ["₹59", "₹60", "₹57", "₹61"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -520,6 +648,8 @@ export const questions: Question[] = [
     options: ["₹116", "₹131", "₹101", "₹117"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -528,6 +658,8 @@ export const questions: Question[] = [
     options: ["₹32", "₹44", "₹47", "₹45"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -536,6 +668,8 @@ export const questions: Question[] = [
     options: ["₹198", "₹185", "₹188", "₹178"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -544,6 +678,8 @@ export const questions: Question[] = [
     options: ["₹128", "₹143", "₹113", "₹118"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -552,6 +688,8 @@ export const questions: Question[] = [
     options: ["₹150", "₹152", "₹149", "₹160"],
     correctAnswer: 0,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -560,6 +698,8 @@ export const questions: Question[] = [
     options: ["₹144", "₹143", "₹153", "₹128"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -568,6 +708,8 @@ export const questions: Question[] = [
     options: ["₹84", "₹83", "₹86", "₹85"],
     correctAnswer: 1,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -576,6 +718,8 @@ export const questions: Question[] = [
     options: ["₹53", "₹47", "₹48", "₹49"],
     correctAnswer: 2,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -584,6 +728,8 @@ export const questions: Question[] = [
     options: ["₹104", "₹84", "₹99", "₹94"],
     correctAnswer: 3,
     difficulty: "easy",
+    type: "Division",
+    reward: 3,
     hint: "Divide the total by the number of friends."
   },
   {
@@ -592,6 +738,8 @@ export const questions: Question[] = [
     options: ["₹35", "₹30", "₹40", "₹25"],
     correctAnswer: 3,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -600,6 +748,8 @@ export const questions: Question[] = [
     options: ["₹142", "₹117", "₹127", "₹128"],
     correctAnswer: 2,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -608,6 +758,8 @@ export const questions: Question[] = [
     options: ["₹141", "₹144", "₹149", "₹147"],
     correctAnswer: 1,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -616,6 +768,8 @@ export const questions: Question[] = [
     options: ["₹67", "₹52", "₹42", "₹49"],
     correctAnswer: 1,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -624,6 +778,8 @@ export const questions: Question[] = [
     options: ["₹129", "₹126", "₹128", "₹139"],
     correctAnswer: 0,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -632,6 +788,8 @@ export const questions: Question[] = [
     options: ["₹141", "₹136", "₹139", "₹138"],
     correctAnswer: 1,
     difficulty: "moderate",
+    type: "add",
+    reward: 5,
     hint: "Divide total amount by the number of teams."
   },
   {
@@ -640,6 +798,8 @@ export const questions: Question[] = [
     options: ["195", "199", "201", "198"],
     correctAnswer: 3,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Divide total apples by apples per box to find number of boxes."
   },
   {
@@ -648,6 +808,8 @@ export const questions: Question[] = [
     options: ["180", "164", "165", "162"],
     correctAnswer: 2,
     difficulty: "difficult",
+    type: "add",
+    reward: 8,
     hint: "Divide total apples by apples per box to find number of boxes."
   },
 ];
