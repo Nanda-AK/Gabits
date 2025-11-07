@@ -1,4 +1,6 @@
-import { Heart, Timer } from "lucide-react";
+import { Heart, Timer, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface GameHeaderProps {
   hearts: number;
@@ -11,9 +13,11 @@ interface GameHeaderProps {
   overallTimeLimit?: number;
   showTimer?: boolean;
   treasureOpen?: boolean;
+  showBackButton?: boolean;
 }
 
-export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600, showTimer = true, treasureOpen = false }: GameHeaderProps) => {
+export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClick, overallTime = 0, overallTimeLimit = 600, showTimer = true, treasureOpen = false, showBackButton = true }: GameHeaderProps) => {
+  const navigate = useNavigate();
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -27,6 +31,17 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
     <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-md border-b-2 border-primary/20 z-50 shadow-xl">
       <div className="container mx-auto px-2 sm:px-3 py-1.5 sm:py-2 lg:py-3">
         <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-5xl xl:max-w-6xl mx-auto">
+          {/* Back Button */}
+          {showBackButton && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate(-1)} 
+              className="rounded-full px-2 sm:px-3 hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
           {/* Hearts */}
           <div className="flex items-center gap-1.5 sm:gap-2 bg-destructive/10 rounded-lg sm:rounded-xl px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-2.5 border-2 border-destructive/30 shadow-lg">
             <div className="flex items-center gap-0.5 sm:gap-1">
@@ -80,7 +95,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
           {/* Chest + Coins */}
           <div className="relative flex items-center gap-1.5 sm:gap-2 lg:gap-3">
             <button
-              onClick={onTreasureClick}
+              onClick={() => { navigate('/treasure'); }}
               className="relative group cursor-pointer hover:scale-110 transition-transform duration-200 active:scale-95"
               aria-label="View Achievements"
             >

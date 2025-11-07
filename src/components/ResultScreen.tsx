@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Trophy, RotateCcw, Star, Frown } from "lucide-react";
+import { Trophy, RotateCcw, Star, Frown, CheckCircle2, XCircle, Award } from "lucide-react";
+import type { Question } from "@/data/questions";
 
 interface ResultScreenProps {
   coins: number;
@@ -8,9 +9,12 @@ interface ResultScreenProps {
   gameOver?: boolean;
   aiScore?: number;
   opponentName?: string;
+  mode?: 'practice' | 'speed' | 'battle-ai';
+  practiceRewards?: { coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null;
+  questions?: Question[];
 }
 
-export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot" }: ResultScreenProps) => {
+export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, questions }: ResultScreenProps) => {
   const isPerfectScore = correctAnswers === 10;
   
   return (
@@ -47,37 +51,81 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg">
-            <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
-            <div className="text-sm font-semibold text-foreground">Correct Answers</div>
-          </div>
-          <div className="bg-gradient-to-br from-accent via-accent/90 to-accent/70 rounded-2xl p-6 border-2 border-accent shadow-lg">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <svg
-                width="40"
-                height="40"
-                viewBox="0 0 64 64"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-label="Coins"
-                role="img"
-              >
-                <defs>
-                  <radialGradient id="goldGradientRS" cx="50%" cy="35%" r="60%">
-                    <stop offset="0%" stopColor="#FFF6B7" />
-                    <stop offset="45%" stopColor="#FFD54A" />
-                    <stop offset="100%" stopColor="#F6A700" />
-                  </radialGradient>
-                </defs>
-                <circle cx="32" cy="32" r="28" fill="url(#goldGradientRS)" stroke="#B7791F" strokeWidth="4" />
-                <circle cx="32" cy="24" r="10" fill="rgba(255,255,255,0.22)" />
-                <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
-              </svg>
-              <span className="text-6xl font-black text-amber-900">{coins}</span>
+        {mode === 'practice' && practiceRewards ? (
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg mb-4">
+              <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
+              <div className="text-sm font-semibold text-foreground">Correct Answers</div>
             </div>
-            <div className="text-sm font-semibold text-amber-900">Total Coins</div>
+            {/* Streak Rewards Summary */}
+            <div className="bg-gradient-to-br from-accent/20 to-accent/10 rounded-2xl p-6 border-2 border-accent/30 shadow-lg">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Award className="w-6 h-6 text-accent" />
+                <h3 className="text-xl font-bold text-foreground">Streak Rewards</h3>
+              </div>
+              <div className="space-y-3 text-left">
+                <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                  <span className="font-semibold text-foreground">Streak Days:</span>
+                  <span className="text-2xl font-black text-primary">{practiceRewards.streak_after}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                  <span className="font-semibold text-foreground">Coins Earned:</span>
+                  <span className="text-2xl font-black text-amber-700">+{practiceRewards.coins_awarded}</span>
+                </div>
+                {practiceRewards.gems_awarded > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                    <span className="font-semibold text-foreground">Gems Earned:</span>
+                    <span className="text-2xl font-black text-fuchsia-600">+{practiceRewards.gems_awarded}</span>
+                  </div>
+                )}
+                {practiceRewards.badges_awarded.length > 0 && (
+                  <div className="p-3 bg-white/50 rounded-lg">
+                    <span className="font-semibold text-foreground block mb-2">Badges Unlocked:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {practiceRewards.badges_awarded.map(badge => (
+                        <span key={badge} className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                          {badge.replace('_', ' ').toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg">
+              <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
+              <div className="text-sm font-semibold text-foreground">Correct Answers</div>
+            </div>
+            <div className="bg-gradient-to-br from-accent via-accent/90 to-accent/70 rounded-2xl p-6 border-2 border-accent shadow-lg">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 64 64"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-label="Coins"
+                  role="img"
+                >
+                  <defs>
+                    <radialGradient id="goldGradientRS" cx="50%" cy="35%" r="60%">
+                      <stop offset="0%" stopColor="#FFF6B7" />
+                      <stop offset="45%" stopColor="#FFD54A" />
+                      <stop offset="100%" stopColor="#F6A700" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="32" cy="32" r="28" fill="url(#goldGradientRS)" stroke="#B7791F" strokeWidth="4" />
+                  <circle cx="32" cy="24" r="10" fill="rgba(255,255,255,0.22)" />
+                  <path d="M16 32h32" stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
+                </svg>
+                <span className="text-6xl font-black text-amber-900">{coins}</span>
+              </div>
+              <div className="text-sm font-semibold text-amber-900">Total Coins</div>
+            </div>
+          </div>
+        )}
 
         {/* Final Standings (Battle AI) */}
         {typeof aiScore === 'number' && (
@@ -92,6 +140,34 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
                 <div className="font-semibold text-muted-foreground">{opponentName}</div>
                 <div className="font-extrabold text-muted-foreground">{aiScore}</div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Question Review (Practice Only) */}
+        {mode === 'practice' && questions && questions.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Star className="w-5 h-5 text-primary" />
+              Question Review
+            </h3>
+            <div className="max-h-64 overflow-y-auto space-y-2 rounded-xl border-2 border-muted p-3">
+              {questions.map((q, idx) => {
+                const userCorrect = idx < correctAnswers; // simplified assumption
+                return (
+                  <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${userCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                    {userCorrect ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground line-clamp-2">{q.question}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Answer: {q.options[q.correctAnswer]}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

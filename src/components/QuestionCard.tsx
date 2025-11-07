@@ -27,6 +27,7 @@ interface QuestionCardProps {
   // UI controls
   showCoinInfo?: boolean;
   hintFree?: boolean;
+  showDifficultyBadge?: boolean;
 }
 
 export const QuestionCard = ({
@@ -53,6 +54,7 @@ export const QuestionCard = ({
   battleMode = false,
   showCoinInfo = true,
   hintFree = false,
+  showDifficultyBadge = true,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -117,16 +119,18 @@ export const QuestionCard = ({
             </div>
           )}
         </div>
-        <div className="relative flex flex-col items-end">
-          <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
-            {(difficultyLabel ?? question.difficulty.toUpperCase())}
-            {showCoinInfo && (
-              <> • {showHint ? questionReward : coinValue} coins</>
-            )}
+        {showDifficultyBadge && (
+          <div className="relative flex flex-col items-end">
+            <div className={`px-4 py-1 rounded-full text-xs font-bold border-2 ${difficultyColors[question.difficulty]}`}>
+              {(difficultyLabel ?? question.difficulty.toUpperCase())}
+              {showCoinInfo && (
+                <> • {showHint ? questionReward : coinValue} coins</>
+              )}
+            </div>
+            {/* Coin animation start anchor near difficulty badge */}
+            <div id="coin-source" className="absolute -right-2 top-1/2 w-3 h-3"></div>
           </div>
-          {/* Coin animation start anchor near difficulty badge */}
-          <div id="coin-source" className="absolute -right-2 top-1/2 w-3 h-3"></div>
-        </div>
+        )}
       </div>
 
       {/* Question Text with Character */}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
@@ -70,31 +70,70 @@ const Treasure = () => {
     setWeekDays(arr);
   }, [weekLabels.join('|')]);
 
-  // Fetch completions for current week (authenticated users only)
+  // Fetch completions for current week (authenticated users only) with stable deps
+  const fetchWeekProgress = useCallback(async () => {
+    if (!user || guest || weekDays.length === 0) return;
+    const start = weekDays[0].date;
+    const end = weekDays[6].date;
+    const { data, error } = await supabase
+      .from('daily_progress')
+      .select('date, completed')
+      .eq('user_id', user.id)
+      .gte('date', start)
+      .lte('date', end);
+    if (error || !data) return;
+    const byDate = new Map<string, boolean>();
+    for (const row of data as Array<{ date: string; completed: boolean }>) {
+      if (!byDate.has(row.date)) byDate.set(row.date, !!row.completed);
+      else byDate.set(row.date, byDate.get(row.date)! || !!row.completed);
+    }
+    setWeekDays(prev => prev.map(w => ({ ...w, done: !!byDate.get(w.date) })));
+  }, [user?.id, guest, weekDays]);
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user || guest || weekDays.length === 0) return;
-      const start = weekDays[0].date;
-      const end = weekDays[6].date;
-      const { data, error } = await supabase
-        .from('daily_progress')
-        .select('date, completed')
-        .eq('user_id', user.id)
-        .gte('date', start)
-        .lte('date', end);
-      if (error || !data) return;
-      const byDate = new Map<string, boolean>();
-      for (const row of data as Array<{ date: string; completed: boolean }>) {
-        if (!byDate.has(row.date)) byDate.set(row.date, !!row.completed);
-        else byDate.set(row.date, byDate.get(row.date)! || !!row.completed);
-      }
-      if (!cancelled) {
-        setWeekDays(prev => prev.map(w => ({ ...w, done: !!byDate.get(w.date) })));
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [user, guest, weekDays.map(w => w.date).join('|')]);
+    fetchWeekProgress();
+  }, [fetchWeekProgress, user?.id, guest, weekDays[0]?.date, weekDays[6]?.date]);
+
+  // Also refetch when the tab gains focus or visibility returns (handles race after finishing a game)
+  useEffect(() => {
+    const onFocus = () => fetchWeekProgress();
+    const onVis = () => { if (document.visibilityState === 'visible') fetchWeekProgress(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [fetchWeekProgress]);
+
+  // Realtime subscription to daily_progress for current week (all modes)
+  useEffect(() => {
+    if (!user || guest || weekDays.length === 0) return;
+    const start = weekDays[0].date;
+    const end = weekDays[6].date;
+    const channel = supabase
+      .channel('daily_progress_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_progress',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Refetch week progress when any daily_progress row changes for this user
+          const date = (payload.new as any)?.date || (payload.old as any)?.date;
+          if (date && date >= start && date <= end) {
+            fetchWeekProgress();
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, guest, weekDays, fetchWeekProgress]);
 
   // Load legacy milestone counts (Silver/Gold/Platinum/Diamond) for Lifetime Achievements section
   useEffect(() => {

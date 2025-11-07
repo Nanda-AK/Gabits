@@ -8,13 +8,11 @@ import { GameHeader } from "./GameHeader";
 import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
-import { AchievementModal } from "./AchievementModal";
 import { BattleSummary } from "./BattleSummary";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
-import { getAchievements } from "@/services/achievements";
-import type { AchievementKey } from "@/services/achievements";
+// removed Achievement modal usage; use Treasure page instead
 import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
@@ -99,7 +97,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
   const userId = user?.id;
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const today = useMemo(() => getLocalYMD(), []);
   const [displayName, setDisplayName] = useState<string>('You');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -117,7 +115,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [lockedWrongIndex, setLockedWrongIndex] = useState<number | null>(null);
   const [questionReward, setQuestionReward] = useState(0);
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
-  const [showAchievements, setShowAchievements] = useState(false);
   const [overallTime, setOverallTime] = useState(0);
   const [questionTime, setQuestionTime] = useState(0);
   const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
@@ -128,7 +125,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const questionStartAtRef = useRef<number>(Date.now());
   const studentWinProbRef = useRef<number>(0.6 + Math.random() * 0.1); // 60-70% student win bias
   const [milestonesState, setMilestonesState] = useState({ m10: false, m25: false, m50: false, m75: false, m100: false });
-  const [lifetimeAchievements, setLifetimeAchievements] = useState<Set<AchievementKey>>(new Set());
   // Battle AI (post-quiz resolution)
   const [battleStarted, setBattleStarted] = useState(mode !== 'battle-ai');
   const [studentCorrectList, setStudentCorrectList] = useState<boolean[]>([]);
@@ -139,6 +135,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [battleDone, setBattleDone] = useState(false);
   // Speed-only: track whether each answered question met the within-time threshold
   const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
+  const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
 
   // Infer a simple math type for HR summary from the active question set
   const inferMathType = (qs: Question[]): string => {
@@ -281,18 +278,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     return () => { cancelled = true; };
   }, [userId, guest, user]);
 
-  // Load lifetime achievements for authenticated users
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!userId || guest) { setLifetimeAchievements(new Set()); return; }
-      try {
-        const set = await getAchievements(userId);
-        if (!cancelled) setLifetimeAchievements(set);
-      } catch { if (!cancelled) setLifetimeAchievements(new Set()); }
-    })();
-    return () => { cancelled = true; };
-  }, [userId, guest]);
+  // Removed lifetime achievements modal usage; /treasure shows wallet and achievements
   
   // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
@@ -330,7 +316,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     }
   }, [overallTime, overallTimeLimit, gameCompleted, practiceMode]);
 
-  // Practice: on completion, grant rewards via server (topic, used_seconds, local date)
+  // Practice: on completion, grant rewards via server (topic, used_seconds, local date) - streak-based only
   const practiceGrantRef = useRef<boolean>(false);
   useEffect(() => {
     if (mode !== 'practice') return;
@@ -345,9 +331,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
       topic,
       used_seconds: overallTime,
       date: localDate,
-      question_coins: coins,
+      question_coins: 0, // Practice: NO per-question coins, only streak rewards
+    }).then(result => {
+      if (result) setPracticeRewards(result);
     }).catch(() => {});
-  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime, coins]);
+  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
 
   // Compete (AI): after battle resolved and marked done, grant rewards once
   const competeGrantRef = useRef<boolean>(false);
@@ -443,10 +431,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         if (question.difficulty === 'easy') earned = within ? 3 : 1;
         else if (question.difficulty === 'moderate') earned = within ? 5 : 2;
         else earned = within ? 8 : 4;
-      } else {
-        // Practice and others: use existing reward minus hint cost
+      } else if (mode !== 'practice') {
+        // Battle modes: use existing reward minus hint cost
         earned = Math.max(0, questionReward);
       }
+      // Practice mode: NO per-question coins (streak-based only at completion)
       if (earned > 0) {
         setCoins(prev => prev + earned);
         const gainId = Date.now();
@@ -839,6 +828,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
         opponentName={mode === 'battle-ai' ? 'AI Bot' : undefined}
         onRestart={handleRestart}
         gameOver={isTimeUp}
+        mode={mode}
+        practiceRewards={mode === 'practice' ? practiceRewards : undefined}
+        questions={shuffledQuestions}
       />
     );
   }
@@ -867,23 +859,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           progress={progress} 
           blinkHeart={blinkHeart} 
           coinGain={coinGain}
-          onTreasureClick={() => setShowAchievements((o) => !o)}
           overallTime={overallTime}
           overallTimeLimit={overallTimeLimit}
           showTimer={!practiceMode}
-          treasureOpen={showAchievements}
         />
       )}
       
-      {/* Achievement Modal */}
-      <AchievementModal
-        open={showAchievements}
-        onOpenChange={setShowAchievements}
-        coins={coins}
-        correctAnswers={correctAnswers}
-        totalQuestions={total}
-        lifetime={lifetimeAchievements}
-      />
+      {/* Removed in-game treasure modal; use dedicated /treasure page */}
 
       {/* Battle header (visible during match) */}
       {mode === 'battle-ai' && (
@@ -901,18 +883,17 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
           {/* Left: AI Panel in Battle-AI, else Monkey Progress */}
           <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
             {mode === 'battle-ai' ? (
-              <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
-                <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
-                <div className="text-sm font-bold">AI Answer:</div>
-                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
-              </div>
-            ) : mode === 'practice' ? (
+            <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
+              <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
+              <div className="text-sm font-bold">AI Answer:</div>
+              <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
+            </div>
+            ) : mode === 'practice' || mode === 'speed' ? (
               <div className="w-full max-w-[200px]" aria-hidden="true" />
             ) : (
               <MonkeyProgress progress={correctAnswers} total={total} />
             )}
           </div>
-
           {/* Center: Question */}
           <div className="lg:col-span-7 min-w-0">
             <QuestionCard
@@ -939,6 +920,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
               battleMode={mode === 'battle-ai'}
               showCoinInfo={mode !== 'practice'}
               hintFree={mode === 'practice'}
+              showDifficultyBadge={mode !== 'practice'}
             />
 
           </div>

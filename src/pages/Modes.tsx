@@ -30,7 +30,7 @@ const Modes = () => {
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-pink-400/20 blur-3xl" />
       <div className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-8">
-          <div>
+          <div className="pl-16 sm:pl-20 pt-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5" /> Choose Mode
             </div>
