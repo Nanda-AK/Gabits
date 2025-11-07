@@ -5,7 +5,7 @@ import { Coins } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { getUserBalances } from "@/services/rewards";
+import { getUserBalances, getAnyStreak, getDailyStreakAward } from "@/services/rewards";
 import { getSpeedDaily } from "@/services/speed";
 import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
 import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
@@ -51,6 +51,8 @@ const Treasure = () => {
   const [seasonWinners, setSeasonWinners] = useState<SeasonalWinner[]>([]);
   const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+  const [anyStreak, setAnyStreak] = useState<number | null>(null);
+  const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
@@ -146,6 +148,20 @@ const Treasure = () => {
     return () => { cancelled = true; };
   }, [user, guest]);
 
+  // Load current streak and today's daily streak award (who claimed base coins)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setAnyStreak(null); setTodayAward(null); return; }
+      const s = await getAnyStreak(user.id);
+      if (!cancelled) setAnyStreak(s?.any_streak ?? 0);
+      const today = getLocalYMD();
+      const a = await getDailyStreakAward(user.id, today);
+      if (!cancelled) setTodayAward(a ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [user, guest]);
+
   // Load server wallet balances (coins, gems, XP). Guest falls back to local snapshot for coins only.
   useEffect(() => {
     let cancelled = false;
@@ -224,10 +240,33 @@ const Treasure = () => {
       <div className="container mx-auto px-4 py-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2">
-            <img src="/treasure_close.png" className="w-8 h-8"/> My Treasure
+            <img src={todayAward ? "/treasure_open.png" : "/treasure_close.png"} className="w-8 h-8"/> My Treasure
           </h1>
           <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
         </div>
+
+        {/* Streak Hero */}
+        {!guest && user && (
+          <div className="mb-6">
+            <Card className="overflow-hidden border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+              <CardContent className="flex items-center gap-4 py-4">
+                <img src={todayAward ? "/treasure_open.png" : "/treasure_close.png"} className="w-16 h-16 flex-shrink-0"/>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-muted-foreground truncate">
+                    {todayAward
+                      ? <>Daily streak coins for today were claimed by <span className="font-semibold">{todayAward.claimed_by}</span>.</>
+                      : <>No daily streak reward claimed yet today. Complete any mode to claim it.</>}
+                  </div>
+                  <div className="text-xs text-amber-800 mt-1">
+                    Current streak: <span className="font-bold">{anyStreak ?? 0}</span> day(s)
+                    {todayAward && <> • Coins: <span className="font-bold">+{todayAward.coins_awarded}</span></>}
+                    {todayAward && todayAward.badges_awarded?.length > 0 && <> • Badges: {todayAward.badges_awarded.join(', ')}</>}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
           <Card>

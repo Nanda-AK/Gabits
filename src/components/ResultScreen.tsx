@@ -1,6 +1,10 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trophy, RotateCcw, Star, Frown, CheckCircle2, XCircle, Award } from "lucide-react";
 import type { Question } from "@/data/questions";
+import { useAuth } from "@/contexts/AuthContext";
+import { getLocalYMD } from "@/lib/date";
+import { getAnyStreak, getDailyStreakAward } from "@/services/rewards";
 
 interface ResultScreenProps {
   coins: number;
@@ -16,6 +20,28 @@ interface ResultScreenProps {
 
 export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, questions }: ResultScreenProps) => {
   const isPerfectScore = correctAnswers === 10;
+  const { user, guest } = useAuth();
+  const [anyStreak, setAnyStreak] = useState<number | null>(null);
+  const [todayAwardMode, setTodayAwardMode] = useState<string | null>(null);
+
+  // Fetch true streak length and who claimed today's daily streak (for transparency)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (mode !== 'practice') return;
+      if (!user || guest) return;
+      const s = await getAnyStreak(user.id);
+      if (!cancelled) setAnyStreak(s?.any_streak ?? null);
+      const today = getLocalYMD();
+      const award = await getDailyStreakAward(user.id, today);
+      if (!cancelled) setTodayAwardMode(award?.claimed_by ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [mode, user, guest]);
+
+  const displayStreak = (practiceRewards?.streak_after && practiceRewards.streak_after > 0)
+    ? practiceRewards.streak_after
+    : (anyStreak ?? 0);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4 relative overflow-hidden">
@@ -66,7 +92,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
               <div className="space-y-3 text-left">
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                   <span className="font-semibold text-foreground">Streak Days:</span>
-                  <span className="text-2xl font-black text-primary">{practiceRewards.streak_after}</span>
+                  <span className="text-2xl font-black text-primary">{displayStreak}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                   <span className="font-semibold text-foreground">Coins Earned:</span>
@@ -88,6 +114,11 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                {todayAwardMode && (
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Daily streak coins for today were claimed by: <span className="font-semibold">{todayAwardMode}</span>
                   </div>
                 )}
               </div>

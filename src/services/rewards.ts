@@ -67,3 +67,28 @@ export async function getUserBalances(userId: string): Promise<{ user_id: string
   if (error) return null;
   return (data as any) ?? null;
 }
+
+// Read the current any-mode streak (applies across Practice/Speed/Compete)
+export async function getAnyStreak(userId: string): Promise<{ any_streak: number } | null> {
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('activity_streaks')
+    .select('any_streak')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return null;
+  return (data as any) ?? null;
+}
+
+// Read who claimed today's daily streak award (first mode of the day)
+export async function getDailyStreakAward(userId: string, dateYMD: string): Promise<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null> {
+  if (!userId || !dateYMD) return null;
+  const { data, error } = await supabase
+    .from('daily_streak_awards')
+    .select('claimed_by, coins_awarded, badges_awarded')
+    .eq('user_id', userId)
+    .eq('date', dateYMD)
+    .maybeSingle();
+  if (error) return null;
+  return (data as any) ?? null;
+}
