@@ -209,13 +209,26 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const filtered = selectedTopics.size
         ? all.filter(q => selectedTopics.has(guessType(q)))
         : all;
-      const pool = filtered.length ? filtered : all; // fallback if empty
+      let pool = filtered.length ? filtered : all; // fallback if empty
+      // Ensure we always have at least 10 by backfilling from the remaining 'all'
+      if (pool.length < 10) {
+        const backfill = all.filter(q => !pool.includes(q));
+        pool = pool.concat(backfill).slice(0, Math.max(10, pool.length));
+      }
       if (userId && !guest) {
         try {
           const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
           if (cancelled) return;
           const mapped = ids.map(id => pool.find(q => q.id === id)).filter(Boolean) as Question[];
-          const arr = mapped.length ? mapped : pool.slice(0, Math.min(10, pool.length));
+          let arr = mapped.length ? mapped : [];
+          if (arr.length < 10) {
+            const need = 10 - arr.length;
+            const extras = pool.filter(q => !arr.some(a => a.id === q.id)).slice(0, need);
+            arr = arr.concat(extras);
+          }
+          if (arr.length === 0) {
+            arr = pool.slice(0, Math.min(10, pool.length));
+          }
           setDailyQuestions(arr);
         } catch {
           const arr = fallbackLocal(pool, difficulty);

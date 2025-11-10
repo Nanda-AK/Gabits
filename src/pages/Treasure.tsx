@@ -423,7 +423,7 @@ const Treasure = () => {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card>/
 
           {/* Stage Boost Tokens */}
           {!guest && user && boostTokens && boostTokens.available > 0 && (
