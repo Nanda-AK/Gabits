@@ -522,7 +522,7 @@ const Treasure = () => {
           </Card>
         )}
 
-        {/* HR Badges with counts (uses images) */}
+        
         {!guest && user && (
           <Card className="mb-6">
             <CardHeader>

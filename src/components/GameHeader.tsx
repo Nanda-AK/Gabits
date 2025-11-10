@@ -95,7 +95,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
           {/* Chest + Coins */}
           <div className="relative flex items-center gap-1.5 sm:gap-2 lg:gap-3">
             <button
-              onClick={() => { navigate('/treasure'); }}
+              onClick={() => { onTreasureClick ? onTreasureClick() : navigate('/treasure'); }}
               className="relative group cursor-pointer hover:scale-110 transition-transform duration-200 active:scale-95"
               aria-label="View Achievements"
             >

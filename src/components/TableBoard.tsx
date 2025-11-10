@@ -36,9 +36,8 @@ export const TableBoard: React.FC<Props> = ({ onClose }) => {
       </div>
       <div className="max-h-64 overflow-y-auto rounded-md border bg-white/60 p-2 text-xs">
         {[...Array(12)].map((_, i) => (
-          <div key={i} className="flex items-center justify-between">
-            <span>{activeTable} × {i+1}</span>
-            <span className="font-bold">= {activeTable * (i+1)}</span>
+          <div key={i} className="py-0.5 font-semibold tracking-tight">
+            {activeTable}×{i+1}={activeTable * (i+1)}
           </div>
         ))}
       </div>

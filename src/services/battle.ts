@@ -9,8 +9,7 @@ export interface BattleResolution {
   aiPoints: number;
 }
 
-// HR summary: minimal performance record
-export type BattleResult = 'win' | 'loss' | 'draw';
+ export type BattleResult = 'win' | 'loss' | 'draw';
 export interface BattlePerformanceRecord {
   user_id: string;
   date: string; // YYYY-MM-DD

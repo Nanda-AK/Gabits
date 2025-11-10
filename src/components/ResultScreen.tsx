@@ -16,9 +16,10 @@ interface ResultScreenProps {
   mode?: 'practice' | 'speed' | 'battle-ai';
   practiceRewards?: { coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null;
   questions?: Question[];
+  results?: boolean[]; // per-question correctness for review (Practice/Speed)
 }
 
-export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, questions }: ResultScreenProps) => {
+export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, questions, results }: ResultScreenProps) => {
   const isPerfectScore = correctAnswers === 10;
   const { user, guest } = useAuth();
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
@@ -181,7 +182,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             </h3>
             <div className="max-h-64 overflow-y-auto space-y-2 rounded-xl border-2 border-muted p-3">
               {questions.map((q, idx) => {
-                const userCorrect = idx < correctAnswers; // simplified assumption
+                const userCorrect = !!(results && typeof results[idx] !== 'undefined' ? results[idx] : (idx < correctAnswers));
                 return (
                   <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${userCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
                     {userCorrect ? (

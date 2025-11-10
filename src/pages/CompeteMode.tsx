@@ -25,7 +25,7 @@ const CompeteMode = () => {
       <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-fuchsia-400/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl" />
       <div className="container mx-auto px-4 py-10">
-        <Button variant="secondary" className="mb-6 rounded-full" onClick={() => navigate("/modes")}> <ArrowLeft className="w-4 h-4 mr-2"/> Back to Modes</Button>
+        <Button variant="secondary" className="mb-6 ml-20 rounded-full" onClick={() => navigate("/modes")}> <ArrowLeft className="w-4 h-4 mr-2"/> Back to Modes</Button>
         <div className="mb-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-3">
             <Sparkles className="w-3.5 h-3.5" /> Competitive Play

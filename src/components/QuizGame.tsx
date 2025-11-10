@@ -5,6 +5,7 @@ import { questions, getDifficultyCoins, getHintCost } from "@/data/questions";
 import type { Question, Difficulty } from "@/data/questions";
 import { QuestionCard } from "./QuestionCard";
 import { GameHeader } from "./GameHeader";
+import { TreasureQuickModal } from "./TreasureQuickModal";
 import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
@@ -81,10 +82,10 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
   return idxs.slice(0, Math.min(count, all.length)).map((i) => all[i]);
 }
 
-// Local fallback using localStorage for guests/offline
-function fallbackLocal(pool: Question[], difficulty: Difficulty): Question[] {
+// Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
+function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string): Question[] {
   const today = new Date().toISOString().split('T')[0];
-  const key = `dailyQuizData:${difficulty}`;
+  const key = `dailyQuizData:${difficulty}:${topicsKey || 'all'}`;
   const storedData = localStorage.getItem(key);
   if (storedData) {
     try {
@@ -92,7 +93,17 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty): Question[] {
       if (date === today) return storedQuestions as Question[];
     } catch {}
   }
-  const newQuestions = pickDailyQuestions(pool, 10);
+  let newQuestions = pickDailyQuestions(pool, 10);
+  // If the filtered pool has fewer than 10, pad from the SAME pool (allow repeats) to keep count=10
+  if (newQuestions.length < 10 && pool.length > 0) {
+    const padded = newQuestions.slice();
+    let i = 0;
+    while (padded.length < 10) {
+      padded.push(pool[i % pool.length]);
+      i++;
+    }
+    newQuestions = padded;
+  }
   try { localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions })); } catch {}
   return newQuestions;
 }
@@ -122,7 +133,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
   const [overallTime, setOverallTime] = useState(0);
   // Right column tools (Practice & Speed)
-  const [showScribble, setShowScribble] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [questionTime, setQuestionTime] = useState(0);
   const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
@@ -143,7 +153,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [battleDone, setBattleDone] = useState(false);
   // Speed-only: track whether each answered question met the within-time threshold
   const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
+  // Practice/Speed: track per-question correctness for the review panel
+  const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
+
+  const [treasureModalOpen, setTreasureModalOpen] = useState(false);
 
   // Infer a simple math type for HR summary from the active question set
   const inferMathType = (qs: Question[]): string => {
@@ -165,6 +179,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     ].sort((a,b) => b.v - a.v);
     return arr[0].v === 0 ? 'mixed' : arr[0].k;
   };
+
+  
 
   // Canonicalize question type and requested topics
   const canonicalize = (t: string): string => {
@@ -198,6 +214,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     return set;
   }, [topic, topics]);
 
+  // Stable key for topics selection used for caching (sorted canonical topics)
+  const topicsKey = useMemo(() => {
+    if (!selectedTopics || selectedTopics.size === 0) return 'all';
+    return Array.from(selectedTopics).sort().join('-');
+  }, [selectedTopics]);
+
+  // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
+  const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
+
   // Load daily set from Supabase for authenticated users; fallback to local for guests
   const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
@@ -210,6 +235,18 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         ? all.filter(q => selectedTopics.has(guessType(q)))
         : all;
       let pool = filtered.length ? filtered : all; // fallback if empty
+
+      // If topics are explicitly selected, use topics-aware local daily set (avoid cross-topic backfill)
+      if (selectedTopics.size > 0) {
+        const arr = fallbackLocal(pool, difficulty, topicsKey);
+        if (!cancelled) {
+          setDailyQuestions(arr);
+          setLoadingDaily(false);
+        }
+        return;
+      }
+
+      // No topics filter: use server daily set for authenticated users; fallback to local for guests
       // Ensure we always have at least 10 by backfilling from the remaining 'all'
       if (pool.length < 10) {
         const backfill = all.filter(q => !pool.includes(q));
@@ -231,11 +268,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           }
           setDailyQuestions(arr);
         } catch {
-          const arr = fallbackLocal(pool, difficulty);
+          const arr = fallbackLocal(pool, difficulty, topicsKey);
           setDailyQuestions(arr);
         }
       } else {
-        const arr = fallbackLocal(pool, difficulty);
+        const arr = fallbackLocal(pool, difficulty, topicsKey);
         setDailyQuestions(arr);
       }
       setLoadingDaily(false);
@@ -249,11 +286,64 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const question = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / total) * 100;
 
-  // When daily set loads or refreshes, refresh the shuffled questions
+  // When daily set loads or refreshes, try restore session; else shuffle fresh
   useEffect(() => {
+    const raw = (() => { try { return localStorage.getItem(storageKey); } catch { return null; } })();
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
+          if (saved.completed) {
+            // Do not restore completed sessions; clear and start fresh
+            try { localStorage.removeItem(storageKey); } catch {}
+            setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
+            setCurrentQuestion(0);
+            return;
+          }
+          setShuffledQuestions(saved.shuffledQuestions as Question[]);
+          setCurrentQuestion(Math.max(0, Math.min(saved.currentQuestion ?? 0, (saved.shuffledQuestions as any[]).length - 1)));
+          setHearts(typeof saved.hearts === 'number' ? saved.hearts : 5);
+          setCoins(typeof saved.coins === 'number' ? saved.coins : 0);
+          setCorrectAnswers(typeof saved.correctAnswers === 'number' ? saved.correctAnswers : 0);
+          setAnswerCorrectList(Array.isArray(saved.answerCorrectList) ? saved.answerCorrectList : []);
+          setWithinTimeList(Array.isArray(saved.withinTimeList) ? saved.withinTimeList : []);
+          setOverallTime(typeof saved.overallTime === 'number' ? saved.overallTime : 0);
+          if (saved.milestones) {
+            const loaded = {
+              m10: !!saved.milestones.m10,
+              m25: !!saved.milestones.m25,
+              m50: !!saved.milestones.m50,
+              m75: !!saved.milestones.m75,
+              m100: !!saved.milestones.m100,
+            };
+            setMilestonesState(loaded);
+            milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
+          }
+          return; // restored, skip fresh shuffle
+        }
+      } catch {}
+    }
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
-  }, [dailyQuestions]);
+  }, [dailyQuestions, storageKey]);
+
+  // Persist local session snapshot (resume on return)
+  useEffect(() => {
+    const snap = {
+      version: 1,
+      currentQuestion,
+      hearts,
+      coins,
+      correctAnswers,
+      answerCorrectList,
+      withinTimeList,
+      shuffledQuestions,
+      overallTime,
+      milestones: milestonesState,
+      completed: gameCompleted,
+    };
+    try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch {}
+  }, [storageKey, currentQuestion, hearts, coins, correctAnswers, answerCorrectList, withinTimeList, shuffledQuestions, overallTime, milestonesState, gameCompleted]);
 
   // Initialize per-question reward when question changes
   const baseReward = question ? getDifficultyCoins(question.difficulty) : 0;
@@ -340,14 +430,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
     if (mode === 'battle-ai') return; // no overall timer in battle AI
+    if (treasureModalOpen) return; // pause while quick treasure modal is open
     const overallInterval = setInterval(() => {
       setOverallTime(prev => prev + 1);
     }, 1000);
     return () => clearInterval(overallInterval);
-  }, [practiceMode, mode]);
+  }, [practiceMode, mode, treasureModalOpen]);
   
   useEffect(() => {
     if (practiceMode || mode === 'battle-ai') return; // no per-question timer in practice or battle AI
+    if (treasureModalOpen) return; // pause per-question timer while modal open
     if (!showResult && !gameCompleted) {
       const questionInterval = setInterval(() => {
         setQuestionTime(prev => {
@@ -362,7 +454,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       
       return () => clearInterval(questionInterval);
     }
-  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode, mode]);
+  }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode, mode, treasureModalOpen]);
   
   // Overall time limit check (disabled in practice mode)
   useEffect(() => {
@@ -433,11 +525,17 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const handleTimeUp = () => {
     // Auto-skip question when time runs out
     if (showResult || gameCompleted) return;
-    
+
     setIsCorrect(false);
     setShowResult(true);
+    // Mark this question as incorrect for review
+    setAnswerCorrectList(prev => {
+      const next = prev.slice();
+      next[currentQuestion] = false;
+      return next;
+    });
     
-    // Lose a heart
+    // Loses a heart
     const newHearts = hearts - 1;
     setHearts(newHearts);
     setBlinkHeart(true);
@@ -457,6 +555,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (correct) {
       setIsCorrect(true);
       setShowResult(true);
+      // Record correctness for review
+      setAnswerCorrectList(prev => {
+        const next = prev.slice();
+        next[currentQuestion] = true;
+        return next;
+      });
       // Battle AI round resolution when student correct
       if (mode === 'battle-ai') {
         const studentElapsed = Date.now() - questionStartAtRef.current;
@@ -562,6 +666,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // Second wrong: lose one heart and end question
       setIsCorrect(false);
       setShowResult(true);
+      // Record incorrect for review
+      setAnswerCorrectList(prev => {
+        const next = prev.slice();
+        next[currentQuestion] = false;
+        return next;
+      });
       if (mode === 'battle-ai') {
         // Student wrong on final attempt: decide AI outcome in favor of AI unless studentShouldWin flips it
         const studentShouldWin = Math.random() < studentWinProbRef.current;
@@ -765,6 +875,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (mode === 'battle-ai') setBattleStarted(false);
     // Allow practice rewards to grant again on the next completion
     practiceGrantRef.current = false;
+    // Clear review correctness
+    setAnswerCorrectList([]);
   };
 
   // Persist progress snapshot for authenticated users
@@ -888,6 +1000,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         mode={mode}
         practiceRewards={mode === 'practice' ? practiceRewards : undefined}
         questions={shuffledQuestions}
+        results={answerCorrectList}
       />
     );
   }
@@ -919,10 +1032,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           overallTime={overallTime}
           overallTimeLimit={overallTimeLimit}
           showTimer={!practiceMode}
+          treasureOpen={treasureModalOpen}
+          onTreasureClick={() => setTreasureModalOpen(true)}
         />
       )}
       
-      {/* Removed in-game treasure modal; use dedicated /treasure page */}
+      {/* In-game Treasure quick modal is available via header chest while playing */}
 
       {/* Battle header (visible during match) */}
       {mode === 'battle-ai' && (
@@ -982,8 +1097,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
           </div>
 
-          {/* Right column: User panel or tools */}
-          <div className="lg:col-span-3 hidden lg:block">
+          {/* Right column: User panel or tools (hidden on xl in favor of fixed sidebar) */}
+          <div className="lg:col-span-3 hidden lg:block xl:hidden">
             {mode === 'battle-ai' ? (
               <div className="w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-5 shadow-lg flex flex-col items-center gap-3">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl shadow">🙂</div>
@@ -993,21 +1108,37 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
             ) : (mode === 'practice' || mode === 'speed') ? (
-              showScribble ? (
-                <ScribbleBoard onClose={() => setShowScribble(false)} />
-              ) : showTable ? (
-                <TableBoard onClose={() => setShowTable(false)} />
-              ) : (
-                <div className="w-full bg-white/70 backdrop-blur rounded-2xl border-2 border-primary/10 p-4 shadow-lg flex flex-col gap-2">
-                  <div className="text-sm font-semibold text-muted-foreground">Tools</div>
-                  <Button variant="outline" className="w-full" onClick={() => { setShowScribble(true); setShowTable(false); }}>Scribble Board</Button>
-                  <Button variant="outline" className="w-full" onClick={() => { setShowTable(true); setShowScribble(false); }}>Tables 2–12</Button>
+              <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
+                <div className="relative flex-1">
+                  {/* Scribble is always visible and fills available height */}
+                  <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+                  {/* Tables overlay above Scribble only */}
+                  {showTable && (
+                    <div className="absolute inset-0 z-10 overflow-auto">
+                      <TableBoard onClose={() => setShowTable(false)} />
+                    </div>
+                  )}
                 </div>
-              )
+              </div>
             ) : null}
           </div>
         </div>
       </div>
+      {/* Fixed right sidebar on xl screens to utilize full right viewport space */}
+      {(mode === 'practice' || mode === 'speed') && (
+        <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40">
+          <div className="flex flex-col w-full h-full">
+            <div className="relative flex-1">
+              <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+              {showTable && (
+                <div className="absolute inset-0 z-10 overflow-auto">
+                  <TableBoard onClose={() => setShowTable(false)} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Second chance modal */}
       <AlertDialog open={secondChanceOpen} onOpenChange={setSecondChanceOpen}>
         <AlertDialogContent className="border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-white">
@@ -1024,6 +1155,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TreasureQuickModal
+        open={treasureModalOpen}
+        onOpenChange={setTreasureModalOpen}
+        sessionCoins={coins}
+        hearts={hearts}
+        correctAnswers={mode === 'battle-ai' ? playerPoints : correctAnswers}
+        total={total}
+      />
     </div>
   );
 };

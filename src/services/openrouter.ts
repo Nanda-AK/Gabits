@@ -16,6 +16,35 @@ async function callOpenRouter(body: unknown): Promise<any | null> {
   return res.json();
 }
 
+// Short step-by-step full solution in Indian style (plain text)
+export async function aiSolveShortIndian(q: Question): Promise<string> {
+  try {
+    const data = await callOpenRouter({
+      model: "tngtech/deepseek-r1t2-chimera:free",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a friendly Indian math tutor. Solve the question with 4-8 short lines showing key calculation steps. Use plain text, Indian style (use lakh/crore separators where relevant, '₹' for rupees, and symbols ×, ÷, +, −). Avoid LaTeX. End with: 'Final: <answer> <unit if any>'. Keep under 80 words.",
+        },
+        {
+          role: "user",
+          content: `Question: ${q.question}\nOptions:\n${q.options.map((opt, i) => `${String.fromCharCode(65 + i)}. ${opt}`).join("\n")}`,
+        },
+      ],
+      max_tokens: 180,
+    });
+    if (!data) {
+      return "Add OpenRouter API key to .env as VITE_OPENROUTER_API_KEY and retry.\nFinal: <answer>";
+    }
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    return text || "Steps: Write the numbers, do the operation step by step, simplify neatly.\nFinal: <answer>";
+  } catch {
+    return "Steps: Do simple calculations step by step and keep units.\nFinal: <answer>";
+  }
+}
+
 export async function aiTaunt(): Promise<string> {
   const data = await callOpenRouter({
     model: "tngtech/deepseek-r1t2-chimera:free",
@@ -29,7 +58,6 @@ export async function aiTaunt(): Promise<string> {
   const text = data?.choices?.[0]?.message?.content?.trim();
   return text || "Let’s see if you can keep up!";
 }
-
 export async function aiBattlePick(q: Question): Promise<{ index: number; commentary?: string }> {
   const data = await callOpenRouter({
     model: "tngtech/deepseek-r1t2-chimera:free",
@@ -60,4 +88,31 @@ export async function aiBattlePick(q: Question): Promise<{ index: number; commen
   const letter = (text.match(/[A-D]/i)?.[0] || "A").toUpperCase();
   const idx = Math.max(0, Math.min(q.options.length - 1, letter.charCodeAt(0) - 65));
   return { index: Number.isFinite(idx) ? idx : 0 };
+}
+
+// Short kid-friendly explanation (no final answer). Returns plain text.
+export async function aiExplainShort(q: Question): Promise<string> {
+  try {
+    const data = await callOpenRouter({
+      model: "tngtech/deepseek-r1t2-chimera:free",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a friendly math tutor for kids (ages 8-12). Explain how to solve the question in 2-4 very short bullet points. Keep it simple, concrete, and encouraging. Do NOT reveal the final answer."
+        },
+        {
+          role: "user",
+          content:
+            `Question: ${q.question}\nOptions:\n${q.options.map((opt, i) => `${String.fromCharCode(65 + i)}. ${opt}`).join("\n")}`,
+        },
+      ],
+      max_tokens: 140,
+    });
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    return text || "Hint: Break the problem into small steps and try simple arithmetic to get close.";
+  } catch {
+    return "Hint: Think step by step. Write down the numbers, choose +, −, ×, or ÷, and check the units.";
+  }
 }
