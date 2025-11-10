@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
@@ -13,9 +14,14 @@ const DiffBtn = ({ value, cur, onPick, children }: DiffBtnProps) => (
 
 const SpeedDriveSetup = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'difficult' | ''>('');
+  const [topics, setTopics] = useState<string[]>(['addition', 'subtraction', 'multiplication', 'division']);
+  const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   const navigate = useNavigate();
 
-  const start = () => navigate(`/play?mode=speed&difficulty=${difficulty}`);
+  const start = () => {
+    const csv = topics.join(',');
+    navigate(`/play?mode=speed&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}`);
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
@@ -33,16 +39,37 @@ const SpeedDriveSetup = () => {
             <h1 className="text-4xl font-black tracking-tight">Speed Drive</h1>
             <p className="text-muted-foreground">10 questions • 30 seconds each</p>
           </div>
-          <div className="space-y-3">
+
+          {/* Difficulty Selection */}
+          <div className="space-y-3 mb-6">
             <DiffBtn value="easy" cur={difficulty} onPick={setDifficulty}>Easy</DiffBtn>
             <DiffBtn value="moderate" cur={difficulty} onPick={setDifficulty}>Moderate</DiffBtn>
             <DiffBtn value="difficult" cur={difficulty} onPick={setDifficulty}>Hard</DiffBtn>
           </div>
-          <Button className="w-full mt-6 rounded-full" onClick={start} disabled={!difficulty}>Start Speed Drive</Button>
+
+          {/* Topic Selection (Checkboxes) */}
+          <div className="mt-6 text-left">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Select Topics</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                { key: 'addition', label: 'Addition' },
+                { key: 'subtraction', label: 'Subtraction' },
+                { key: 'multiplication', label: 'Multiplication' },
+                { key: 'division', label: 'Division' },
+                { key: 'fractions', label: 'Fractions' },
+                { key: 'algebra', label: 'Algebra' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
+                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                  <span className="text-sm font-medium">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <Button className="w-full mt-6 rounded-full" onClick={start} disabled={!difficulty || topics.length === 0}>Start Speed Drive</Button>
         </Card>
       </div>
     </div>
   );
 };
-
 export default SpeedDriveSetup;

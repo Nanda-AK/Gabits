@@ -795,7 +795,7 @@ export const questions: Question[] = [
   },
   {
     id: 79,
-    question: "₹1584 apples are packed into boxes of 8 apples each. How many boxes are needed in total?",
+    question: "₹792 apples are packed into boxes of 4 apples each. How many boxes are needed in total?",
     options: ["195", "199", "201", "198"],
     correctAnswer: 3,
     difficulty: "difficult",
@@ -813,7 +813,6 @@ export const questions: Question[] = [
     reward: 8,
     hint: "Divide total apples by apples per box to find number of boxes."
   },
-,
   {
     id: 81,
     question: "Solve for x: x + 7 = 12.",

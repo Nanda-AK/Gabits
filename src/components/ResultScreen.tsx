@@ -76,35 +76,38 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
           </>
         )}
 
-        {/* Stats */}
-        {mode === 'practice' && practiceRewards ? (
+        {/* Stats (Practice + Speed share the same styled layout) */}
+        {(mode === 'practice' || mode === 'speed') ? (
           <div className="mb-8">
             <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg mb-4">
               <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
               <div className="text-sm font-semibold text-foreground">Correct Answers</div>
             </div>
-            {/* Streak Rewards Summary */}
+            {/* Rewards Summary styled like Practice */}
             <div className="bg-gradient-to-br from-accent/20 to-accent/10 rounded-2xl p-6 border-2 border-accent/30 shadow-lg">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Award className="w-6 h-6 text-accent" />
-                <h3 className="text-xl font-bold text-foreground">Streak Rewards</h3>
+                <h3 className="text-xl font-bold text-foreground">Rewards Summary</h3>
               </div>
               <div className="space-y-3 text-left">
+                {/* Streak Days (only meaningful in practice) */}
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                   <span className="font-semibold text-foreground">Streak Days:</span>
-                  <span className="text-2xl font-black text-primary">{displayStreak}</span>
+                  <span className="text-2xl font-black text-primary">{mode === 'practice' ? displayStreak : 0}</span>
                 </div>
+                {/* Coins */}
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                   <span className="font-semibold text-foreground">Coins Earned:</span>
-                  <span className="text-2xl font-black text-amber-700">+{practiceRewards.coins_awarded}</span>
+                  <span className="text-2xl font-black text-amber-700">+{mode === 'practice' && practiceRewards ? practiceRewards.coins_awarded : coins}</span>
                 </div>
-                {practiceRewards.gems_awarded > 0 && (
+                {/* Gems and Badges (practice only) */}
+                {mode === 'practice' && practiceRewards?.gems_awarded && practiceRewards.gems_awarded > 0 && (
                   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                     <span className="font-semibold text-foreground">Gems Earned:</span>
                     <span className="text-2xl font-black text-fuchsia-600">+{practiceRewards.gems_awarded}</span>
                   </div>
                 )}
-                {practiceRewards.badges_awarded.length > 0 && (
+                {mode === 'practice' && practiceRewards?.badges_awarded && practiceRewards.badges_awarded.length > 0 && (
                   <div className="p-3 bg-white/50 rounded-lg">
                     <span className="font-semibold text-foreground block mb-2">Badges Unlocked:</span>
                     <div className="flex flex-wrap gap-2">
@@ -116,7 +119,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
                     </div>
                   </div>
                 )}
-                {todayAwardMode && (
+                {mode === 'practice' && todayAwardMode && (
                   <div className="text-[11px] text-muted-foreground mt-1">
                     Daily streak coins for today were claimed by: <span className="font-semibold">{todayAwardMode}</span>
                   </div>
@@ -125,6 +128,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             </div>
           </div>
         ) : (
+          // Other modes keep compact grid
           <div className="grid grid-cols-2 gap-6 mb-8">
             <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg">
               <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
@@ -132,14 +136,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             </div>
             <div className="bg-gradient-to-br from-accent via-accent/90 to-accent/70 rounded-2xl p-6 border-2 border-accent shadow-lg">
               <div className="flex items-center justify-center gap-3 mb-2">
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 64 64"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-label="Coins"
-                  role="img"
-                >
+                <svg width="40" height="40" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Coins" role="img">
                   <defs>
                     <radialGradient id="goldGradientRS" cx="50%" cy="35%" r="60%">
                       <stop offset="0%" stopColor="#FFF6B7" />
@@ -175,8 +172,8 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
           </div>
         )}
 
-        {/* Question Review (Practice Only) */}
-        {mode === 'practice' && questions && questions.length > 0 && (
+        {/* Question Review (Practice and Speed) */}
+        {(mode === 'practice' || mode === 'speed') && questions && questions.length > 0 && (
           <div className="mb-8">
             <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
               <Star className="w-5 h-5 text-primary" />

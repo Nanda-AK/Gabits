@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -16,12 +17,15 @@ function randomCode(): string {
 const BattleFriends = () => {
   const [code, setCode] = useState("");
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'difficult' | ''>('');
+  const [topics, setTopics] = useState<string[]>(['addition','subtraction','multiplication','division']);
+  const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   const navigate = useNavigate();
 
   const createLobby = () => {
-    if (!difficulty) return;
+    if (!difficulty || topics.length === 0) return;
     const c = randomCode();
-    navigate(`/lobby/${c}?difficulty=${difficulty}&role=host`);
+    const csv = topics.join(',');
+    navigate(`/lobby/${c}?difficulty=${difficulty}&topics=${encodeURIComponent(csv)}&role=host`);
   };
 
   const joinLobby = () => {
@@ -50,7 +54,25 @@ const BattleFriends = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button className="w-full mt-4 rounded-full" onClick={createLobby} disabled={!difficulty}>Create Lobby</Button>
+            <div className="mt-4 space-y-2">
+              <label className="text-sm font-medium">Topics</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { key: 'addition', label: 'Addition' },
+                  { key: 'subtraction', label: 'Subtraction' },
+                  { key: 'multiplication', label: 'Multiplication' },
+                  { key: 'division', label: 'Division' },
+                  { key: 'fractions', label: 'Fractions' },
+                  { key: 'algebra', label: 'Algebra' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
+                    <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                    <span className="text-sm font-medium">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button className="w-full mt-4 rounded-full" onClick={createLobby} disabled={!difficulty || topics.length === 0}>Create Lobby</Button>
           </Card>
           <Card className="p-6 rounded-3xl border-0 bg-white/70 backdrop-blur-xl shadow-xl">
             <h2 className="text-xl font-bold mb-2">Join Lobby</h2>

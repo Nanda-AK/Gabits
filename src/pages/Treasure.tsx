@@ -53,6 +53,7 @@ const Treasure = () => {
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
+  const [todayEvents, setTodayEvents] = useState<Array<{ source: string; coins_delta: number; gems_delta: number; badges_delta: number; meta: any }>>([]);
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
@@ -72,24 +73,20 @@ const Treasure = () => {
     setWeekDays(arr);
   }, [weekLabels.join('|')]);
 
-  // Fetch completions for current week (authenticated users only) with stable deps
+  // Fetch completions for current week from daily_streak_awards (claimed streak days only)
   const fetchWeekProgress = useCallback(async () => {
     if (!user || guest || weekDays.length === 0) return;
     const start = weekDays[0].date;
     const end = weekDays[6].date;
     const { data, error } = await supabase
-      .from('daily_progress')
-      .select('date, completed')
+      .from('daily_streak_awards')
+      .select('date')
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end);
     if (error || !data) return;
-    const byDate = new Map<string, boolean>();
-    for (const row of data as Array<{ date: string; completed: boolean }>) {
-      if (!byDate.has(row.date)) byDate.set(row.date, !!row.completed);
-      else byDate.set(row.date, byDate.get(row.date)! || !!row.completed);
-    }
-    setWeekDays(prev => prev.map(w => ({ ...w, done: !!byDate.get(w.date) })));
+    const setDates = new Set((data as Array<{ date: string }>).map(r => r.date));
+    setWeekDays(prev => prev.map(w => ({ ...w, done: setDates.has(w.date) })));
   }, [user?.id, guest, weekDays]);
 
   useEffect(() => {
@@ -108,19 +105,19 @@ const Treasure = () => {
     };
   }, [fetchWeekProgress]);
 
-  // Realtime subscription to daily_progress for current week (all modes)
+  // Realtime subscription to daily_streak_awards for current week (claimed streak days)
   useEffect(() => {
     if (!user || guest || weekDays.length === 0) return;
     const start = weekDays[0].date;
     const end = weekDays[6].date;
     const channel = supabase
-      .channel('daily_progress_changes')
+      .channel('daily_streak_awards_changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'daily_progress',
+          table: 'daily_streak_awards',
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
@@ -147,6 +144,57 @@ const Treasure = () => {
     })();
     return () => { cancelled = true; };
   }, [user, guest]);
+
+  // Load today's reward events (dynamic breakdown)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setTodayEvents([]); return; }
+      const today = getLocalYMD();
+      const { data } = await supabase
+        .from('reward_events')
+        .select('source, coins_delta, gems_delta, badges_delta, meta')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .order('id', { ascending: true });
+      if (!cancelled) setTodayEvents((data as any[]) ?? []);
+    })();
+    return () => { cancelled = true; };
+  }, [user, guest]);
+
+  // Realtime subscription for today's reward_events
+  useEffect(() => {
+    if (!user || guest) return;
+    const today = getLocalYMD();
+    const channel = supabase
+      .channel('reward_events_today')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reward_events',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const date = (payload.new as any)?.date || (payload.old as any)?.date;
+          if (date === today) {
+            // Re-fetch today's breakdown
+            (async () => {
+              const { data } = await supabase
+                .from('reward_events')
+                .select('source, coins_delta, gems_delta, badges_delta, meta')
+                .eq('user_id', user.id)
+                .eq('date', today)
+                .order('id', { ascending: true });
+              setTodayEvents((data as any[]) ?? []);
+            })();
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, guest]);
 
   // Load current streak and today's daily streak award (who claimed base coins)
   useEffect(() => {
@@ -266,6 +314,47 @@ const Treasure = () => {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Today Reward Breakdown */}
+        {!guest && user && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Today Reward Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {todayEvents.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No rewards logged today yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {todayEvents.map((e, idx) => (
+                    <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-white/70">
+                      <div className="text-sm">
+                        <div className="font-semibold capitalize">{e.source.replace('compete-','compete ')}</div>
+                        {e.meta?.streak && (
+                          <div className="text-xs text-muted-foreground">streak: {e.meta.streak}</div>
+                        )}
+                        {e.meta?.difficulty && (
+                          <div className="text-xs text-muted-foreground">difficulty: {e.meta.difficulty}</div>
+                        )}
+                        {typeof e.meta?.acc === 'number' && (
+                          <div className="text-xs text-muted-foreground">accuracy: {(e.meta.acc*100).toFixed(0)}%</div>
+                        )}
+                        {e.meta?.type && e.meta?.result && (
+                          <div className="text-xs text-muted-foreground">{e.meta.type} • {e.meta.result}</div>
+                        )}
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="font-bold text-amber-700">+{e.coins_delta} coins</div>
+                        {e.gems_delta > 0 && <div className="font-bold text-fuchsia-700">+{e.gems_delta} gems</div>}
+                        {e.badges_delta > 0 && <div className="font-bold text-purple-700">+{e.badges_delta} badge(s)</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">

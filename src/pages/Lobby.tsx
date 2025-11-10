@@ -19,6 +19,7 @@ const Lobby = () => {
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   const difficulty = (params.get("difficulty") as 'easy' | 'moderate' | 'difficult') ?? 'moderate';
+  const topicsParam = params.get('topics') || '';
   const role = params.get("role") === 'host' ? 'host' : 'guest';
 
   const userId = useMemo(() => user?.id ?? localStorage.getItem("guestId") ?? `guest-${Math.random().toString(36).slice(2, 10)}`, [user]);
@@ -60,7 +61,10 @@ const Lobby = () => {
 
     channel.on('broadcast', { event: 'start' }, (payload: any) => {
       const d = payload?.payload?.difficulty ?? difficulty;
-      navigate(`/play?mode=speed&difficulty=${encodeURIComponent(d)}&lobby=${encodeURIComponent(code)}`);
+      const t = payload?.payload?.topics ?? topicsParam;
+      const qp = new URLSearchParams({ mode: 'speed', difficulty: String(d), lobby: String(code) });
+      if (t) qp.set('topics', String(t));
+      navigate(`/play?${qp.toString()}`);
     });
 
     return () => {
@@ -71,7 +75,7 @@ const Lobby = () => {
   const startMatch = async () => {
     if (!channelRef.current) return;
     setStarting(true);
-    await channelRef.current.send({ type: 'broadcast', event: 'start', payload: { difficulty } });
+    await channelRef.current.send({ type: 'broadcast', event: 'start', payload: { difficulty, topics: topicsParam } });
     setStarting(false);
   };
 
@@ -98,6 +102,9 @@ const Lobby = () => {
             <div>
               <h1 className="text-3xl font-black">Lobby #{code}</h1>
               <p className="text-muted-foreground">Difficulty: <span className="font-semibold">{difficulty}</span></p>
+              {topicsParam && (
+                <p className="text-muted-foreground text-sm">Topics: <span className="font-semibold">{topicsParam}</span></p>
+              )}
             </div>
             <Button onClick={copyCode} variant="outline" className="rounded-full">
               {copied ? <Check className="w-4 h-4 mr-2"/> : <Copy className="w-4 h-4 mr-2"/>} Copy Code

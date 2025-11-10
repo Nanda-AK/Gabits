@@ -9,6 +9,9 @@ import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
 import { BattleSummary } from "./BattleSummary";
+import { ScribbleBoard } from "./ScribbleBoard";
+import { TableBoard } from "./TableBoard";
+import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
@@ -24,6 +27,8 @@ import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 interface QuizGameProps {
   difficulty?: Difficulty;
   mode?: 'practice' | 'speed' | 'battle-ai';
+  topic?: 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra';
+  topics?: string[]; // normalized later
 }
 
 // Utility: Fisher-Yates shuffle
@@ -92,7 +97,7 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty): Question[] {
   return newQuestions;
 }
 
-export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGameProps) => {
+export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics }: QuizGameProps) => {
   const location = useLocation();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
@@ -116,6 +121,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
   const [questionReward, setQuestionReward] = useState(0);
   const [coinGain, setCoinGain] = useState<{ amount: number; id: number } | null>(null);
   const [overallTime, setOverallTime] = useState(0);
+  // Right column tools (Practice & Speed)
+  const [showScribble, setShowScribble] = useState(false);
+  const [showTable, setShowTable] = useState(false);
   const [questionTime, setQuestionTime] = useState(0);
   const [questionTimeLimit, setQuestionTimeLimit] = useState(30);
   const [overallTimeLimit] = useState(600); // 10 minutes total
@@ -158,6 +166,38 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     return arr[0].v === 0 ? 'mixed' : arr[0].k;
   };
 
+  // Canonicalize question type and requested topics
+  const canonicalize = (t: string): string => {
+    const s = (t || '').toLowerCase();
+    if (s.startsWith('add')) return 'addition';
+    if (s.startsWith('sub')) return 'subtraction';
+    if (s.startsWith('mul')) return 'multiplication';
+    if (s.startsWith('div')) return 'division';
+    if (s.startsWith('frac')) return 'fractions';
+    if (s.startsWith('alg')) return 'algebra';
+    return s;
+  };
+  const guessType = (q: Question): string => {
+    const allowed = new Set(['addition','subtraction','multiplication','division','fractions','algebra']);
+    const byType = canonicalize((q as any).type || '');
+    if (allowed.has(byType)) return byType;
+    const text = `${q.hint || ''} ${q.question || ''}`.toLowerCase();
+    if (text.includes('fraction') || text.includes('/') ) return 'fractions';
+    if (text.includes('solve for x') || /\bx\b/.test(text)) return 'algebra';
+    if (text.includes('multiply') || text.includes('per hour')) return 'multiplication';
+    if (text.includes('divide') || text.includes('each')) return 'division';
+    if (text.includes('subtract') || text.includes('remain') || text.includes('left')) return 'subtraction';
+    if (text.includes('add') || text.includes('sum') || text.includes('total')) return 'addition';
+    return byType || 'addition';
+  };
+  const selectedTopics = useMemo(() => {
+    const arr = Array.isArray(topics) && topics.length > 0
+      ? topics
+      : (topic && topic !== 'mixed' ? [topic] : []);
+    const set = new Set(arr.map(canonicalize));
+    return set;
+  }, [topic, topics]);
+
   // Load daily set from Supabase for authenticated users; fallback to local for guests
   const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
@@ -165,7 +205,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     let cancelled = false;
     async function load() {
       setLoadingDaily(true);
-      const pool = questions.filter(q => q.difficulty === difficulty);
+      const all = questions.filter(q => q.difficulty === difficulty);
+      const filtered = selectedTopics.size
+        ? all.filter(q => selectedTopics.has(guessType(q)))
+        : all;
+      const pool = filtered.length ? filtered : all; // fallback if empty
       if (userId && !guest) {
         try {
           const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
@@ -185,7 +229,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
     }
     load();
     return () => { cancelled = true; };
-  }, [difficulty, userId, guest, today]);
+  }, [difficulty, userId, guest, today, selectedTopics]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const total = shuffledQuestions.length || dailyQuestions.length;
@@ -925,9 +969,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
 
           </div>
 
-          {/* Right column: User panel in Battle-AI */}
-          <div className="lg:col-span-3">
-            {mode === 'battle-ai' && (
+          {/* Right column: User panel or tools */}
+          <div className="lg:col-span-3 hidden lg:block">
+            {mode === 'battle-ai' ? (
               <div className="w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-5 shadow-lg flex flex-col items-center gap-3">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 flex items-center justify-center text-4xl shadow">🙂</div>
                 <div className="text-sm font-bold">Your Answer:</div>
@@ -935,7 +979,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice' }: QuizGam
                   {selectedAnswer === null ? '-' : String.fromCharCode(65 + selectedAnswer)}
                 </div>
               </div>
-            )}
+            ) : (mode === 'practice' || mode === 'speed') ? (
+              showScribble ? (
+                <ScribbleBoard onClose={() => setShowScribble(false)} />
+              ) : showTable ? (
+                <TableBoard onClose={() => setShowTable(false)} />
+              ) : (
+                <div className="w-full bg-white/70 backdrop-blur rounded-2xl border-2 border-primary/10 p-4 shadow-lg flex flex-col gap-2">
+                  <div className="text-sm font-semibold text-muted-foreground">Tools</div>
+                  <Button variant="outline" className="w-full" onClick={() => { setShowScribble(true); setShowTable(false); }}>Scribble Board</Button>
+                  <Button variant="outline" className="w-full" onClick={() => { setShowTable(true); setShowScribble(false); }}>Tables 2–12</Button>
+                </div>
+              )
+            ) : null}
           </div>
         </div>
       </div>

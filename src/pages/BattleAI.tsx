@@ -1,6 +1,7 @@
 import { useState, useEffect, ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bot, Sparkles } from "lucide-react";
 import { aiTaunt } from "@/services/openrouter";
@@ -14,6 +15,8 @@ const DiffBtn: React.FC<{ v: 'easy' | 'moderate' | 'difficult'; cur: string; onP
 const BattleAI = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'difficult' | ''>('');
   const [taunt, setTaunt] = useState<string>("");
+  const [topics, setTopics] = useState<string[]>(['addition','subtraction','multiplication','division']);
+  const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -24,7 +27,10 @@ const BattleAI = () => {
     return () => { alive = false; };
   }, []);
 
-  const start = () => navigate(`/play?mode=battle-ai&difficulty=${difficulty}`);
+  const start = () => {
+    const csv = topics.join(',');
+    navigate(`/play?mode=battle-ai&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}`);
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
@@ -51,7 +57,26 @@ const BattleAI = () => {
               <DiffBtn v="difficult" cur={difficulty} onPick={setDifficulty}>Speed AI</DiffBtn>
             </div>
           </div>
-          <Button className="w-full rounded-full" onClick={start} disabled={!difficulty}>Start Battle</Button>
+          {/* Topic Selection (Checkboxes) */}
+          <div>
+            <p className="text-sm mb-2">Select Topics</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                { key: 'addition', label: 'Addition' },
+                { key: 'subtraction', label: 'Subtraction' },
+                { key: 'multiplication', label: 'Multiplication' },
+                { key: 'division', label: 'Division' },
+                { key: 'fractions', label: 'Fractions' },
+                { key: 'algebra', label: 'Algebra' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
+                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                  <span className="text-sm font-medium">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <Button className="w-full rounded-full" onClick={start} disabled={!difficulty || topics.length === 0}>Start Battle</Button>
         </Card>
       </div>
     </div>
