@@ -194,17 +194,55 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     return s;
   };
   const guessType = (q: Question): string => {
+    const text = `${q.hint || ''} ${q.question || ''}`.toLowerCase();
+
+    // 1) Fractions (strong signal)
+    const hasFractionSymbol = /(^|[^a-z])\d+\s*\/\s*\d+($|[^a-z])/.test(text) || text.includes('fraction');
+    if (hasFractionSymbol) return 'fractions';
+
+    // 2) Algebra (strong signal) — match standalone x, avoid words like 'box'/'six'
+    const hasAlgebra = /\bsolve\s+for\s+x\b/.test(text) || /\b(find|solve)\b[\s\S]*\b(?<![a-z])x(?![a-z])\b/.test(text) || /\b(?<![a-z])x(?![a-z])\b/.test(text);
+    if (hasAlgebra) return 'algebra';
+
+    // 3) Division cues
+    // Shared equally / packed into boxes of N each / how many boxes needed / each gets ...
+    const divisionPhrases = [
+      'shared equally', 'split equally', 'equally among', 'distributed equally',
+      'packed into boxes of', 'how many boxes', 'boxes are needed', 'number of boxes',
+      'each friend receive', 'each friend gets', 'each gets', 'per box'
+    ];
+    if (divisionPhrases.some(p => text.includes(p)) || /\bshared\b.*\bequally\b/.test(text)) {
+      return 'division';
+    }
+
+    // 4) Multiplication cues
+    // Each packet contains ... If there are N packets, total items? / per hour/day rate × time
+    const multPhrases = [
+      'each packet contains', 'each box contains', 'each group contains', 'contains',
+      'per hour', 'per day', 'per minute', 'per week', 'groups of', 'times'
+    ];
+    const hasEachContains = /each\s+(packet|box|group|bag|pack)\s+contains/.test(text);
+    if (hasEachContains || multPhrases.some(p => text.includes(p)) || /\bper\s+(hour|day|minute|week|month)\b/.test(text)) {
+      return 'multiplication';
+    }
+
+    // 5) Subtraction cues
+    const subtractionPhrases = ['remain', 'left', 'difference', 'given away', 'lost', 'spent', 'after giving', 'take away'];
+    if (subtractionPhrases.some(p => text.includes(p)) || /\bsubtract(ed)?\b/.test(text)) {
+      return 'subtraction';
+    }
+
+    // 6) Addition cues (last among ops — can appear with "total" wording)
+    const additionPhrases = ['total', 'sum', 'altogether', 'in all', 'combined'];
+    if (additionPhrases.some(p => text.includes(p)) || /\badd(ed|ition)?\b/.test(text)) {
+      return 'addition';
+    }
+
+    // 7) Fallback to declared type if present and valid; else default to addition
     const allowed = new Set(['addition','subtraction','multiplication','division','fractions','algebra']);
     const byType = canonicalize((q as any).type || '');
     if (allowed.has(byType)) return byType;
-    const text = `${q.hint || ''} ${q.question || ''}`.toLowerCase();
-    if (text.includes('fraction') || text.includes('/') ) return 'fractions';
-    if (text.includes('solve for x') || /\bx\b/.test(text)) return 'algebra';
-    if (text.includes('multiply') || text.includes('per hour')) return 'multiplication';
-    if (text.includes('divide') || text.includes('each')) return 'division';
-    if (text.includes('subtract') || text.includes('remain') || text.includes('left')) return 'subtraction';
-    if (text.includes('add') || text.includes('sum') || text.includes('total')) return 'addition';
-    return byType || 'addition';
+    return 'addition';
   };
   const selectedTopics = useMemo(() => {
     const arr = Array.isArray(topics) && topics.length > 0
