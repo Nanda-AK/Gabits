@@ -59,6 +59,7 @@ export const AccountMenu = () => {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate("/dashboard")}>Dashboard</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/treasure")}>My Treasure</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/leaderboard")}>Leaderboard</DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -11,6 +11,7 @@ import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import AuthCallback from "./pages/AuthCallback";
 import Leaderboard from "./pages/Leaderboard";
 import Treasure from "./pages/Treasure";
+import Dashboard from "./pages/Dashboard";
 import { GlobalLogo } from "@/components/GlobalLogo";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Modes from "./pages/Modes";
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/lobby/:code" element={<Lobby />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/treasure" element={<Treasure />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Route>
