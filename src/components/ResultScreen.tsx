@@ -13,13 +13,14 @@ interface ResultScreenProps {
   gameOver?: boolean;
   aiScore?: number;
   opponentName?: string;
-  mode?: 'practice' | 'speed' | 'battle-ai';
+  mode?: 'practice' | 'speed' | 'battle-ai' | 'battle-friends';
   practiceRewards?: { coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null;
+  speedRewards?: { coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null;
   questions?: Question[];
   results?: boolean[]; // per-question correctness for review (Practice/Speed)
 }
 
-export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, questions, results }: ResultScreenProps) => {
+export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, speedRewards, questions, results }: ResultScreenProps) => {
   const isPerfectScore = correctAnswers === 10;
   const { user, guest } = useAuth();
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
@@ -101,11 +102,17 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
                   <span className="font-semibold text-foreground">Coins Earned:</span>
                   <span className="text-2xl font-black text-amber-700">+{mode === 'practice' && practiceRewards ? practiceRewards.coins_awarded : coins}</span>
                 </div>
-                {/* Gems and Badges (practice only) */}
+                {/* Gems (Practice & Speed) and Badges (Practice only) */}
                 {mode === 'practice' && practiceRewards?.gems_awarded && practiceRewards.gems_awarded > 0 && (
                   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
                     <span className="font-semibold text-foreground">Gems Earned:</span>
                     <span className="text-2xl font-black text-fuchsia-600">+{practiceRewards.gems_awarded}</span>
+                  </div>
+                )}
+                {mode === 'speed' && speedRewards?.gems_awarded && speedRewards.gems_awarded > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                    <span className="font-semibold text-foreground">Gems Earned:</span>
+                    <span className="text-2xl font-black text-fuchsia-600">+{speedRewards.gems_awarded}</span>
                   </div>
                 )}
                 {mode === 'practice' && practiceRewards?.badges_awarded && practiceRewards.badges_awarded.length > 0 && (

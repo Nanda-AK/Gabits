@@ -24,12 +24,29 @@ import { getProfile } from "@/services/profile";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
 import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
-  mode?: 'practice' | 'speed' | 'battle-ai';
+  mode?: 'practice' | 'speed' | 'battle-ai' | 'battle-friends';
   topic?: 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra';
   topics?: string[]; // normalized later
+  lobbyCode?: string; // for battle-friends
+}
+
+// Stable guest ID for realtime presence when unauthenticated
+function getGuestIdStable(): string {
+  try {
+    let id = localStorage.getItem('guestId');
+    if (!id) {
+      id = 'guest-' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('guestId', id);
+    }
+    return id;
+  } catch {
+    return 'guest-' + Math.random().toString(36).slice(2, 10);
+  }
 }
 
 // Utility: Fisher-Yates shuffle
@@ -63,6 +80,46 @@ function seededRandom(seed: number) {
     seed ^= seed << 5;
     return (seed >>> 0) / 0xffffffff;
   };
+}
+
+// Helpers for Battle Friends deterministic selection (same set/order/options for both players)
+function stringToSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) || 123456789;
+}
+
+function pickQuestionsWithSeed(all: Question[], count: number, seed: number): Question[] {
+  const rand = seededRandom(seed);
+  const idxs = all.map((_, i) => i);
+  for (let i = idxs.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+  }
+  return idxs.slice(0, Math.min(count, all.length)).map((i) => all[i]);
+}
+
+function shuffleQuestionSetDeterministic(src: Question[], seed: number): Question[] {
+  const r = seededRandom(seed);
+  const orderIdx = src.map((_, i) => i);
+  for (let i = orderIdx.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [orderIdx[i], orderIdx[j]] = [orderIdx[j], orderIdx[i]];
+  }
+  const ordered = orderIdx.map(i => src[i]);
+  return ordered.map((q) => {
+    const optIdx = q.options.map((_, i) => i);
+    for (let i = optIdx.length - 1; i > 0; i--) {
+      const j = Math.floor(r() * (i + 1));
+      [optIdx[i], optIdx[j]] = [optIdx[j], optIdx[i]];
+    }
+    const newOptions = optIdx.map(i => q.options[i]);
+    const newCorrect = optIdx.indexOf(q.correctAnswer);
+    return { ...q, options: newOptions, correctAnswer: newCorrect };
+  });
 }
 
 function pickDailyQuestions(all: Question[], count = 10): Question[] {
@@ -108,13 +165,13 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
   return newQuestions;
 }
 
-export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics }: QuizGameProps) => {
+export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode }: QuizGameProps) => {
   const location = useLocation();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
-  const userId = user?.id;
+  const userId = user?.id ?? getGuestIdStable();
   const today = useMemo(() => getLocalYMD(), []);
-  const [displayName, setDisplayName] = useState<string>('You');
+  const [displayName, setDisplayName] = useState<string>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -151,11 +208,23 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [aiTimesList, setAiTimesList] = useState<number[]>([]);
   const [winnersList, setWinnersList] = useState<Winner[]>([]);
   const [battleDone, setBattleDone] = useState(false);
+  // Friends battle (opponent presence, answers)
+  const matchChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [opponentId, setOpponentId] = useState<string | null>(null);
+  const [opponentName, setOpponentName] = useState<string>('Friend');
+  const [friendsDone, setFriendsDone] = useState(false);
+  const [opponentDone, setOpponentDone] = useState(false);
+  // Friends rematch
+  const rematchSeedRef = useRef<number | null>(null);
+  const [rematchWaiting, setRematchWaiting] = useState(false);
+  const [rematchInviteFrom, setRematchInviteFrom] = useState<string | null>(null);
+  const [rematchNonce, setRematchNonce] = useState(0);
   // Speed-only: track whether each answered question met the within-time threshold
   const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
   // Practice/Speed: track per-question correctness for the review panel
   const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
+  const [speedRewards, setSpeedRewards] = useState<{ coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null>(null);
 
   const [treasureModalOpen, setTreasureModalOpen] = useState(false);
 
@@ -274,6 +343,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         : all;
       let pool = filtered.length ? filtered : all; // fallback if empty
 
+      // battle-friends: build deterministic set locally and skip server daily logic
+      if (mode === 'battle-friends') {
+        const seedStr = `${lobbyCode || 'room'}:${getLocalYMD()}:${difficulty}:${Array.from(selectedTopics).sort().join('-') || 'all'}`;
+        const baseSeed = rematchSeedRef.current ?? stringToSeed(seedStr);
+        const picked = pickQuestionsWithSeed(pool, 10, baseSeed);
+        const deterministic = shuffleQuestionSetDeterministic(picked, baseSeed ^ 0x9e3779b9);
+        if (!cancelled) {
+          setDailyQuestions(deterministic);
+          setLoadingDaily(false);
+        }
+        return;
+      }
+
       // If topics are explicitly selected, use topics-aware local daily set (avoid cross-topic backfill)
       if (selectedTopics.size > 0) {
         const arr = fallbackLocal(pool, difficulty, topicsKey);
@@ -317,7 +399,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
     load();
     return () => { cancelled = true; };
-  }, [difficulty, userId, guest, today, selectedTopics]);
+  }, [difficulty, userId, guest, today, selectedTopics, mode, lobbyCode, rematchNonce]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const total = shuffledQuestions.length || dailyQuestions.length;
@@ -326,13 +408,18 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
   // When daily set loads or refreshes, try restore session; else shuffle fresh
   useEffect(() => {
+    // In friends battle, we already built a deterministic set in dailyQuestions; don't restore from local
+    if (mode === 'battle-friends') {
+      setShuffledQuestions(dailyQuestions);
+      setCurrentQuestion(0);
+      return;
+    }
     const raw = (() => { try { return localStorage.getItem(storageKey); } catch { return null; } })();
     if (raw) {
       try {
         const saved = JSON.parse(raw);
         if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
           if (saved.completed) {
-            // Do not restore completed sessions; clear and start fresh
             try { localStorage.removeItem(storageKey); } catch {}
             setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
             setCurrentQuestion(0);
@@ -357,13 +444,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
             setMilestonesState(loaded);
             milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
           }
-          return; // restored, skip fresh shuffle
+          return;
         }
       } catch {}
     }
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
-  }, [dailyQuestions, storageKey]);
+  }, [dailyQuestions, storageKey, mode]);
 
   // Persist local session snapshot (resume on return)
   useEffect(() => {
@@ -397,7 +484,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     
     // Set time threshold / limit based on difficulty
     if (question) {
-      if (mode === 'battle-ai') {
+      if (mode === 'battle-ai' || mode === 'battle-friends') {
         setQuestionTimeLimit(30);
       } else if (mode === 'speed') {
         const thr = question.difficulty === 'easy' ? 15 : (question.difficulty === 'moderate' ? 25 : 30);
@@ -407,7 +494,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         setQuestionTimeLimit(timeLimit);
       }
     }
-    if (mode === 'battle-ai') {
+    if (mode === 'battle-ai' || mode === 'battle-friends') {
       // Start timing immediately when question becomes visible
       questionStartAtRef.current = Date.now();
     }
@@ -442,21 +529,20 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
 
-  // Resolve display name (prefer profile full_name, then metadata, then email username)
+  // Resolve display name (prefer profile full_name, then metadata; avoid emails; final fallback Player/Guest)
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const metaName = (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || (user?.user_metadata?.user_name as string) || (user?.user_metadata?.username as string) || null;
-      const emailName = user?.email ? user.email.split('@')[0] : null;
       if (!userId || guest) {
-        if (!cancelled) setDisplayName(metaName || emailName || 'You');
+        if (!cancelled) setDisplayName(metaName || 'Guest');
         return;
       }
       try {
         const p = await getProfile(userId);
-        if (!cancelled) setDisplayName(p?.full_name || metaName || emailName || 'You');
+        if (!cancelled) setDisplayName(p?.full_name || metaName || 'Player');
       } catch {
-        if (!cancelled) setDisplayName(metaName || emailName || 'You');
+        if (!cancelled) setDisplayName(metaName || 'Player');
       }
     };
     load();
@@ -503,6 +589,204 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
   }, [overallTime, overallTimeLimit, gameCompleted, practiceMode]);
 
+  // Battle Friends realtime: presence, answer exchange, rematch handshake
+  useEffect(() => {
+    if (mode !== 'battle-friends') return;
+    if (!lobbyCode || !userId) return;
+    const ch = supabase.channel(`match:${lobbyCode}`, { config: { presence: { key: userId } } });
+    matchChannelRef.current = ch;
+    let ended = false;
+
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState() as Record<string, Array<{ id: string; name: string }>>;
+      // Pick the first opponent (not me)
+      const others = Object.keys(state).filter(id => id !== userId && (state[id]?.length ?? 0) > 0);
+      if (others.length > 0) {
+        const oid = others[0];
+        const oname = state[oid]?.[0]?.name || 'Friend';
+        setOpponentId(oid);
+        setOpponentName(oname);
+      } else {
+        // Opponent left
+        if (!ended && opponentId) {
+          toast({ title: 'Opponent left', description: 'Match ended.', duration: 4000 });
+          ended = true;
+          try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+          setFriendsDone(true);
+          setGameCompleted(true);
+          // compute with whatever answers we have so far
+          computeFriendsResults();
+          ch.unsubscribe();
+        }
+      }
+    });
+
+    ch.on('broadcast', { event: 'answer' }, (payload: any) => {
+      const p = payload?.payload || {};
+      const idx = Number(p.idx);
+      const correct = !!p.correct;
+      const timeMs = Math.max(0, Number(p.timeMs || 0));
+      if (Number.isFinite(idx) && idx >= 0) {
+        setAiCorrectList(prev => { const next = prev.slice(); next[idx] = correct; return next; });
+        setAiTimesList(prev => { const next = prev.slice(); next[idx] = timeMs; return next; });
+      }
+    });
+
+    ch.on('broadcast', { event: 'done' }, () => {
+      setOpponentDone(true);
+      // Small delay to allow any late answer events to arrive
+      setTimeout(() => {
+        if (friendsDone && !ended) {
+          computeFriendsResults();
+        }
+      }, 120);
+    });
+
+    // Rematch flow: request / accept / decline / leave
+    ch.on('broadcast', { event: 'rematch_request' }, (payload: any) => {
+      const p = payload?.payload || {};
+      const seed = Number(p.seed);
+      if (Number.isFinite(seed)) rematchSeedRef.current = seed;
+      setRematchInviteFrom(p.from || (opponentName || 'Friend'));
+      setRematchWaiting(false);
+    });
+    ch.on('broadcast', { event: 'rematch_accept' }, (payload: any) => {
+      const p = payload?.payload || {};
+      const seed = Number(p.seed);
+      if (rematchWaiting && Number.isFinite(seed)) {
+        rematchSeedRef.current = seed;
+        startRematch(seed);
+      }
+    });
+    ch.on('broadcast', { event: 'rematch_decline' }, () => {
+      if (rematchWaiting) {
+        setRematchWaiting(false);
+        toast({ title: 'Rematch declined', description: `${opponentName || 'Friend'} declined the rematch`, duration: 3000 });
+      }
+    });
+    ch.on('broadcast', { event: 'leave' }, (payload: any) => {
+      const who = payload?.payload?.name || 'Friend';
+      if (!ended) toast({ title: `${who} left`, description: 'Match ended', duration: 3000 });
+    });
+
+    ch.on('broadcast', { event: 'end' }, () => {
+      if (!ended) {
+        ended = true;
+        setFriendsDone(true); // force finish
+        setGameCompleted(true);
+        // Compute with what we have
+        computeFriendsResults();
+      }
+    });
+
+    ch.subscribe(async (status) => {
+      if (status !== 'SUBSCRIBED') return;
+      await ch.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
+    });
+
+    return () => {
+      try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+      ch.unsubscribe();
+      matchChannelRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, lobbyCode, userId]);
+
+  // Start a new friends rematch with agreed seed
+  const startRematch = (seed: number) => {
+    setRematchWaiting(false);
+    setRematchInviteFrom(null);
+    setBattleDone(false);
+    setFriendsDone(false);
+    setOpponentDone(false);
+    setGameCompleted(false);
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setShowResult(false);
+    setAiScore(0);
+    setPlayerPoints(0);
+    setStudentCorrectList([]);
+    setStudentTimesList([]);
+    setAiCorrectList([]);
+    setAiTimesList([]);
+    setWinnersList([]);
+    friendsGrantRef.current = false;
+    questionStartAtRef.current = Date.now();
+    // Trigger deterministic rebuild using the provided seed
+    rematchSeedRef.current = seed;
+    setRematchNonce(n => n + 1);
+  };
+
+  // Request a rematch (send to opponent and wait)
+  const requestRematch = () => {
+    if (mode !== 'battle-friends') return handleRestart();
+    const ch = matchChannelRef.current;
+    if (!ch) return;
+    const seed = (Math.floor(Math.random() * 2147483647) ^ stringToSeed(`${Date.now()}:${userId}:${lobbyCode}`)) >>> 0;
+    rematchSeedRef.current = seed;
+    setRematchWaiting(true);
+    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
+  };
+
+  const acceptRematch = () => {
+    const ch = matchChannelRef.current;
+    const seed = rematchSeedRef.current ?? (stringToSeed(`${Date.now()}:${lobbyCode}`));
+    try { ch?.send({ type: 'broadcast', event: 'rematch_accept', payload: { seed } }); } catch {}
+    startRematch(seed);
+  };
+
+  const declineRematch = () => {
+    const ch = matchChannelRef.current;
+    try { ch?.send({ type: 'broadcast', event: 'rematch_decline', payload: {} }); } catch {}
+    setRematchInviteFrom(null);
+  };
+
+  const handleLeaveFriends = () => {
+    const ch = matchChannelRef.current;
+    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
+    try { ch?.unsubscribe(); } catch {}
+    // Navigate away
+    try { window.location.assign('/modes/compete'); } catch {}
+  };
+
+  // If displayName resolves after subscribe, update presence metadata so opponent sees correct name
+  useEffect(() => {
+    if (mode !== 'battle-friends') return;
+    if (!matchChannelRef.current) return;
+    if (!userId) return;
+    try {
+      matchChannelRef.current.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
+    } catch {}
+  }, [displayName, mode, userId, guest]);
+
+  // Compute points and winners for friends battle
+  const computeFriendsResults = () => {
+    if (battleDone) return;
+    const totalQ = shuffledQuestions.length;
+    let studentPts = 0;
+    let aiPts = 0;
+    const winners: Winner[] = new Array(totalQ).fill('none');
+    for (let i = 0; i < totalQ; i++) {
+      const s = !!studentCorrectList[i];
+      const a = !!aiCorrectList[i];
+      if (s && !a) { studentPts++; winners[i] = 'student'; }
+      else if (!s && a) { aiPts++; winners[i] = 'ai'; }
+      else if (s && a) {
+        const st = studentTimesList[i] ?? Number.MAX_SAFE_INTEGER;
+        const at = aiTimesList[i] ?? Number.MAX_SAFE_INTEGER;
+        if (st < at) { studentPts++; winners[i] = 'student'; }
+        else if (at < st) { aiPts++; winners[i] = 'ai'; }
+        else { winners[i] = 'none'; }
+      } else {
+        winners[i] = 'none';
+      }
+    }
+    setPlayerPoints(studentPts);
+    setAiScore(aiPts);
+    setWinnersList(winners);
+    setBattleDone(true);
+  };
+
   // Practice: on completion, grant rewards via server (topic, used_seconds, local date) - streak-based only
   const practiceGrantRef = useRef<boolean>(false);
   useEffect(() => {
@@ -542,6 +826,48 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       result,
     }).catch(() => {});
   }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
+
+  // Compete (Friends): grant rewards once when computed
+  const friendsGrantRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (mode !== 'battle-friends') return;
+    if (!battleDone) return;
+    if (!userId || guest) return;
+    if (friendsGrantRef.current) return;
+    friendsGrantRef.current = true;
+    const localDate = getLocalYMD();
+    const result: 'win' | 'loss' | 'draw' = playerPoints > aiScore ? 'win' : (playerPoints < aiScore ? 'loss' : 'draw');
+    grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => {});
+  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
+
+  // Speed: after completion, log run and capture rewards (coins, gems, badges)
+  const speedGrantRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (mode !== 'speed') return;
+    if (!gameCompleted) return;
+    if (!userId || guest) return;
+    if (speedGrantRef.current) return;
+    speedGrantRef.current = true;
+    const localDate = getLocalYMD();
+    const totalQ = (shuffledQuestions.length || 10);
+    const ratio = totalQ > 0 ? (correctAnswers / totalQ) : 0;
+    const payload = {
+      user_id: userId,
+      date: localDate,
+      difficulty,
+      correct: correctAnswers,
+      coins,
+      m10: ratio >= 1.0 || correctAnswers >= 10,
+      m25: ratio >= 0.25,
+      m50: ratio >= 0.50,
+      m75: ratio >= 0.75,
+      m100: ratio >= 1.0,
+      fast_flawless: correctAnswers === totalQ,
+    } as const;
+    logSpeedRun(payload).then(res => {
+      if (res) setSpeedRewards(res);
+    }).catch(() => {});
+  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -583,6 +909,33 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const handleAnswerSelect = (index: number) => {
     if (!showResult) {
       setSelectedAnswer(index);
+    }
+  };
+
+  // Battle Friends: send answer for this round and progress; finalize when both sides finish
+  const handleNextFriends = () => {
+    if (mode !== 'battle-friends') return handleNext();
+    const idx = currentQuestion;
+    const elapsed = Date.now() - questionStartAtRef.current;
+    const isLocalCorrect = selectedAnswer !== null && (selectedAnswer === question.correctAnswer);
+
+    setStudentCorrectList(prev => { const next = prev.slice(); next[idx] = isLocalCorrect; return next; });
+    setStudentTimesList(prev => { const next = prev.slice(); next[idx] = elapsed; return next; });
+    try {
+      matchChannelRef.current?.send({ type: 'broadcast', event: 'answer', payload: { idx, correct: isLocalCorrect, timeMs: elapsed } });
+    } catch {}
+
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+      setSelectedAnswer(null);
+      setShowHint(false);
+      setShowResult(false);
+    } else {
+      setFriendsDone(true);
+      setGameCompleted(true);
+      try { matchChannelRef.current?.send({ type: 'broadcast', event: 'done', payload: {} }); } catch {}
+      // Wait briefly; actual compute happens when we receive opponent 'done' OR presence reports leave
+      setTimeout(() => { if (opponentDone) computeFriendsResults(); }, 200);
     }
   };
 
@@ -902,6 +1255,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setAiScore(0);
     setPlayerPoints(0);
     setWithinTimeList([]);
+    setPracticeRewards(null);
+    setSpeedRewards(null);
     questionStartAtRef.current = Date.now();
     // Reset battle state
     setStudentCorrectList([]);
@@ -957,7 +1312,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       m75: m.m75,
       m100: m.m100,
       fast_flawless: ff,
-    }).catch(() => {});
+    }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => {});
   }, [mode, gameCompleted, userId, guest, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
 
   if (loadingDaily) {
@@ -977,7 +1332,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
-              <p className="text-muted-foreground">{aiTypeLabel} Vs {displayName || 'You'}</p>
+              <p className="text-muted-foreground">{aiTypeLabel} Vs {displayName || (guest ? 'Guest' : 'Player')}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl mx-auto">
               <div className="lg:col-span-2 flex justify-center">
@@ -1026,7 +1381,33 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
   }
 
-  if (gameCompleted) {
+  // Battle Friends: summary when results computed
+  if (mode === 'battle-friends' && battleDone) {
+    const rows = shuffledQuestions.map((q, i) => ({
+      index: i,
+      student: { correct: !!studentCorrectList[i], timeMs: studentTimesList[i] ?? 0 },
+      ai: { correct: !!aiCorrectList[i], timeMs: aiTimesList[i] ?? 0 },
+      winner: winnersList[i] as Winner,
+    }));
+    return (
+      <BattleSummary
+        title="Battle Friends"
+        aiTypeLabel={opponentName || 'Friend'}
+        studentName={displayName || (guest ? 'Guest' : 'Player')}
+        studentPoints={playerPoints}
+        aiPoints={aiScore}
+        rows={rows}
+        onRestart={requestRematch}
+        onLeave={handleLeaveFriends}
+        waitingText={rematchWaiting ? 'Waiting for friend to accept…' : undefined}
+        inviteFrom={rematchInviteFrom || undefined}
+        onAcceptRematch={acceptRematch}
+        onDeclineRematch={declineRematch}
+      />
+    );
+  }
+
+  if (gameCompleted && mode !== 'battle-friends') {
     return (
       <ResultScreen
         coins={coins}
@@ -1037,6 +1418,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         gameOver={isTimeUp}
         mode={mode}
         practiceRewards={mode === 'practice' ? practiceRewards : undefined}
+        speedRewards={mode === 'speed' ? speedRewards : undefined}
         questions={shuffledQuestions}
         results={answerCorrectList}
       />
@@ -1078,12 +1460,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       {/* In-game Treasure quick modal is available via header chest while playing */}
 
       {/* Battle header (visible during match) */}
-      {mode === 'battle-ai' && (
+      {(mode === 'battle-ai' || mode === 'battle-friends') && (
         <div className="pt-14 sm:pt-16 lg:pt-20 text-center">
-          <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
-          <p className="text-muted-foreground">
-            {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {displayName || 'You'}
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-black">{mode === 'battle-ai' ? 'Battle AI' : 'Battle Friends'}</h1>
+          {mode === 'battle-ai' ? (
+            <p className="text-muted-foreground">
+              {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {displayName || 'You'}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">{(displayName || (guest ? 'Guest' : 'Player'))} Vs {(opponentName || 'Friend')}</p>
+          )}
         </div>
       )}
 
@@ -1113,7 +1499,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               isCorrect={isCorrect}
               onAnswerSelect={handleAnswerSelect}
               onCheckAnswer={handleCheckAnswer}
-              onNext={mode === 'battle-ai' ? handleNextBattle : handleNext}
+              onNext={mode === 'battle-ai' ? handleNextBattle : (mode === 'battle-friends' ? handleNextFriends : handleNext)}
               onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
               onHint={handleHint}
               showHint={showHint}
@@ -1127,10 +1513,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               lockedWrongIndex={lockedWrongIndex}
               secondChance={secondChance}
               difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
-              battleMode={mode === 'battle-ai'}
+              battleMode={mode === 'battle-ai' || mode === 'battle-friends'}
               showCoinInfo={mode !== 'practice'}
               hintFree={mode === 'practice'}
               showDifficultyBadge={mode !== 'practice'}
+              disableSkipHint={mode === 'battle-friends'}
+              requireSelectionForNext={mode !== 'battle-friends'}
             />
 
           </div>

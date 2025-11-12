@@ -28,6 +28,10 @@ interface QuestionCardProps {
   showCoinInfo?: boolean;
   hintFree?: boolean;
   showDifficultyBadge?: boolean;
+  // When true, hides interaction advantages (used in battle-friends)
+  disableSkipHint?: boolean;
+  // When true, Next/Finish requires an answer selection; set false for friends mode
+  requireSelectionForNext?: boolean;
 }
 
 export const QuestionCard = ({
@@ -55,6 +59,8 @@ export const QuestionCard = ({
   showCoinInfo = true,
   hintFree = false,
   showDifficultyBadge = true,
+  disableSkipHint = false,
+  requireSelectionForNext = true,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -218,7 +224,7 @@ export const QuestionCard = ({
         <Button
           onClick={onSkip}
           variant="outline"
-          disabled={showResult}
+          disabled={showResult || disableSkipHint}
           className="text-xs sm:text-sm rounded-lg border-2 hover:bg-muted hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-secondary/40 shadow-sm hover:shadow-md py-1 sm:py-1.5 px-2 sm:px-3"
         >
           <SkipForward className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -228,7 +234,7 @@ export const QuestionCard = ({
         <Button
           onClick={onHint}
           variant="outline"
-          disabled={showResult || showHint || (!hintFree && questionReward < hintCost)}
+          disabled={showResult || showHint || disableSkipHint || (!hintFree && questionReward < hintCost)}
           className="text-xs sm:text-sm rounded-lg border-2 border-accent/40 text-accent bg-accent/5 hover:bg-accent/15 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-transparent hover:ring-accent/40 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed py-1 sm:py-1.5 px-2 sm:px-3"
         >
           <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -251,7 +257,7 @@ export const QuestionCard = ({
         {battleMode ? (
           <Button
             onClick={onNext}
-            disabled={selectedAnswer === null}
+            disabled={requireSelectionForNext ? selectedAnswer === null : false}
             className="text-xs sm:text-sm rounded-lg px-3 sm:px-5 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500/50 active:scale-[0.98] py-1 sm:py-1.5"
           >
             {questionNumber === totalQuestions ? 'Finish' : 'Next'}

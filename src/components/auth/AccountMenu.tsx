@@ -27,7 +27,7 @@ export const AccountMenu = () => {
 
   const displayName = useMemo(() => {
     const localName = localStorage.getItem("player:name") || "";
-    return fullName || (user?.user_metadata as any)?.full_name || localName || user?.email || (guest ? "Guest" : "");
+    return fullName || (user?.user_metadata as any)?.full_name || localName || (guest ? "Guest" : "Player");
   }, [fullName, user, guest]);
 
   const seed = useMemo(() => (user?.id || localStorage.getItem("guestId") || displayName || "guest"), [user, displayName]);

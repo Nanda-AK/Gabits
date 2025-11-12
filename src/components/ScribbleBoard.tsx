@@ -264,7 +264,7 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
 
         {/* Solution overlay above scribble (like Tables) */}
         {showSolutionOverlay && (
-          <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur rounded-lg border-2 border-primary/20 shadow-xl p-3 flex flex-col">
+          <div className="absolute inset-0 z-20 bg-amber-50/95 backdrop-blur rounded-lg border-2 border-primary/20 shadow-xl p-3 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-bold">AI Solution</div>
               <div className="flex items-center gap-2">

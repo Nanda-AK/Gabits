@@ -15,6 +15,12 @@ interface BattleSummaryProps {
   aiPoints: number;
   rows: Row[];
   onRestart: () => void;
+  title?: string;
+  onLeave?: () => void;
+  waitingText?: string;
+  inviteFrom?: string;
+  onAcceptRematch?: () => void;
+  onDeclineRematch?: () => void;
 }
 
 function fmtTime(ms: number) {
@@ -22,8 +28,9 @@ function fmtTime(ms: number) {
   return `${s.toFixed(1)}s`;
 }
 
-export const BattleSummary = ({ aiTypeLabel, studentName = "You", studentPoints, aiPoints, rows, onRestart }: BattleSummaryProps) => {
+export const BattleSummary = ({ aiTypeLabel, studentName = "You", studentPoints, aiPoints, rows, onRestart, title, onLeave, waitingText, inviteFrom, onAcceptRematch, onDeclineRematch }: BattleSummaryProps) => {
   const youWin = studentPoints > aiPoints;
+  const isDraw = studentPoints === aiPoints;
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-start justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
       {/* Decorative background */}
@@ -33,14 +40,24 @@ export const BattleSummary = ({ aiTypeLabel, studentName = "You", studentPoints,
       <div className="w-full max-w-4xl bg-gradient-to-br from-card to-card/90 rounded-3xl shadow-2xl border-2 border-primary/20 p-5 sm:p-8 lg:p-10 backdrop-blur-sm animate-slide-up">
         <div className="text-center mb-6">
           <h2 className="text-3xl sm:text-4xl font-black text-foreground mb-1">Quiz Complete!</h2>
-          <p className="text-muted-foreground">Battle AI — {aiTypeLabel} Vs {studentName}</p>
+          <p className="text-muted-foreground">{title ?? 'Battle AI'} — {aiTypeLabel} Vs {studentName}</p>
         </div>
 
         <div className="text-center mb-8">
           <div className="text-2xl sm:text-3xl font-extrabold">
-            {youWin ? `${studentName} won against ${aiTypeLabel}` : `${aiTypeLabel} won against ${studentName}`}
-            <span className="text-muted-foreground"> by </span>
-            <span className="text-primary">{studentPoints}:{aiPoints}</span>
+            {isDraw ? (
+              <>
+                It's a draw — {aiTypeLabel} Vs {studentName}
+                <span className="text-muted-foreground"> at </span>
+                <span className="text-primary">{studentPoints}:{aiPoints}</span>
+              </>
+            ) : (
+              <>
+                {youWin ? `${studentName} won against ${aiTypeLabel}` : `${aiTypeLabel} won against ${studentName}`}
+                <span className="text-muted-foreground"> by </span>
+                <span className="text-primary">{studentPoints}:{aiPoints}</span>
+              </>
+            )}
           </div>
           <div className="mt-2 text-sm text-muted-foreground">Collectable reward unlocked</div>
         </div>
@@ -48,7 +65,7 @@ export const BattleSummary = ({ aiTypeLabel, studentName = "You", studentPoints,
         <div className="rounded-2xl overflow-hidden border">
           <div className="grid grid-cols-4 bg-muted/50 text-xs sm:text-sm font-semibold text-muted-foreground">
             <div className="px-3 py-2">Q#</div>
-            <div className="px-3 py-2">AI</div>
+            <div className="px-3 py-2">{aiTypeLabel}</div>
             <div className="px-3 py-2">{studentName}</div>
             <div className="px-3 py-2">Winner</div>
           </div>
@@ -80,9 +97,22 @@ export const BattleSummary = ({ aiTypeLabel, studentName = "You", studentPoints,
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
+        {inviteFrom && (
+          <div className="mb-4 flex items-center justify-center gap-3 text-sm">
+            <span className="text-muted-foreground">{inviteFrom} invited you to a rematch</span>
+            <Button onClick={onAcceptRematch} className="rounded-xl h-8 px-3 text-sm">Accept</Button>
+            <Button variant="outline" onClick={onDeclineRematch} className="rounded-xl h-8 px-3 text-sm">Decline</Button>
+          </div>
+        )}
+        <div className="mt-4 flex justify-center gap-3">
           <Button onClick={onRestart} className="rounded-xl px-10">Play Again</Button>
+          {onLeave && (
+            <Button variant="outline" onClick={onLeave} className="rounded-xl px-6">Leave</Button>
+          )}
         </div>
+        {waitingText && (
+          <div className="mt-3 text-center text-sm text-muted-foreground">{waitingText}</div>
+        )}
       </div>
     </div>
   );
