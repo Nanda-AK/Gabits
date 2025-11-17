@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase";
 import { getUserBalances, getAnyStreak, getDailyStreakAward } from "@/services/rewards";
 import { getSpeedDaily } from "@/services/speed";
 import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
-import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
 import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles, Gem, Star } from "lucide-react";
 import { getLocalYMD } from "@/lib/date";
@@ -49,7 +48,6 @@ const Treasure = () => {
   const [badges, setBadges] = useState<Achievement[]>([]);
   const [boostTokens, setBoostTokens] = useState<{ available: number; used: number } | null>(null);
   const [seasonWinners, setSeasonWinners] = useState<SeasonalWinner[]>([]);
-  const [counts, setCounts] = useState<MilestoneCounts>({ silver: 0, gold: 0, platinum: 0, diamond: 0 });
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
@@ -133,17 +131,6 @@ const Treasure = () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id, guest, weekDays, fetchWeekProgress]);
-
-  // Load legacy milestone counts (Silver/Gold/Platinum/Diamond) for Lifetime Achievements section
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user || guest) { setCounts({ silver: 0, gold: 0, platinum: 0, diamond: 0 }); return; }
-      const c = await getMilestoneCounts(user.id);
-      if (!cancelled) setCounts(c);
-    })();
-    return () => { cancelled = true; };
-  }, [user, guest]);
 
   // Load today's reward events (dynamic breakdown)
   useEffect(() => {
@@ -560,53 +547,6 @@ const Treasure = () => {
           </Card>
         )}
 
-        {/* Lifetime Achievement Counts (Silver/Gold/Platinum/Diamond) */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Lifetime Achievements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-slate-50 to-slate-100">
-                <img src="/assets/silverimage.png" alt="Silver" className="w-20 h-16 object-contain drop-shadow" />
-                <div className="mt-2 text-sm font-semibold text-muted-foreground">Silver</div>
-                <div className="text-2xl font-extrabold text-slate-700">{counts.silver}</div>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-amber-50 to-yellow-50">
-                <img src="/assets/goldimage.png" alt="Gold" className="w-20 h-16 object-contain drop-shadow" />
-                <div className="mt-2 text-sm font-semibold text-muted-foreground">Gold</div>
-                <div className="text-2xl font-extrabold text-amber-700">{counts.gold}</div>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-indigo-50 to-slate-100">
-                <img src="/assets/platinuumimage.png" alt="Platinum" className="w-20 h-16 object-contain drop-shadow" />
-                <div className="mt-2 text-sm font-semibold text-muted-foreground">Platinum</div>
-                <div className="text-2xl font-extrabold text-indigo-700">{counts.platinum}</div>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gradient-to-br from-cyan-50 to-blue-50">
-                {/* Diamond icon (inline SVG) */}
-                <svg width="80" height="64" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg" aria-label="Diamond" role="img" className="drop-shadow">
-                  <defs>
-                    <linearGradient id="gradDiamondTreasure" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#E0F7FA" />
-                      <stop offset="50%" stopColor="#B2EBF2" />
-                      <stop offset="100%" stopColor="#81D4FA" />
-                    </linearGradient>
-                  </defs>
-                  <polygon points="8,16 20,2 44,2 56,16 32,46" fill="url(#gradDiamondTreasure)" stroke="#4FC3F7" strokeWidth="2" />
-                  <polyline points="20,2 32,16 44,2" fill="none" stroke="#4FC3F7" strokeWidth="2" />
-                  <polyline points="8,16 32,16 56,16" fill="none" stroke="#4FC3F7" strokeWidth="2" />
-                </svg>
-                <div className="mt-2 text-sm font-semibold text-muted-foreground">Diamond</div>
-                <div className="text-2xl font-extrabold text-sky-700">{counts.diamond}</div>
-              </div>
-            </div>
-            {(!user || guest) && (
-              <div className="text-center text-xs text-muted-foreground mt-2">Sign in to track lifetime counts.</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Bottom Achievements grid removed; lifetime section above is the only achievements display */}
       </div>
     </div>
   );

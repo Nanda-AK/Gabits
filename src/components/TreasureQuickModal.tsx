@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Coins, Heart, Gem, Star, Trophy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserBalances } from "@/services/rewards";
-import { getMilestoneCounts, type MilestoneCounts } from "@/services/stats";
 import { getBadgeCounts } from "@/services/achievements";
 
 interface TreasureQuickModalProps {
@@ -19,7 +18,6 @@ export function TreasureQuickModal({ open, onOpenChange, sessionCoins, hearts, c
   const { user, guest } = useAuth();
   const [walletCoins, setWalletCoins] = useState<number>(0);
   const [balances, setBalances] = useState<{ coins: number; gems: number; xp: number } | null>(null);
-  const [counts, setCounts] = useState<MilestoneCounts | null>(null);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   // Badge metadata for images and labels
@@ -46,13 +44,9 @@ export function TreasureQuickModal({ open, onOpenChange, sessionCoins, hearts, c
       if (!user || guest) { setBalances(null); return; }
       const b = await getUserBalances(user.id);
       if (!cancelled) setBalances(b ? { coins: b.coins, gems: b.gems, xp: b.xp } : { coins: 0, gems: 0, xp: 0 });
-      // Load lifetime achievements and badge counts
-      const [mc, bc] = await Promise.all([
-        getMilestoneCounts(user.id),
-        getBadgeCounts(user.id),
-      ]);
+      // Load badge counts
+      const bc = await getBadgeCounts(user.id);
       if (!cancelled) {
-        setCounts(mc);
         setBadgeCounts(bc);
       }
     })();
@@ -129,45 +123,6 @@ export function TreasureQuickModal({ open, onOpenChange, sessionCoins, hearts, c
             </div>
           </div>
 
-          {/* Lifetime Achievements (only if any) */}
-          {!guest && user && counts && (counts.silver > 0 || counts.gold > 0 || counts.platinum > 0 || counts.diamond > 0) && (
-            <div className="rounded-xl border bg-white/70 p-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700"><Trophy className="w-4 h-4" /> Lifetime Achievements</div>
-              <div className="mt-2 grid grid-cols-4 gap-2 text-center">
-                <div className="p-2 rounded-lg border bg-gradient-to-br from-slate-50 to-slate-100">
-                  <img src="/assets/silverimage.png" alt="Silver" className="w-10 h-8 mx-auto object-contain" />
-                  <div className="text-[10px] text-muted-foreground mt-1">Silver</div>
-                  <div className="text-sm font-extrabold text-slate-700">{counts.silver}</div>
-                </div>
-                <div className="p-2 rounded-lg border bg-gradient-to-br from-amber-50 to-yellow-50">
-                  <img src="/assets/goldimage.png" alt="Gold" className="w-10 h-8 mx-auto object-contain" />
-                  <div className="text-[10px] text-muted-foreground mt-1">Gold</div>
-                  <div className="text-sm font-extrabold text-amber-700">{counts.gold}</div>
-                </div>
-                <div className="p-2 rounded-lg border bg-gradient-to-br from-indigo-50 to-slate-100">
-                  <img src="/assets/platinuumimage.png" alt="Platinum" className="w-10 h-8 mx-auto object-contain" />
-                  <div className="text-[10px] text-muted-foreground mt-1">Platinum</div>
-                  <div className="text-sm font-extrabold text-indigo-700">{counts.platinum}</div>
-                </div>
-                <div className="p-2 rounded-lg border bg-gradient-to-br from-cyan-50 to-blue-50">
-                  <svg width="40" height="32" viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg" aria-label="Diamond" role="img" className="mx-auto">
-                    <defs>
-                      <linearGradient id="gradDiamondModal" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#E0F7FA" />
-                        <stop offset="50%" stopColor="#B2EBF2" />
-                        <stop offset="100%" stopColor="#81D4FA" />
-                      </linearGradient>
-                    </defs>
-                    <polygon points="8,16 20,2 44,2 56,16 32,46" fill="url(#gradDiamondModal)" stroke="#4FC3F7" strokeWidth="2" />
-                    <polyline points="20,2 32,16 44,2" fill="none" stroke="#4FC3F7" strokeWidth="2" />
-                    <polyline points="8,16 32,16 56,16" fill="none" stroke="#4FC3F7" strokeWidth="2" />
-                  </svg>
-                  <div className="text-[10px] text-muted-foreground mt-1">Diamond</div>
-                  <div className="text-sm font-extrabold text-sky-700">{counts.diamond}</div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Earned Badges (only if any) */}
           {!guest && user && badgeCounts && Object.values(badgeCounts).some((v) => (v ?? 0) > 0) && (
