@@ -228,8 +228,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
   const [treasureModalOpen, setTreasureModalOpen] = useState(false);
 
-  // Infer a simple math type for HR summary from the active question set
-  const inferMathType = (qs: Question[]): string => {
+   const inferMathType = (qs: Question[]): string => {
     let add = 0, sub = 0, mul = 0, div = 0;
     const inc = (h: string, q: string) => {
       const H = (h || '').toLowerCase();
