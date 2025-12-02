@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -10,6 +10,7 @@ export const AccountMenu = () => {
   const { user, guest, signOut, clearGuest } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [fullName, setFullName] = useState<string>("");
 
   // Load profile name when authenticated or guest profile exists
@@ -32,6 +33,16 @@ export const AccountMenu = () => {
 
   const seed = useMemo(() => (user?.id || localStorage.getItem("guestId") || displayName || "guest"), [user, displayName]);
   const avatarUrl = `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
+
+  // Determine if we should replace the history entry when leaving a completed game
+  const shouldReplace = useMemo(() => {
+    try {
+      const completed = localStorage.getItem('play:completed') === '1';
+      return location.pathname === '/play' && completed;
+    } catch {
+      return false;
+    }
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,10 +69,10 @@ export const AccountMenu = () => {
               <span className="max-w-[140px] truncate text-sm font-semibold text-gray-700">{displayName}</span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => navigate("/dashboard")}>Dashboard</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/treasure")}>My Treasure</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/leaderboard")}>Leaderboard</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate("/dashboard", { replace: shouldReplace })}>Dashboard</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>
             <DropdownMenuSeparator />
             {user ? (
               <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>

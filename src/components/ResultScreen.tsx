@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trophy, RotateCcw, Star, Frown, CheckCircle2, XCircle, Award } from "lucide-react";
+import { Trophy, RotateCcw, Star, Frown, CheckCircle2, XCircle, Award, ArrowLeft } from "lucide-react";
 import type { Question } from "@/data/questions";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLocalYMD } from "@/lib/date";
 import { getAnyStreak, getDailyStreakAward } from "@/services/rewards";
+import { useNavigate } from "react-router-dom";
 
 interface ResultScreenProps {
   coins: number;
@@ -25,6 +26,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
   const { user, guest } = useAuth();
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAwardMode, setTodayAwardMode] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Fetch true streak length and who claimed today's daily streak (for transparency)
   useEffect(() => {
@@ -219,15 +221,33 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
           </p>
         </div>
 
-        {/* Restart Button */}
-        <Button
-          onClick={onRestart}
-          size="lg"
-          className="rounded-xl px-12 text-lg bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-lg hover:shadow-xl transition-all"
-        >
-          <RotateCcw className="w-5 h-5 mr-2" />
-          Play Again
-        </Button>
+        {/* Actions */}
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            onClick={onRestart}
+            size="lg"
+            className="rounded-xl px-12 text-lg bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold shadow-lg hover:shadow-xl transition-all"
+          >
+            <RotateCcw className="w-5 h-5 mr-2" />
+            Play Again
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-xl px-8 text-lg"
+            onClick={() => {
+              const m = mode || 'practice';
+              let target = '/modes';
+              if (m === 'practice' || m === 'speed') target = '/modes/solo';
+              else if (m === 'battle-ai' || m === 'battle-friends') target = '/modes/compete';
+              try { localStorage.removeItem('play:completed'); } catch {}
+              navigate(target, { replace: true });
+            }}
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Go Back
+          </Button>
+        </div>
       </div>
     </div>
   );

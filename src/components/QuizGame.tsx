@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { questions, getDifficultyCoins, getHintCost } from "@/data/questions";
 import type { Question, Difficulty } from "@/data/questions";
@@ -167,6 +167,7 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
 
 export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode }: QuizGameProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
   const userId = user?.id ?? getGuestIdStable();
@@ -469,6 +470,24 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch {}
   }, [storageKey, currentQuestion, hearts, coins, correctAnswers, answerCorrectList, withinTimeList, shuffledQuestions, overallTime, milestonesState, gameCompleted]);
 
+  // Maintain a completion flag to allow other UI (logo, account menu) to replace navigation
+  useEffect(() => {
+    try {
+      if (gameCompleted) {
+        localStorage.setItem('play:completed', '1');
+      } else {
+        localStorage.removeItem('play:completed');
+      }
+    } catch {}
+  }, [gameCompleted]);
+
+  // Cleanup completion flag on unmount
+  useEffect(() => {
+    return () => {
+      try { localStorage.removeItem('play:completed'); } catch {}
+    };
+  }, []);
+
   // Initialize per-question reward when question changes
   const baseReward = question ? getDifficultyCoins(question.difficulty) : 0;
   useEffect(() => {
@@ -744,8 +763,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const ch = matchChannelRef.current;
     try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
     try { ch?.unsubscribe(); } catch {}
-    // Navigate away
-    try { window.location.assign('/modes/compete'); } catch {}
+    // Navigate away with replace so Back doesn't return to finished game
+    try { localStorage.removeItem('play:completed'); } catch {}
+    navigate('/modes/compete', { replace: true });
   };
 
   // If displayName resolves after subscribe, update presence metadata so opponent sees correct name
@@ -1375,6 +1395,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           aiPoints={aiScore}
           rows={rows}
           onRestart={handleRestart}
+          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch {}; navigate('/modes/compete', { replace: true }); }}
         />
       );
     }
