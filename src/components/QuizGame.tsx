@@ -765,7 +765,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     try { ch?.unsubscribe(); } catch {}
     // Navigate away with replace so Back doesn't return to finished game
     try { localStorage.removeItem('play:completed'); } catch {}
-    navigate('/modes/compete', { replace: true });
+    navigate('/modes', { replace: true });
   };
 
   // If displayName resolves after subscribe, update presence metadata so opponent sees correct name
@@ -1395,7 +1395,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           aiPoints={aiScore}
           rows={rows}
           onRestart={handleRestart}
-          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch {}; navigate('/modes/compete', { replace: true }); }}
+          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch {}; navigate('/modes', { replace: true }); }}
         />
       );
     }

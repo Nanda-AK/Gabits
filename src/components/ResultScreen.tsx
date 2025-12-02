@@ -236,10 +236,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             size="lg"
             className="rounded-xl px-8 text-lg"
             onClick={() => {
-              const m = mode || 'practice';
-              let target = '/modes';
-              if (m === 'practice' || m === 'speed') target = '/modes/solo';
-              else if (m === 'battle-ai' || m === 'battle-friends') target = '/modes/compete';
+              const target = '/modes';
               try { localStorage.removeItem('play:completed'); } catch {}
               navigate(target, { replace: true });
             }}
