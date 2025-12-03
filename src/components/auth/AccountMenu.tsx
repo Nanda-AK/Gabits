@@ -12,6 +12,7 @@ export const AccountMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [fullName, setFullName] = useState<string>("");
+  const [role, setRole] = useState<string>("");
 
   // Load profile name when authenticated or guest profile exists
   useEffect(() => {
@@ -21,6 +22,7 @@ export const AccountMenu = () => {
         if (!uid) { setFullName(""); return; }
         const p = await getProfile(uid);
         if (p?.full_name) setFullName(p.full_name);
+        if ((p as any)?.role) setRole((p as any).role);
       } catch {}
     };
     run();
@@ -70,6 +72,9 @@ export const AccountMenu = () => {
             </button>
           </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+            {role === 'teacher' && (
+              <DropdownMenuItem onClick={() => navigate("/portal/teacher", { replace: shouldReplace })}>Teacher Panel</DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => navigate("/dashboard", { replace: shouldReplace })}>Dashboard</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>

@@ -14,6 +14,7 @@ import Treasure from "./pages/Treasure";
 import Dashboard from "./pages/Dashboard";
 import { GlobalLogo } from "@/components/GlobalLogo";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { ProtectedRoleRoute } from "./components/auth/ProtectedRoleRoute";
 import Modes from "./pages/Modes";
 import SoloMode from "./pages/SoloMode";
 import PracticeSetup from "./pages/PracticeSetup";
@@ -23,6 +24,7 @@ import BattleAI from "./pages/BattleAI";
 import BattleFriends from "./pages/BattleFriends";
 import Play from "./pages/Play";
 import Lobby from "./pages/Lobby";
+import TeacherPortal from "./pages/TeacherPortal";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,10 @@ const App = () => (
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/treasure" element={<Treasure />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              {/* Role-gated routes */}
+              <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
+                <Route path="/portal/teacher" element={<TeacherPortal />} />
+              </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Route>

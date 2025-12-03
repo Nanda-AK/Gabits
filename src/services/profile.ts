@@ -8,6 +8,7 @@ export const ProfileSchema = z.object({
   age: z.number().min(5).max(120),
   gender: z.enum(["male", "female", "other"]),
   standard: z.string().min(1),
+  role: z.enum(["student","parent","teacher","principal"]).optional(),
 });
 
 export type ProfileInput = Omit<Profile, "created_at" | "updated_at">;
@@ -35,7 +36,7 @@ export async function upsertProfile(input: ProfileInput): Promise<{ ok: boolean;
   try { localStorage.setItem(localKey(input.id), JSON.stringify(input)); } catch {}
 
   try {
-    const parsed = ProfileSchema.parse(input);
+    const parsed = ProfileSchema.parse(input as any);
     const { error } = await supabase.from("profiles").upsert({ ...parsed, updated_at: new Date().toISOString() });
     if (error) return { ok: false, error: error.message };
     return { ok: true };
