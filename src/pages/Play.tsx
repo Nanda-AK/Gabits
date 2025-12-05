@@ -1,6 +1,9 @@
-import { useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { QuizGame } from "@/components/QuizGame";
+import { useAuth } from "@/contexts/AuthContext";
+import { getProfile } from "@/services/profile";
+import { getTaskById, type LiveTask } from "@/services/tasks";
 
 function useQuery() {
   const { search } = useLocation();
@@ -8,13 +11,53 @@ function useQuery() {
 }
 
 const Play = () => {
+  const { user, guest } = useAuth();
+  const navigate = useNavigate();
   const q = useQuery();
-  const mode = (q.get("mode") as 'practice' | 'speed' | 'battle-ai' | 'battle-friends') ?? 'practice';
-  const difficulty = (q.get("difficulty") as 'easy' | 'moderate' | 'difficult') ?? 'moderate';
-  const topic = (q.get("topic") as 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra') ?? 'mixed';
+  const qsMode = (q.get("mode") as 'practice' | 'speed' | 'battle-ai' | 'battle-friends') ?? 'practice';
+  const qsDifficulty = (q.get("difficulty") as 'easy' | 'moderate' | 'difficult') ?? 'moderate';
+  const qsTopic = (q.get("topic") as 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra') ?? 'mixed';
   const topicsCsv = q.get("topics") || '';
-  const topics = topicsCsv ? topicsCsv.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+  const qsTopics = topicsCsv ? topicsCsv.split(',').map(s => s.trim()).filter(Boolean) : undefined;
   const lobby = q.get('lobby') || undefined;
+  const taskId = q.get('task') || undefined;
+
+  const [role, setRole] = useState<string>('');
+  const [task, setTask] = useState<LiveTask | null>(null);
+  const [ready, setReady] = useState<boolean>(false);
+
+  // Load role and optionally the task
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setRole('student'); } else {
+        const p = await getProfile(user.id);
+        if (!cancelled) setRole((p?.role as string) || 'student');
+      }
+      // If not teacher, require a valid active task
+      const isTeacher = (role === 'teacher');
+      if (!isTeacher) {
+        if (!taskId) { if (!cancelled) { setReady(true); navigate('/tasks', { replace: true }); } return; }
+        const t = await getTaskById(taskId);
+        if (!cancelled) {
+          if (!t || t.status !== 'active') { setReady(true); navigate('/tasks', { replace: true }); return; }
+          setTask(t);
+        }
+      }
+      if (!cancelled) setReady(true);
+    })();
+    return () => { cancelled = true; };
+  // include taskId so navigating to different task works
+  }, [user?.id, guest, taskId, role]);
+
+  // Final settings: if task present, prefer its values
+  const mode = (task?.mode || qsMode);
+  const difficulty = (task?.difficulty || qsDifficulty) as 'easy' | 'moderate' | 'difficult';
+  const topics = (task?.topics_csv ? task.topics_csv.split(',').map(s => s.trim()).filter(Boolean) : qsTopics);
+  const topic = qsTopic; // kept for backward-compat; "topics" takes precedence in QuizGame
+
+  if (!ready) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <QuizGame mode={mode} difficulty={difficulty} topic={topic} topics={topics} lobbyCode={lobby} />

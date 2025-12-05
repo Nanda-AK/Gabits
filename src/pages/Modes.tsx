@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
 import { Target, Swords, Trophy, ChartNoAxesGantt, Sparkles, BookOpen, Timer, Bot, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getProfile } from "@/services/profile";
 
 const GlowTile: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; onClick: () => void; gradient: string }> = ({ title, subtitle, icon, onClick, gradient }) => (
   <button onClick={onClick} className="group relative w-full text-left">
@@ -24,6 +26,21 @@ const Modes = () => {
   const navigate = useNavigate();
   const [soloOpen, setSoloOpen] = useState(false);
   const [competeOpen, setCompeteOpen] = useState(false);
+  const { user, guest } = useAuth();
+  const [role, setRole] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { if (!cancelled) setRole('student'); return; }
+      const p = await getProfile(user.id);
+      if (!cancelled) setRole((p?.role as string) || 'student');
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, guest]);
+
+  const isTeacher = role === 'teacher';
+  const toTasks = () => navigate('/tasks');
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
@@ -65,7 +82,7 @@ const Modes = () => {
                 <div className="space-y-1">
                   <button
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setSoloOpen(false); navigate('/modes/solo/practice'); }}
+                    onClick={() => { setSoloOpen(false); isTeacher ? navigate('/modes/solo/practice') : toTasks(); }}
                   >
                     <div className="rounded-lg p-2 bg-indigo-100 text-indigo-700"><BookOpen className="w-4 h-4"/></div>
                     <div>
@@ -75,7 +92,7 @@ const Modes = () => {
                   </button>
                   <button
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setSoloOpen(false); navigate('/modes/solo/speed'); }}
+                    onClick={() => { setSoloOpen(false); isTeacher ? navigate('/modes/solo/speed') : toTasks(); }}
                   >
                     <div className="rounded-lg p-2 bg-emerald-100 text-emerald-700"><Timer className="w-4 h-4"/></div>
                     <div>
@@ -110,7 +127,7 @@ const Modes = () => {
                 <div className="space-y-1">
                   <button
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setCompeteOpen(false); navigate('/modes/compete/ai'); }}
+                    onClick={() => { setCompeteOpen(false); isTeacher ? navigate('/modes/compete/ai') : toTasks(); }}
                   >
                     <div className="rounded-lg p-2 bg-purple-100 text-purple-700"><Bot className="w-4 h-4"/></div>
                     <div>
@@ -120,7 +137,7 @@ const Modes = () => {
                   </button>
                   <button
                     className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setCompeteOpen(false); navigate('/modes/compete/friends'); }}
+                    onClick={() => { setCompeteOpen(false); isTeacher ? navigate('/modes/compete/friends') : toTasks(); }}
                   >
                     <div className="rounded-lg p-2 bg-cyan-100 text-cyan-700"><Users className="w-4 h-4"/></div>
                     <div>

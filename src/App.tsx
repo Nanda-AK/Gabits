@@ -25,6 +25,7 @@ import BattleFriends from "./pages/BattleFriends";
 import Play from "./pages/Play";
 import Lobby from "./pages/Lobby";
 import TeacherPortal from "./pages/TeacherPortal";
+import TasksHub from "./pages/TasksHub";
 
 const queryClient = new QueryClient();
 
@@ -43,16 +44,20 @@ const App = () => (
             <Route element={<ProtectedRoute />}> 
               <Route path="/modes" element={<Modes />} />
               <Route path="/modes/solo" element={<SoloMode />} />
-              <Route path="/modes/solo/practice" element={<PracticeSetup />} />
-              <Route path="/modes/solo/speed" element={<SpeedDriveSetup />} />
-              <Route path="/modes/compete" element={<CompeteMode />} />
-              <Route path="/modes/compete/ai" element={<BattleAI />} />
-              <Route path="/modes/compete/friends" element={<BattleFriends />} />
+              {/* Teacher-only: setup and free-play routes */}
+              <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
+                <Route path="/modes/solo/practice" element={<PracticeSetup />} />
+                <Route path="/modes/solo/speed" element={<SpeedDriveSetup />} />
+                <Route path="/modes/compete" element={<CompeteMode />} />
+                <Route path="/modes/compete/ai" element={<BattleAI />} />
+                <Route path="/modes/compete/friends" element={<BattleFriends />} />
+              </Route>
               <Route path="/play" element={<Play />} />
               <Route path="/lobby/:code" element={<Lobby />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/treasure" element={<Treasure />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tasks" element={<TasksHub />} />
               {/* Role-gated routes */}
               <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
                 <Route path="/portal/teacher" element={<TeacherPortal />} />

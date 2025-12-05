@@ -6,6 +6,7 @@ export type LiveTask = {
   mode: 'practice' | 'speed' | 'battle-ai' | 'battle-friends';
   topics_csv: string; // comma-separated topics
   difficulty: 'easy' | 'moderate' | 'difficult' | null;
+  chapter?: string | null;
   status: 'active' | 'ended';
   created_by: string;
   started_at: string;
@@ -31,6 +32,7 @@ export async function startLiveTask(params: {
   mode: LiveTask['mode'];
   topics: string[];
   difficulty?: LiveTask['difficulty'];
+  chapter?: string | null;
   created_by: string;
 }): Promise<LiveTask | null> {
   try {
@@ -39,6 +41,7 @@ export async function startLiveTask(params: {
       mode: params.mode,
       topics_csv: (params.topics || []).join(','),
       difficulty: params.difficulty ?? null,
+      chapter: params.chapter ?? null,
       status: 'active' as const,
       created_by: params.created_by,
       started_at: new Date().toISOString(),
@@ -80,4 +83,18 @@ export function subscribeActiveTasks(onChange: (tasks: LiveTask[]) => void) {
   return () => {
     try { supabase.removeChannel(channel); } catch {}
   };
+}
+
+export async function getTaskById(id: string): Promise<LiveTask | null> {
+  try {
+    const { data, error } = await supabase
+      .from('live_tasks')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as LiveTask;
+  } catch {
+    return null;
+  }
 }

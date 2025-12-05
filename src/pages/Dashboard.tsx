@@ -63,6 +63,7 @@ const Dashboard = () => {
 
   const joinTask = (t: LiveTask) => {
     const qs = new URLSearchParams();
+    qs.set('task', t.id);
     qs.set('mode', t.mode);
     if (t.difficulty) qs.set('difficulty', t.difficulty);
     if (t.topics_csv) qs.set('topics', t.topics_csv);

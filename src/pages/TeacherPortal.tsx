@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getProfile } from "@/services/profile";
 import { startLiveTask, endLiveTask, getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 
@@ -16,14 +15,22 @@ const topicOptions = [
   { key: 'algebra', label: 'Algebra' },
 ];
 
+const chapterOptions = [
+  'Chapter 1: Numbers & Operations',
+  'Chapter 2: Fractions & Decimals',
+  'Chapter 3: Algebra Basics',
+  'Chapter 4: Geometry',
+  'Chapter 5: Data & Probability',
+];
+
 const TeacherPortal = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profileName, setProfileName] = useState<string>("");
-  const [title, setTitle] = useState<string>("");
   const [mode, setMode] = useState<'practice' | 'speed' | 'battle-ai' | 'battle-friends'>('practice');
   const [difficulty, setDifficulty] = useState<'easy'|'moderate'|'difficult'>('moderate');
   const [topics, setTopics] = useState<string[]>(['addition','subtraction','multiplication','division']);
+  const [chapter, setChapter] = useState<string>(chapterOptions[0]);
   const [live, setLive] = useState<LiveTask[]>([]);
   const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
@@ -49,16 +56,14 @@ const TeacherPortal = () => {
 
   const start = async () => {
     if (!user) return;
-    const created = await startLiveTask({
-      title: title || `${displayName}'s Assignment`,
+    await startLiveTask({
+      title: chapter || `${displayName}'s Assignment`,
       mode,
       topics,
       difficulty,
+      chapter,
       created_by: user.id,
     });
-    if (created) {
-      setTitle("");
-    }
   };
 
   const end = async (taskId: string) => {
@@ -68,8 +73,8 @@ const TeacherPortal = () => {
 
   const joinPreview = (t: LiveTask) => {
     const qs = new URLSearchParams();
+    qs.set('task', t.id);
     qs.set('mode', t.mode);
-    if (t.difficulty) qs.set('difficulty', t.difficulty);
     if (t.topics_csv) qs.set('topics', t.topics_csv);
     navigate(`/play?${qs.toString()}`);
   };
@@ -89,26 +94,13 @@ const TeacherPortal = () => {
             <CardTitle className="text-lg">Start Live Task</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-xs text-muted-foreground">Title</label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Practice Set - Fractions" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">Mode</label>
-                <select className="w-full border rounded-md h-10 px-2" value={mode} onChange={e => setMode(e.target.value as any)}>
-                  <option value="practice">Practice</option>
-                  <option value="speed">Speed</option>
-                  <option value="battle-ai">Battle AI</option>
-                  <option value="battle-friends">Battle Friends</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Difficulty</label>
-                <select className="w-full border rounded-md h-10 px-2" value={difficulty} onChange={e => setDifficulty(e.target.value as any)}>
-                  <option value="easy">Easy</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="difficult">Difficult</option>
+                <label className="text-xs text-muted-foreground">Chapter</label>
+                <select className="w-full border rounded-md h-10 px-2" value={chapter} onChange={e => setChapter(e.target.value)}>
+                  {chapterOptions.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -140,7 +132,7 @@ const TeacherPortal = () => {
                   <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border bg-white/70">
                     <div>
                       <div className="text-sm font-bold">{t.title}</div>
-                      <div className="text-xs text-muted-foreground">{t.mode} • {t.difficulty || 'moderate'} • {t.topics_csv || 'mixed'}</div>
+                      <div className="text-xs text-muted-foreground">{t.chapter ? `${t.chapter} • ` : ''}{t.topics_csv || 'mixed'}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="secondary" onClick={() => joinPreview(t)}>Preview</Button>
