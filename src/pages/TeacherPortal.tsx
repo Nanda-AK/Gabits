@@ -141,6 +141,7 @@ const TeacherPortal = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="secondary" onClick={() => joinPreview(t)}>Preview</Button>
+                      <Button onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>View Report</Button>
                       <Button variant="outline" onClick={() => end(t.id)}>End</Button>
                     </div>
                   </div>

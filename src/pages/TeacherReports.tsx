@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getTasksByCreator, type LiveTask } from "@/services/tasks";
 import { getRunsForTeacher, type TaskRunWithTask } from "@/services/taskRuns";
 import { getProfilesByIds } from "@/services/profile";
+import { Badge } from "@/components/ui/badge";
 
 function formatPercent(n: number) { return `${(n * 100).toFixed(0)}%`; }
 function formatMs(ms?: number | null) {
@@ -119,11 +120,18 @@ const TeacherReports = () => {
                 {recentTasks.map(t => (
                   <div key={t.id} className="py-3 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-sm">{t.title}</div>
-                      <div className="text-xs text-muted-foreground">{t.chapter ? `${t.chapter} • ` : ''}{t.topics_csv || 'mixed'} • {t.status}</div>
+                      <div className="font-semibold text-sm flex items-center gap-2">
+                        {t.title}
+                        {t.status === 'active' ? (
+                          <Badge>Active</Badge>
+                        ) : (
+                          <Badge variant="outline">Ended</Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{t.chapter ? `${t.chapter} • ` : ''}{t.topics_csv || 'mixed'}</div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>View</Button>
+                      <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>View Report</Button>
                     </div>
                   </div>
                 ))}
@@ -132,56 +140,6 @@ const TeacherReports = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Students</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {runs.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No student activity yet.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-muted-foreground">
-                      <th className="py-2 pr-4">Student</th>
-                      <th className="py-2 pr-4">Attempts</th>
-                      <th className="py-2 pr-4">Avg Acc</th>
-                      <th className="py-2 pr-4">Avg Time</th>
-                      <th className="py-2 pr-4">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from(new Map(runs.map(r => [r.user_id || r.guest_id || r.id, r]))).map(([key]) => {
-                      const all = runs.filter(r => (r.user_id || r.guest_id || r.id) === key);
-                      const attempts = all.length;
-                      let c=0,t=0, tm=0, tc=0;
-                      for (const r of all) { c += Math.max(0, r.correct || 0); t += Math.max(0, r.total || 0); if (r.time_ms) { tm += r.time_ms; tc++; } }
-                      const acc = t ? c/t : 0;
-                      const avgT = tc ? tm/tc : 0;
-                      const isGuest = !!all[0].guest_id;
-                      const displayName = isGuest
-                        ? 'Guest'
-                        : (all[0].display_name || nameMap[all[0].user_id as string] || 'Player');
-                      const [name, setName] = [undefined, undefined] as any; // placeholder for TSX map
-                      return (
-                        <tr key={key} className="border-t">
-                          <td className="py-2 pr-4">{displayName}</td>
-                          <td className="py-2 pr-4">{attempts}</td>
-                          <td className="py-2 pr-4">{formatPercent(acc)}</td>
-                          <td className="py-2 pr-4">{formatMs(avgT)}</td>
-                          <td className="py-2 pr-4">
-                            {!isGuest && <Button size="sm" variant="outline" onClick={() => navigate(`/portal/reports/students/${all[0].user_id}`)}>Inspect</Button>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

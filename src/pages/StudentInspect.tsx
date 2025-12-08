@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProfile } from "@/services/profile";
+import { getProfile, getStudentProfileForTeacher } from "@/services/profile";
 import { getRunsForTeacherStudent, type TaskRunWithTask } from "@/services/taskRuns";
 
 function pct(c: number, t: number) { return t ? Math.round((c/t)*100) : 0; }
@@ -31,13 +31,17 @@ const StudentInspect = () => {
       if (!teacher?.id || !studentId) return;
       setLoading(true);
       try {
-        const [r, p] = await Promise.all([
+        const [r, pRpc] = await Promise.all([
           getRunsForTeacherStudent(teacher.id, studentId),
-          getProfile(studentId).catch(() => null)
+          getStudentProfileForTeacher(studentId).catch(() => null)
         ]);
+        const p = pRpc || await getProfile(studentId).catch(() => null);
         if (!cancelled) {
-          setRuns(r || []);
-          setStudentName(p?.full_name || 'Student');
+          const runsList = r || [];
+          setRuns(runsList);
+          // Prefer profile name; fallback to first run's display_name; final fallback 'Student'
+          const fallbackRunName = runsList.find(x => !!x.display_name)?.display_name;
+          setStudentName(p?.full_name || fallbackRunName || 'Student');
           setStudentStandard(p?.standard || '-');
           setStudentAge(typeof p?.age === 'number' ? p!.age : null);
           setStudentGender(p?.gender || '-');

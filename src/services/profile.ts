@@ -71,3 +71,23 @@ export async function getProfilesByIds(ids: string[]): Promise<Record<string, st
     return {};
   }
 }
+
+// Secure RPC: for teachers to fetch a student's limited profile (no emails) only if
+// the student has runs on tasks created by the current teacher. Avoids RLS recursion.
+export async function getStudentProfileForTeacher(studentId: string): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_student_profile_for_teacher', { student_id: studentId });
+    if (error || !data) return null;
+    const row = Array.isArray(data) ? (data[0] as any) : (data as any);
+    if (!row) return null;
+    return {
+      id: row.id,
+      full_name: row.full_name,
+      age: row.age,
+      gender: row.gender,
+      standard: row.standard,
+    } as Profile;
+  } catch {
+    return null;
+  }
+}

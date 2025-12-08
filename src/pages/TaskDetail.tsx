@@ -129,8 +129,10 @@ const TaskDetail = () => {
                       </thead>
                       <tbody>
                         {runs.map(r => {
-                          const displayName = r.user_id ? (nameMap[r.user_id] || 'Player') : 'Guest';
                           const isGuest = !r.user_id;
+                          const displayName = isGuest
+                            ? 'Guest'
+                            : (r.display_name || nameMap[r.user_id as string] || 'Player');
                           return (
                           <tr key={r.id} className="border-t">
                             <td className="py-2 pr-4">{displayName}</td>
