@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTaskById, type LiveTask } from "@/services/tasks";
 import { getRunsForTask, type TaskRun } from "@/services/taskRuns";
+import { getProfilesByIds } from "@/services/profile";
 
 function pct(correct: number, total: number) { return total ? Math.round((correct/total)*100) : 0; }
 function fmtMs(ms?: number | null) {
@@ -21,6 +22,7 @@ const TaskDetail = () => {
   const [task, setTask] = useState<LiveTask | null>(null);
   const [runs, setRuns] = useState<TaskRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +41,19 @@ const TaskDetail = () => {
     })();
     return () => { cancelled = true; };
   }, [taskId]);
+
+  // Load names for all user_ids in this task's runs
+  useEffect(() => {
+    const ids = Array.from(new Set((runs || []).map(r => r.user_id).filter(Boolean) as string[]));
+    if (ids.length === 0) {
+      setNameMap({});
+      return;
+    }
+    (async () => {
+      const m = await getProfilesByIds(ids);
+      setNameMap(m);
+    })();
+  }, [runs]);
 
   const summary = useMemo(() => {
     const participants = new Set<string>();
@@ -113,16 +128,24 @@ const TaskDetail = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {runs.map(r => (
+                        {runs.map(r => {
+                          const displayName = r.user_id ? (nameMap[r.user_id] || 'Player') : 'Guest';
+                          const isGuest = !r.user_id;
+                          return (
                           <tr key={r.id} className="border-t">
-                            <td className="py-2 pr-4">{r.user_id ? 'Player' : 'Guest'}</td>
+                            <td className="py-2 pr-4">{displayName}</td>
                             <td className="py-2 pr-4">{r.correct ?? 0}</td>
                             <td className="py-2 pr-4">{r.total ?? 0}</td>
                             <td className="py-2 pr-4">{pct(r.correct || 0, r.total || 0)}%</td>
                             <td className="py-2 pr-4">{fmtMs(r.time_ms)}</td>
                             <td className="py-2 pr-4">{r.status}</td>
+                            {!isGuest && (
+                              <td className="py-2 pr-4">
+                                <Button size="sm" variant="outline" onClick={() => navigate(`/portal/reports/students/${r.user_id}`)}>Inspect</Button>
+                              </td>
+                            )}
                           </tr>
-                        ))}
+                        );})}
                       </tbody>
                     </table>
                   </div>

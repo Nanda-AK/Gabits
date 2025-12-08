@@ -69,15 +69,28 @@ export type TaskRunWithTask = TaskRun & {
 
 export async function getRunsForTeacher(teacherId: string): Promise<TaskRunWithTask[]> {
   try {
-    const { data, error } = await supabase
+    // First get all task IDs created by this teacher
+    const { data: tasks, error: tasksError } = await supabase
+      .from('live_tasks')
+      .select('id')
+      .eq('created_by', teacherId);
+
+    if (tasksError || !tasks || tasks.length === 0) return [];
+
+    const taskIds = tasks.map(t => t.id);
+
+    // Then get all runs for these task IDs
+    const { data: runs, error: runsError } = await supabase
       .from('task_runs')
-      .select('*, live_tasks!inner(id, title, chapter, topics_csv, status, started_at, ended_at, created_by)')
-      .eq('live_tasks.created_by', teacherId)
+      .select('*, live_tasks!inner(*)')
+      .in('task_id', taskIds)
       .order('completed_at', { ascending: false });
-    if (error || !data) return [] as any;
-    return data as any;
-  } catch {
-    return [] as any;
+
+    if (runsError || !runs) return [];
+    return runs as any;
+  } catch (error) {
+    console.error('Error fetching runs for teacher:', error);
+    return [];
   }
 }
 

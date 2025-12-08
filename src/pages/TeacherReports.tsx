@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getTasksByCreator, type LiveTask } from "@/services/tasks";
 import { getRunsForTeacher, type TaskRunWithTask } from "@/services/taskRuns";
-import { getProfile } from "@/services/profile";
+import { getProfilesByIds } from "@/services/profile";
 
 function formatPercent(n: number) { return `${(n * 100).toFixed(0)}%`; }
 function formatMs(ms?: number | null) {
@@ -21,6 +21,7 @@ const TeacherReports = () => {
   const [tasks, setTasks] = useState<LiveTask[]>([]);
   const [runs, setRuns] = useState<TaskRunWithTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +40,19 @@ const TeacherReports = () => {
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  // Load student display names for all user_ids present in runs
+  useEffect(() => {
+    const ids = Array.from(new Set((runs || []).map(r => r.user_id).filter(Boolean) as string[]));
+    if (ids.length === 0) {
+      setNameMap({});
+      return;
+    }
+    (async () => {
+      const m = await getProfilesByIds(ids);
+      setNameMap(m);
+    })();
+  }, [runs]);
 
   const kpis = useMemo(() => {
     const totalTasks = tasks.length;
@@ -146,10 +160,11 @@ const TeacherReports = () => {
                       const acc = t ? c/t : 0;
                       const avgT = tc ? tm/tc : 0;
                       const isGuest = !!all[0].guest_id;
+                      const displayName = isGuest ? 'Guest' : (nameMap[all[0].user_id as string] || 'Player');
                       const [name, setName] = [undefined, undefined] as any; // placeholder for TSX map
                       return (
                         <tr key={key} className="border-t">
-                          <td className="py-2 pr-4">{isGuest ? 'Guest' : 'Player'}</td>
+                          <td className="py-2 pr-4">{displayName}</td>
                           <td className="py-2 pr-4">{attempts}</td>
                           <td className="py-2 pr-4">{formatPercent(acc)}</td>
                           <td className="py-2 pr-4">{formatMs(avgT)}</td>

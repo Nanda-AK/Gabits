@@ -21,6 +21,9 @@ const StudentInspect = () => {
   const [runs, setRuns] = useState<TaskRunWithTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentName, setStudentName] = useState<string>('Student');
+  const [studentStandard, setStudentStandard] = useState<string>('-');
+  const [studentAge, setStudentAge] = useState<number | null>(null);
+  const [studentGender, setStudentGender] = useState<string>('-');
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +38,9 @@ const StudentInspect = () => {
         if (!cancelled) {
           setRuns(r || []);
           setStudentName(p?.full_name || 'Student');
+          setStudentStandard(p?.standard || '-');
+          setStudentAge(typeof p?.age === 'number' ? p!.age : null);
+          setStudentGender(p?.gender || '-');
           setLoading(false);
         }
       } catch {
@@ -72,10 +78,20 @@ const StudentInspect = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
           <Card><CardHeader><CardTitle className="text-sm">Tasks Completed</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{runs.length}</CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm">Avg Accuracy</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{Math.round(summary.avgAcc*100)}%</CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm">Avg Time</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{fmtMs(summary.avgTime)}</CardContent></Card>
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Profile</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-sm space-y-1">
+                <div><span className="text-muted-foreground">Standard:</span> {studentStandard}</div>
+                <div><span className="text-muted-foreground">Age:</span> {studentAge ?? '-'}</div>
+                <div><span className="text-muted-foreground">Gender:</span> {studentGender}</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>

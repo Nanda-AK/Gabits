@@ -49,3 +49,25 @@ export function needsOnboarding(p?: Profile | null): boolean {
   if (!p) return true;
   return !p.full_name || !p.age || !p.gender || !p.standard;
 }
+
+// Batch fetch minimal profile info (id, full_name) and return a map id -> displayName.
+// Used by teachers to show student names without ever displaying emails.
+export async function getProfilesByIds(ids: string[]): Promise<Record<string, string>> {
+  if (!ids || ids.length === 0) return {};
+  try {
+    const uniq = Array.from(new Set(ids.filter(Boolean)));
+    if (uniq.length === 0) return {};
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", uniq);
+    if (error || !data) return {};
+    const map: Record<string, string> = {};
+    for (const row of data as Array<{ id: string; full_name: string }>) {
+      map[row.id] = row.full_name || "Player";
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
