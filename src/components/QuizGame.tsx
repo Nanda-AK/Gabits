@@ -23,6 +23,7 @@ import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
+import { createRun, completeRun } from "@/services/taskRuns";
 import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
@@ -172,6 +173,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const { user, guest } = useAuth();
   const userId = user?.id ?? getGuestIdStable();
   const today = useMemo(() => getLocalYMD(), []);
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const taskId = query.get('task');
+  const topicsCsvParam = query.get('topics') || null;
   const [displayName, setDisplayName] = useState<string>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -183,6 +187,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [showHint, setShowHint] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [coinAnimations, setCoinAnimations] = useState<Array<{ id: number; amount: number }>>([]);
+  // Run tracking for live tasks
+  const runIdRef = useRef<string | null>(null);
+  const runCompletedRef = useRef<boolean>(false);
+  const gameStartAtRef = useRef<number>(Date.now());
+  const [role, setRole] = useState<string>('');
   const [blinkHeart, setBlinkHeart] = useState(false);
   const [secondChance, setSecondChance] = useState(false);
   const [secondChanceOpen, setSecondChanceOpen] = useState(false);
@@ -547,20 +556,29 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
 
-  // Resolve display name (prefer profile full_name, then metadata; avoid emails; final fallback Player/Guest)
+  // Resolve display name (prefer profile.full_name) and role; avoid emails; fallback Player/Guest
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const metaName = (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || (user?.user_metadata?.user_name as string) || (user?.user_metadata?.username as string) || null;
       if (!userId || guest) {
-        if (!cancelled) setDisplayName(metaName || 'Guest');
+        if (!cancelled) {
+          setDisplayName(metaName || 'Guest');
+          setRole('student');
+        }
         return;
       }
       try {
         const p = await getProfile(userId);
-        if (!cancelled) setDisplayName(p?.full_name || metaName || 'Player');
+        if (!cancelled) {
+          setDisplayName(p?.full_name || metaName || 'Player');
+          setRole(((p as any)?.role as string) || 'student');
+        }
       } catch {
-        if (!cancelled) setDisplayName(metaName || 'Player');
+        if (!cancelled) {
+          setDisplayName(metaName || 'Player');
+          setRole('student');
+        }
       }
     };
     load();
@@ -568,7 +586,73 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   }, [userId, guest, user]);
 
   // Removed lifetime achievements modal usage; /treasure shows wallet and achievements
-  
+
+  // Create a task run when a student is playing a live task (skip for teacher preview)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!taskId) return; // only when launched with a task id
+      if (!role) return; // wait until role resolves
+      if (role === 'teacher') return; // do not log teacher previews
+      if (runIdRef.current) return; // already created
+      const topicsCsv = (Array.isArray(topics) && topics.length) ? topics.join(',') : (topicsCsvParam || null);
+      const created = await createRun({
+        task_id: taskId,
+        user_id: guest ? null : (user?.id || null),
+        guest_id: guest ? userId : null,
+        mode: mode,
+        difficulty: (difficulty as any) ?? null,
+        topics_csv: topicsCsv,
+        chapter: null,
+      });
+      if (!cancelled && created) {
+        runIdRef.current = created.id;
+        gameStartAtRef.current = Date.now();
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId, role]);
+
+  // Complete the run when game is completed
+  useEffect(() => {
+    (async () => {
+      if (!taskId) return;
+      if (!runIdRef.current || runCompletedRef.current) return;
+      if (!gameCompleted) return;
+      const totalQ = shuffledQuestions.length;
+      const correctCount = answerCorrectList.filter(Boolean).length;
+      const timeMs = Date.now() - gameStartAtRef.current;
+      const details = shuffledQuestions.map((q, i) => ({ qid: (q as any).id ?? i, correct: !!answerCorrectList[i] }));
+      const ok = await completeRun(runIdRef.current, {
+        total: totalQ,
+        correct: correctCount,
+        time_ms: timeMs,
+        hearts_left: hearts,
+        coins_earned: coins,
+        details,
+        status: 'completed',
+      });
+      if (ok) runCompletedRef.current = true;
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameCompleted]);
+
+  // Best-effort mark as abandoned on unload/navigation while in-progress
+  useEffect(() => {
+    const handler = () => {
+      if (!taskId) return;
+      const id = runIdRef.current;
+      if (!id || runCompletedRef.current) return;
+      const totalQ = shuffledQuestions.length;
+      const correctCount = answerCorrectList.filter(Boolean).length;
+      const timeMs = Date.now() - gameStartAtRef.current;
+      try { completeRun(id, { total: totalQ, correct: correctCount, time_ms: timeMs, status: 'abandoned' }); } catch {}
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
   // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
     if (mode === 'battle-ai') return; // no overall timer in battle AI

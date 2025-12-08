@@ -26,6 +26,9 @@ import Play from "./pages/Play";
 import Lobby from "./pages/Lobby";
 import TeacherPortal from "./pages/TeacherPortal";
 import TasksHub from "./pages/TasksHub";
+import TeacherReports from "./pages/TeacherReports";
+import TaskDetail from "./pages/TaskDetail";
+import StudentInspect from "./pages/StudentInspect";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +64,9 @@ const App = () => (
               {/* Role-gated routes */}
               <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
                 <Route path="/portal/teacher" element={<TeacherPortal />} />
+                <Route path="/portal/reports" element={<TeacherReports />} />
+                <Route path="/portal/reports/tasks/:taskId" element={<TaskDetail />} />
+                <Route path="/portal/reports/students/:studentId" element={<StudentInspect />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

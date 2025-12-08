@@ -86,7 +86,12 @@ const TeacherPortal = () => {
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-indigo-700 to-emerald-700 bg-clip-text text-transparent">
             Teacher Panel
           </h1>
-          <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/portal/reports')}>
+              View Reports
+            </Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+          </div>
         </div>
 
         <Card className="mb-6">

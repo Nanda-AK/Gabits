@@ -27,6 +27,22 @@ export async function getActiveTasks(): Promise<LiveTask[]> {
   }
 }
 
+export async function getTasksByCreator(teacherId: string, status: 'active' | 'ended' | 'all' = 'all'): Promise<LiveTask[]> {
+  try {
+    let q = supabase
+      .from('live_tasks')
+      .select('*')
+      .eq('created_by', teacherId)
+      .order('started_at', { ascending: false });
+    if (status !== 'all') q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return data as LiveTask[];
+  } catch {
+    return [];
+  }
+}
+
 export async function startLiveTask(params: {
   title: string;
   mode: LiveTask['mode'];
