@@ -19,6 +19,7 @@ export type TaskRun = {
   coins_earned: number | null;
   details: any | null;
   status: 'completed' | 'abandoned';
+  display_name?: string | null;
 };
 
 export async function createRun(params: {
@@ -29,6 +30,7 @@ export async function createRun(params: {
   difficulty?: TaskRun['difficulty'];
   topics_csv?: string | null;
   chapter?: string | null;
+  display_name?: string | null;
 }): Promise<TaskRun | null> {
   try {
     const payload = {
@@ -39,6 +41,7 @@ export async function createRun(params: {
       difficulty: params.difficulty ?? null,
       topics_csv: params.topics_csv ?? null,
       chapter: params.chapter ?? null,
+      display_name: params.display_name ?? null,
       status: 'abandoned' as const, // mark in-progress as abandoned until completion
       // started_at default now() is set by DB
     } as any;

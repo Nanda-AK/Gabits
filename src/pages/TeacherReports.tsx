@@ -160,7 +160,9 @@ const TeacherReports = () => {
                       const acc = t ? c/t : 0;
                       const avgT = tc ? tm/tc : 0;
                       const isGuest = !!all[0].guest_id;
-                      const displayName = isGuest ? 'Guest' : (nameMap[all[0].user_id as string] || 'Player');
+                      const displayName = isGuest
+                        ? 'Guest'
+                        : (all[0].display_name || nameMap[all[0].user_id as string] || 'Player');
                       const [name, setName] = [undefined, undefined] as any; // placeholder for TSX map
                       return (
                         <tr key={key} className="border-t">

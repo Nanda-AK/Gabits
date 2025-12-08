@@ -604,6 +604,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         difficulty: (difficulty as any) ?? null,
         topics_csv: topicsCsv,
         chapter: null,
+        display_name: (displayName && displayName.trim()) ? displayName : (guest ? 'Guest' : 'Player'),
       });
       if (!cancelled && created) {
         runIdRef.current = created.id;
