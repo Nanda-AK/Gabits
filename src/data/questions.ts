@@ -1,3 +1,7 @@
+import { constructionQuestions } from './chapters/constructions';
+import { fractionQuestions } from './chapters/fractions';
+import { perimeterQuestions } from './chapters/perimeter_area';
+
 export type Difficulty = 'easy' | 'moderate' | 'difficult';
 
 export interface Question {
@@ -568,6 +572,7 @@ export const questions: Question[] = [
   reward: 8,
   hint: "Anything multiplied by 0 becomes 0.",
   }
+  , ...fractionQuestions, ...constructionQuestions, ...perimeterQuestions
 ];
 
 export const getDifficultyCoins = (difficulty: Difficulty): number => {

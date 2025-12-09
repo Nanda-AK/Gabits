@@ -27,6 +27,7 @@ const TasksHub = () => {
     qs.set('mode', t.mode);
     if (t.difficulty) qs.set('difficulty', t.difficulty);
     if (t.topics_csv) qs.set('topics', t.topics_csv);
+    if (t.chapter) qs.set('chapter', t.chapter);
     navigate(`/play?${qs.toString()}`);
   };
 

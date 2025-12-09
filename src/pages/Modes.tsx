@@ -1,33 +1,24 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
-import { Target, Swords, Trophy, ChartNoAxesGantt, Sparkles, BookOpen, Timer, Bot, Users } from "lucide-react";
+import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
+import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/lib/supabase";
+import { getLocalYMD } from "@/lib/date";
 
-const GlowTile: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; onClick: () => void; gradient: string }> = ({ title, subtitle, icon, onClick, gradient }) => (
-  <button onClick={onClick} className="group relative w-full text-left">
-    <div className={`absolute -inset-0.5 rounded-3xl blur-lg opacity-60 group-hover:opacity-90 transition-opacity ${gradient}`} />
-    <Card className="relative h-48 rounded-3xl border-0 bg-gradient-to-br from-white/75 to-white/50 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all">
-      <CardHeader className="flex items-center justify-center gap-4 pt-8">
-        <div className="rounded-2xl p-3 bg-primary/10 text-primary group-hover:scale-105 transition-transform">
-          {icon}
-        </div>
-        <CardTitle className="text-3xl font-extrabold tracking-tight">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="text-center text-muted-foreground">{subtitle}</CardContent>
-    </Card>
-  </button>
+const Pill: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
+  <span className={`inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700 ${className}`}>{children}</span>
 );
 
 const Modes = () => {
   const navigate = useNavigate();
-  const [soloOpen, setSoloOpen] = useState(false);
-  const [competeOpen, setCompeteOpen] = useState(false);
   const { user, guest } = useAuth();
   const [role, setRole] = useState<string>("");
+  const [progressCount, setProgressCount] = useState<number>(0);
+  const progressGoal = 5;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,114 +32,145 @@ const Modes = () => {
 
   const isTeacher = role === 'teacher';
   const toTasks = () => navigate('/tasks');
+
+  // Today's progression (count reward events today, cap 5)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!user || guest) { if (alive) setProgressCount(0); return; }
+        const today = getLocalYMD();
+        const { count } = await supabase
+          .from('reward_events')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('date', today);
+        if (alive) setProgressCount(Math.min(progressGoal, count ?? 0));
+      } catch {
+        if (alive) setProgressCount(0);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user?.id, guest]);
+
+  const startPractice = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
+  const startSpeed = () => isTeacher ? navigate('/modes/solo/speed') : toTasks();
+  const startAI = () => isTeacher ? navigate('/modes/compete/ai') : toTasks();
+  const goFriends = () => isTeacher ? navigate('/modes/compete/friends') : toTasks();
+  const revisitTopics = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
+  const goStats = () => navigate('/dashboard');
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
-      <div className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-pink-400/20 blur-3xl" />
-      <div className="container mx-auto px-4 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div className="pl-16 sm:pl-20 pt-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-3">
-              <Sparkles className="w-3.5 h-3.5" /> Choose Mode
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto max-w-6xl px-4 py-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-2">
+              <Sparkles className="w-3.5 h-3.5" /> Choose Your Mode
             </div>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Choose your path to mine more treasures</h1>
-            <p className="text-muted-foreground mt-2">Select a mode to begin your journey.</p>
+            <h1 className="text-3xl sm:text-4xl font-black">Choose Your Mode</h1>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={() => navigate('/treasure')} variant="secondary" className="rounded-full"><ChartNoAxesGantt className="w-4 h-4 mr-2"/>My Treasure</Button>
-            <Button onClick={() => navigate('/leaderboard')} variant="secondary" className="rounded-full"><Trophy className="w-4 h-4 mr-2"/>Leaderboard</Button>
+          <div className="w-full sm:w-80" style={{ ['--primary' as any]: '249 74% 64%' }}>
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Progression</span>
+              <span className="font-semibold">{progressCount}/{progressGoal} Quizzes</span>
+            </div>
+            <Progress className="h-2 bg-gray-200" value={(progressCount / progressGoal) * 100} />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          {/* Solo with hover/tap menu */}
-          <div
-            onMouseEnter={() => setSoloOpen(true)}
-            onMouseLeave={() => setSoloOpen(false)}
-            className="w-full"
-          >
-            <Popover open={soloOpen} onOpenChange={setSoloOpen}>
-              <PopoverTrigger asChild>
-                <div>
-                  <GlowTile
-                    title="Solo"
-                    subtitle="Practice at your own pace"
-                    icon={<Target className="w-7 h-7"/>}
-                    onClick={() => setSoloOpen(o => !o)}
-                    gradient="bg-gradient-to-r from-indigo-400/40 to-purple-400/40"
-                  />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent align="center" sideOffset={10} className="rounded-2xl border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl shadow-xl p-2 w-72">
-                <div className="space-y-1">
-                  <button
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setSoloOpen(false); isTeacher ? navigate('/modes/solo/practice') : toTasks(); }}
-                  >
-                    <div className="rounded-lg p-2 bg-indigo-100 text-indigo-700"><BookOpen className="w-4 h-4"/></div>
-                    <div>
-                      <div className="font-semibold">Practice</div>
-                      <div className="text-xs text-muted-foreground">Your own pace</div>
-                    </div>
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setSoloOpen(false); isTeacher ? navigate('/modes/solo/speed') : toTasks(); }}
-                  >
-                    <div className="rounded-lg p-2 bg-emerald-100 text-emerald-700"><Timer className="w-4 h-4"/></div>
-                    <div>
-                      <div className="font-semibold">Speed Drive</div>
-                      <div className="text-xs text-muted-foreground">10 Qs • 30s each</div>
-                    </div>
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
 
-          {/* Compete with hover/tap menu */}
-          <div
-            onMouseEnter={() => setCompeteOpen(true)}
-            onMouseLeave={() => setCompeteOpen(false)}
-            className="w-full"
-          >
-            <Popover open={competeOpen} onOpenChange={setCompeteOpen}>
-              <PopoverTrigger asChild>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6"/></div>
                 <div>
-                  <GlowTile
-                    title="Compete"
-                    subtitle="Challenge others"
-                    icon={<Swords className="w-7 h-7"/>}
-                    onClick={() => setCompeteOpen(o => !o)}
-                    gradient="bg-gradient-to-r from-emerald-400/40 to-cyan-400/40"
-                  />
+                  <CardTitle className="text-xl">Practice Mode</CardTitle>
+                  <p className="text-sm text-muted-foreground">Start with concept-wise practice at your own pace.</p>
                 </div>
-              </PopoverTrigger>
-              <PopoverContent align="center" sideOffset={10} className="rounded-2xl border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-xl shadow-xl p-2 w-72">
-                <div className="space-y-1">
-                  <button
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setCompeteOpen(false); isTeacher ? navigate('/modes/compete/ai') : toTasks(); }}
-                  >
-                    <div className="rounded-lg p-2 bg-purple-100 text-purple-700"><Bot className="w-4 h-4"/></div>
-                    <div>
-                      <div className="font-semibold">Battle AI</div>
-                      <div className="text-xs text-muted-foreground">Challenge a clever bot</div>
-                    </div>
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/10 text-left"
-                    onClick={() => { setCompeteOpen(false); isTeacher ? navigate('/modes/compete/friends') : toTasks(); }}
-                  >
-                    <div className="rounded-lg p-2 bg-cyan-100 text-cyan-700"><Users className="w-4 h-4"/></div>
-                    <div>
-                      <div className="font-semibold">Battle Friends</div>
-                      <div className="text-xs text-muted-foreground">Create or join a lobby</div>
-                    </div>
-                  </button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between">
+              <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
+              <Button className="rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0]" onClick={startPractice}>Start Practice</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6"/></div>
+                <div>
+                  <CardTitle className="text-xl">Speed Drive</CardTitle>
+                  <p className="text-sm text-muted-foreground">Solve fast. Earn speed badges.</p>
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between">
+              <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
+              <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100]" onClick={startSpeed}>Start Speed Run</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6"/></div>
+                <div>
+                  <CardTitle className="text-xl">AI Rivals</CardTitle>
+                  <p className="text-sm text-muted-foreground">Challenge smart bots and climb the ranks!</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[
+                  { name: 'STEADY AI', diff: 'Easy', color: 'text-emerald-700 bg-emerald-50', rate: 'Win Rate: 60%' },
+                  { name: 'SMART AI', diff: 'Medium', color: 'text-amber-700 bg-amber-50', rate: 'Win Rate: 45%' },
+                  { name: 'SPEED AI', diff: 'Hard', color: 'text-rose-700 bg-rose-50', rate: 'Win Rate: 20%' },
+                ].map((r, idx) => (
+                  <button key={idx} onClick={startAI} className="w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left hover:bg-gray-50">
+                    <div>
+                      <div className="text-sm font-bold">{r.name}</div>
+                      <div className="text-[12px] text-muted-foreground flex items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.color}`}>{r.diff}</span>
+                        <span>{r.rate}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300"/>
+                  </button>
+                ))}
+              </div>
+              <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0]" onClick={startAI}>Challenge Bot</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6"/></div>
+                <div>
+                  <CardTitle className="text-xl">Battle With Friends</CardTitle>
+                  <p className="text-sm text-muted-foreground">Compete live with your classmates!</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F]" onClick={goFriends}>+ Create Room</Button>
+                <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9]" onClick={goFriends}>Join Room</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-8 flex items-center justify-end gap-8 text-sm">
+          <button className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900" onClick={revisitTopics}>
+            <BookOpen className="w-4 h-4"/> Revisit Previous Topics
+          </button>
+          <button className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900" onClick={goStats}>
+            <BarChart3 className="w-4 h-4"/> My Stats
+          </button>
         </div>
       </div>
     </div>

@@ -18,6 +18,7 @@ const Play = () => {
   const qsDifficulty = (q.get("difficulty") as 'easy' | 'moderate' | 'difficult') ?? 'moderate';
   const qsTopic = (q.get("topic") as 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra') ?? 'mixed';
   const topicsCsv = q.get("topics") || '';
+  const qsChapter = q.get('chapter') || undefined;
   const qsTopics = topicsCsv ? topicsCsv.split(',').map(s => s.trim()).filter(Boolean) : undefined;
   const lobby = q.get('lobby') || undefined;
   const taskId = q.get('task') || undefined;
@@ -55,12 +56,13 @@ const Play = () => {
   const difficulty = (task?.difficulty || qsDifficulty) as 'easy' | 'moderate' | 'difficult';
   const topics = (task?.topics_csv ? task.topics_csv.split(',').map(s => s.trim()).filter(Boolean) : qsTopics);
   const topic = qsTopic; // kept for backward-compat; "topics" takes precedence in QuizGame
+  const chapter = (task?.chapter || qsChapter);
 
   if (!ready) return null;
 
   return (
     <div className="min-h-screen bg-background">
-      <QuizGame mode={mode} difficulty={difficulty} topic={topic} topics={topics} lobbyCode={lobby} />
+      <QuizGame mode={mode} difficulty={difficulty} topic={topic} topics={topics} chapter={chapter || undefined} lobbyCode={lobby} />
     </div>
   );
 };

@@ -34,6 +34,7 @@ interface QuizGameProps {
   topic?: 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra';
   topics?: string[]; // normalized later
   lobbyCode?: string; // for battle-friends
+  chapter?: string;
 }
 
 // Stable guest ID for realtime presence when unauthenticated
@@ -166,7 +167,7 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
   return newQuestions;
 }
 
-export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode }: QuizGameProps) => {
+export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode, chapter }: QuizGameProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
@@ -332,9 +333,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
   // Stable key for topics selection used for caching (sorted canonical topics)
   const topicsKey = useMemo(() => {
-    if (!selectedTopics || selectedTopics.size === 0) return 'all';
-    return Array.from(selectedTopics).sort().join('-');
-  }, [selectedTopics]);
+    const base = (!selectedTopics || selectedTopics.size === 0)
+      ? 'all'
+      : Array.from(selectedTopics).sort().join('-');
+    return base + (chapter ? `:ch=${chapter}` : '');
+  }, [selectedTopics, chapter]);
 
   // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
   const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
@@ -346,10 +349,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     let cancelled = false;
     async function load() {
       setLoadingDaily(true);
+      // Base pool by difficulty
       const all = questions.filter(q => q.difficulty === difficulty);
-      const filtered = selectedTopics.size
-        ? all.filter(q => selectedTopics.has(guessType(q)))
+      // Optional chapter filter
+      const byChapter = (chapter && chapter.trim())
+        ? all.filter(q => (q.chapter || '').toLowerCase() === chapter.toLowerCase())
         : all;
+      // Optional topic filter — but if chapter is selected, prefer chapter-only pool
+      const filtered = (chapter && chapter.trim())
+        ? byChapter
+        : (selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter);
       let pool = filtered.length ? filtered : all; // fallback if empty
 
       // battle-friends: build deterministic set locally and skip server daily logic
@@ -603,7 +612,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         mode: mode,
         difficulty: (difficulty as any) ?? null,
         topics_csv: topicsCsv,
-        chapter: null,
+        chapter: chapter || null,
         display_name: (displayName && displayName.trim()) ? displayName : (guest ? 'Guest' : 'Player'),
       });
       if (!cancelled && created) {

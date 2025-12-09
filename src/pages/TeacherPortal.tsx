@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getProfile } from "@/services/profile";
 import { startLiveTask, endLiveTask, getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 import { toast } from "@/hooks/use-toast";
+import { questions } from "@/data/questions";
 
 const topicOptions = [
   { key: 'addition', label: 'Addition' },
@@ -16,14 +17,6 @@ const topicOptions = [
   { key: 'algebra', label: 'Algebra' },
 ];
 
-const chapterOptions = [
-  'Chapter 1: Numbers & Operations',
-  'Chapter 2: Fractions & Decimals',
-  'Chapter 3: Algebra Basics',
-  'Chapter 4: Geometry',
-  'Chapter 5: Data & Probability',
-];
-
 const TeacherPortal = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -31,7 +24,18 @@ const TeacherPortal = () => {
   const [mode, setMode] = useState<'practice' | 'speed' | 'battle-ai' | 'battle-friends'>('practice');
   const [difficulty, setDifficulty] = useState<'easy'|'moderate'|'difficult'>('moderate');
   const [topics, setTopics] = useState<string[]>(['addition','subtraction','multiplication','division']);
-  const [chapter, setChapter] = useState<string>(chapterOptions[0]);
+  // Build chapter list dynamically from aggregated questions (unique, sorted)
+  const chapterOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const q of questions) {
+      if (q.chapter && typeof q.chapter === 'string') set.add(q.chapter);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, []);
+  const [chapter, setChapter] = useState<string>("");
+  useEffect(() => {
+    if (!chapter && chapterOptions.length > 0) setChapter(chapterOptions[0]);
+  }, [chapter, chapterOptions]);
   const [live, setLive] = useState<LiveTask[]>([]);
   const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
@@ -94,6 +98,7 @@ const TeacherPortal = () => {
     qs.set('task', t.id);
     qs.set('mode', t.mode);
     if (t.topics_csv) qs.set('topics', t.topics_csv);
+    if (t.chapter) qs.set('chapter', t.chapter);
     navigate(`/play?${qs.toString()}`);
   };
 
