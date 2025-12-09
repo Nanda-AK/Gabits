@@ -117,11 +117,11 @@ export async function getRunsForTask(taskId: string): Promise<TaskRun[]> {
   try {
     const { data, error } = await supabase
       .from('task_runs')
-      .select('*')
+      .select('*, live_tasks(created_by, title, chapter, topics_csv, started_at, ended_at, status)')
       .eq('task_id', taskId)
       .order('completed_at', { ascending: false });
     if (error || !data) return [];
-    return data as TaskRun[];
+    return data as any;
   } catch {
     return [];
   }

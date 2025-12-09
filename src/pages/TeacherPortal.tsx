@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/services/profile";
 import { startLiveTask, endLiveTask, getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
+import { toast } from "@/hooks/use-toast";
 
 const topicOptions = [
   { key: 'addition', label: 'Addition' },
@@ -56,7 +57,7 @@ const TeacherPortal = () => {
 
   const start = async () => {
     if (!user) return;
-    await startLiveTask({
+    const created = await startLiveTask({
       title: chapter || `${displayName}'s Assignment`,
       mode,
       topics,
@@ -64,11 +65,28 @@ const TeacherPortal = () => {
       chapter,
       created_by: user.id,
     });
+    if (created) {
+      // Optimistic update so UI reflects immediately even if Realtime lags
+      setLive(prev => [created, ...prev]);
+      toast({ title: 'Task started', description: created.title });
+    } else {
+      toast({ title: 'Failed to start task', description: 'Please retry.', variant: 'destructive' as any });
+    }
   };
 
   const end = async (taskId: string) => {
     if (!user) return;
-    await endLiveTask(taskId, user.id);
+    // Optimistically remove from list
+    const before = live;
+    setLive(prev => prev.filter(t => t.id !== taskId));
+    const ok = await endLiveTask(taskId, user.id);
+    if (ok) {
+      toast({ title: 'Task ended', description: 'Students can no longer join.' });
+    } else {
+      // Revert on failure
+      setLive(before);
+      toast({ title: 'Failed to end task', description: 'Please retry.', variant: 'destructive' as any });
+    }
   };
 
   const joinPreview = (t: LiveTask) => {
