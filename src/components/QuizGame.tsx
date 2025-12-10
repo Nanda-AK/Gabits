@@ -323,21 +323,32 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (allowed.has(byType)) return byType;
     return 'addition';
   };
-  const selectedTopics = useMemo(() => {
-    const arr = Array.isArray(topics) && topics.length > 0
+  // Raw topics array from props/URL (kept as-is for subtopic matching)
+  const rawTopicsArr = useMemo(() => {
+    return (Array.isArray(topics) && topics.length > 0)
       ? topics
       : (topic && topic !== 'mixed' ? [topic] : []);
-    const set = new Set(arr.map(canonicalize));
-    return set;
   }, [topic, topics]);
+
+  // Legacy topic categories (addition/subtraction/...) for non-chapter filtering
+  const selectedTopics = useMemo(() => {
+    const set = new Set(rawTopicsArr.map(canonicalize));
+    return set;
+  }, [rawTopicsArr]);
+
+  // Per-chapter subtopics (exact topic names) for chapter filtering
+  const selectedSubtopics = useMemo(() => {
+    return new Set(rawTopicsArr.map(s => (s || '').trim().toLowerCase()));
+  }, [rawTopicsArr]);
 
   // Stable key for topics selection used for caching (sorted canonical topics)
   const topicsKey = useMemo(() => {
-    const base = (!selectedTopics || selectedTopics.size === 0)
+    const useSet = (chapter && chapter.trim()) ? selectedSubtopics : selectedTopics;
+    const base = (!useSet || useSet.size === 0)
       ? 'all'
-      : Array.from(selectedTopics).sort().join('-');
+      : Array.from(useSet).sort().join('-');
     return base + (chapter ? `:ch=${chapter}` : '');
-  }, [selectedTopics, chapter]);
+  }, [selectedTopics, selectedSubtopics, chapter]);
 
   // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
   const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
@@ -355,15 +366,23 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const byChapter = (chapter && chapter.trim())
         ? all.filter(q => (q.chapter || '').toLowerCase() === chapter.toLowerCase())
         : all;
-      // Optional topic filter — but if chapter is selected, prefer chapter-only pool
-      const filtered = (chapter && chapter.trim())
-        ? byChapter
-        : (selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter);
+      // Topic filtering
+      let filtered: Question[];
+      if (chapter && chapter.trim()) {
+        // If subtopics selected, filter within the chapter by exact question.topic
+        filtered = (selectedSubtopics.size > 0)
+          ? byChapter.filter(q => selectedSubtopics.has(((q.topic || '')).trim().toLowerCase()))
+          : byChapter;
+      } else {
+        // Legacy category filtering based on inferred type
+        filtered = selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter;
+      }
       let pool = filtered.length ? filtered : all; // fallback if empty
 
       // battle-friends: build deterministic set locally and skip server daily logic
       if (mode === 'battle-friends') {
-        const seedStr = `${lobbyCode || 'room'}:${getLocalYMD()}:${difficulty}:${Array.from(selectedTopics).sort().join('-') || 'all'}`;
+        const seedBaseSet = (chapter && chapter.trim()) ? selectedSubtopics : selectedTopics;
+        const seedStr = `${lobbyCode || 'room'}:${getLocalYMD()}:${difficulty}:${Array.from(seedBaseSet).sort().join('-') || 'all'}`;
         const baseSeed = rematchSeedRef.current ?? stringToSeed(seedStr);
         const picked = pickQuestionsWithSeed(pool, 10, baseSeed);
         const deterministic = shuffleQuestionSetDeterministic(picked, baseSeed ^ 0x9e3779b9);

@@ -10,7 +10,7 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   difficulty: Difficulty;
-  type: string;
+  type?: string;
   chapter?: string;
   topic?: string;
   reward: number;

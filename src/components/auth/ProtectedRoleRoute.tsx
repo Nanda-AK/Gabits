@@ -5,7 +5,7 @@ import { getProfile } from "@/services/profile";
 
 export const ProtectedRoleRoute: React.FC<{ roles: Array<'student'|'parent'|'teacher'|'principal'> }>
   = ({ roles }) => {
-  const { user, guest, loading } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
@@ -13,16 +13,16 @@ export const ProtectedRoleRoute: React.FC<{ roles: Array<'student'|'parent'|'tea
     let cancelled = false;
     (async () => {
       if (loading) return;
-      if (!user || guest) { setAllowed(false); return; }
+      if (!user) { setAllowed(false); return; }
       const p = await getProfile(user.id);
       const role = p?.role as any;
       if (!cancelled) setAllowed(roles.includes(role));
     })();
     return () => { cancelled = true; };
-  }, [user?.id, guest, loading, roles.join('|')]);
+  }, [user?.id, loading, roles.join('|')]);
 
   if (loading || allowed === null) return null;
-  if (!user || guest) return <Navigate to="/" state={{ from: location }} replace />;
+  if (!user) return <Navigate to="/" state={{ from: location }} replace />;
   if (!allowed) return <Navigate to="/" replace />;
   return <Outlet />;
 };

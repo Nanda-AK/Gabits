@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getProfile } from "@/services/profile";
 
 export const AccountMenu = () => {
-  const { user, guest, signOut, clearGuest } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,7 +18,7 @@ export const AccountMenu = () => {
   useEffect(() => {
     const run = async () => {
       try {
-        const uid = user?.id || (guest ? localStorage.getItem("guestId") || undefined : undefined);
+        const uid = user?.id || undefined;
         if (!uid) { setFullName(""); return; }
         const p = await getProfile(uid);
         if (p?.full_name) setFullName(p.full_name);
@@ -26,14 +26,14 @@ export const AccountMenu = () => {
       } catch {}
     };
     run();
-  }, [user, guest]);
+  }, [user]);
 
   const displayName = useMemo(() => {
     const localName = localStorage.getItem("player:name") || "";
-    return fullName || (user?.user_metadata as any)?.full_name || localName || (guest ? "Guest" : "Player");
-  }, [fullName, user, guest]);
+    return fullName || (user?.user_metadata as any)?.full_name || localName || "Player";
+  }, [fullName, user]);
 
-  const seed = useMemo(() => (user?.id || localStorage.getItem("guestId") || displayName || "guest"), [user, displayName]);
+  const seed = useMemo(() => (user?.id || displayName || "user"), [user, displayName]);
   const avatarUrl = `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
 
   // Determine if we should replace the history entry when leaving a completed game
@@ -52,15 +52,9 @@ export const AccountMenu = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleClearGuest = () => {
-    clearGuest();
-    toast({ title: "Guest mode off", description: "Sign in or continue as Guest again." });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   return (
     <div className="fixed right-4 top-4 z-50">
-      {(user || guest) && (
+      {user && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 rounded-full border bg-white/80 backdrop-blur px-3 py-1.5 shadow hover:shadow-md transition">
@@ -79,11 +73,7 @@ export const AccountMenu = () => {
             <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>
             <DropdownMenuSeparator />
-            {user ? (
-              <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={handleClearGuest}>Switch Account</DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}

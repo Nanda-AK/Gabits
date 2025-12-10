@@ -10,25 +10,26 @@ import { getUserBalances, getXpLeaderboard } from "@/services/rewards";
 import { supabase } from "@/lib/supabase";
 import { getLocalYMD } from "@/lib/date";
 import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2 } from "lucide-react";
+import { AuthPanel } from "@/components/auth/AuthPanel";
 
 type XpRow = Awaited<ReturnType<typeof getXpLeaderboard>>[number];
 
-function useDisplayName(user: any, guest: boolean) {
+function useDisplayName(user: any) {
   const [fullName, setFullName] = useState<string>("");
   useEffect(() => {
     (async () => {
       try {
-        const uid = user?.id || (guest ? localStorage.getItem("guestId") || undefined : undefined);
+        const uid = user?.id || undefined;
         if (!uid) { setFullName(""); return; }
         const p = await getProfile(uid);
         if (p?.full_name) setFullName(p.full_name);
       } catch {}
     })();
-  }, [user, guest]);
+  }, [user]);
   return useMemo(() => {
     const localName = localStorage.getItem("player:name") || "";
-    return fullName || (user?.user_metadata as any)?.full_name || localName || (guest ? "Guest" : "Player");
-  }, [fullName, user, guest]);
+    return fullName || (user?.user_metadata as any)?.full_name || localName || "Player";
+  }, [fullName, user]);
 }
 
 function getGreeting(): string {
@@ -51,18 +52,18 @@ function timeAgo(dateISO: string): string {
 }
 
 const Index = () => {
-  const { user, guest } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const displayName = useDisplayName(user, guest);
+  const displayName = useDisplayName(user);
 
   // Top progress
   const [balances, setBalances] = useState<{ coins: number; gems: number; xp: number } | null>(null);
   useEffect(() => {
     (async () => {
-      if (!user || guest) { setBalances(null); return; }
+      if (!user) { setBalances(null); return; }
       setBalances(await getUserBalances(user.id));
     })();
-  }, [user, guest]);
+  }, [user]);
   const coursePct = useMemo(() => {
     const xp = balances?.xp ?? 0;
     const pct = ((xp % 1000) / 1000) * 100; // level-sized window
@@ -73,16 +74,16 @@ const Index = () => {
   const [activeTasks, setActiveTasks] = useState<LiveTask[]>([]);
   useEffect(() => {
     (async () => {
-      if (!user || guest) { setActiveTasks([]); return; }
+      if (!user) { setActiveTasks([]); return; }
       setActiveTasks(await getActiveTasks());
     })();
-  }, [user, guest]);
+  }, [user]);
 
   // Recent reward events (14 days)
   const [recentEvents, setRecentEvents] = useState<Array<{ date: string; source: string; meta: any }>>([]);
   useEffect(() => {
     (async () => {
-      if (!user || guest) { setRecentEvents([]); return; }
+      if (!user) { setRecentEvents([]); return; }
       const to = getLocalYMD();
       const d = new Date(); d.setDate(d.getDate() - 14);
       const from = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -96,7 +97,7 @@ const Index = () => {
         .order('id', { ascending: false });
       setRecentEvents((data as any[]) || []);
     })();
-  }, [user, guest]);
+  }, [user]);
 
   // Monthly XP leaderboard (top 5)
   const [leaders, setLeaders] = useState<XpRow[]>([]);
@@ -113,7 +114,7 @@ const Index = () => {
   const [aiCount, setAiCount] = useState<number>(0);
   useEffect(() => {
     (async () => {
-      if (!user || guest) { setAiCount(0); return; }
+      if (!user) { setAiCount(0); return; }
       const { count } = await supabase
         .from('reward_events')
         .select('id', { count: 'exact', head: true })
@@ -121,7 +122,7 @@ const Index = () => {
         .ilike('source', '%compete-ai%');
       setAiCount(count ?? 0);
     })();
-  }, [user, guest]);
+  }, [user]);
 
   // Derive task lists (basic wiring; deep task states can later be added)
   const newTasks = activeTasks.slice(0,3);
@@ -134,6 +135,23 @@ const Index = () => {
   }, [recentEvents]);
 
   return (
+    // Gate: if not authenticated, show sign-in screen first
+    (!user) ? (
+      <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-[#21D4FD] via-[#00A6FF] to-[#005BFF]">
+        {/* Soft background orbs */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/20 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute top-1/3 left-1/3 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+
+        <div className="relative z-10 container mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-xl text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-black">Welcome</h1>
+            <p className="text-sm text-gray-600 mt-2">Please sign in with the credentials provided by your school.</p>
+          </div>
+          <AuthPanel modeLocked="signin" showSignupToggle={false} hideGuest />
+        </div>
+      </div>
+    ) : (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto max-w-6xl px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
         {/* Main column */}
@@ -252,8 +270,8 @@ const Index = () => {
               <CardTitle className="text-base font-bold flex items-center gap-2"><CalendarDays className="w-5 h-5 text-gray-600"/> Recent Activity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {(!user || guest) && <div className="text-gray-500">Sign in to see your recent activity.</div>}
-              {user && !guest && (
+              {(!user) && <div className="text-gray-500">Sign in to see your recent activity.</div>}
+              {user && (
                 <div>
                   <div className="text-xs font-semibold text-gray-500 mb-2">Recently Played</div>
                   {recentPlayed.length === 0 ? (
@@ -274,8 +292,8 @@ const Index = () => {
                   )}
                 </div>
               )}
-              {user && !guest && <div className="h-px bg-gray-100" />}
-              {user && !guest && recentEvents.slice(0,6).map((e, idx) => (
+              {user && <div className="h-px bg-gray-100" />}
+              {user && recentEvents.slice(0,6).map((e, idx) => (
                 <div key={idx} className="flex items-start gap-3">
                   <div className="w-2 h-2 mt-2 rounded-full bg-gray-300" />
                   <div className="flex-1">
@@ -309,7 +327,7 @@ const Index = () => {
         </div>
       </div>
     </div>
-  );
+  ));
 };
 
 export default Index;

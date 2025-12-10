@@ -7,15 +7,8 @@ import { getProfile } from "@/services/profile";
 import { startLiveTask, endLiveTask, getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 import { toast } from "@/hooks/use-toast";
 import { questions } from "@/data/questions";
-
-const topicOptions = [
-  { key: 'addition', label: 'Addition' },
-  { key: 'subtraction', label: 'Subtraction' },
-  { key: 'multiplication', label: 'Multiplication' },
-  { key: 'division', label: 'Division' },
-  { key: 'fractions', label: 'Fractions' },
-  { key: 'algebra', label: 'Algebra' },
-];
+// Dynamic topics are computed per-chapter from question.topic. When a chapter is selected,
+// the teacher can optionally pick subtopics within that chapter.
 
 const TeacherPortal = () => {
   const { user } = useAuth();
@@ -23,7 +16,10 @@ const TeacherPortal = () => {
   const [profileName, setProfileName] = useState<string>("");
   const [mode, setMode] = useState<'practice' | 'speed' | 'battle-ai' | 'battle-friends'>('practice');
   const [difficulty, setDifficulty] = useState<'easy'|'moderate'|'difficult'>('moderate');
-  const [topics, setTopics] = useState<string[]>(['addition','subtraction','multiplication','division']);
+  // Selected topics will mean:
+  // - If chapter is selected: these are subtopics (exact match of question.topic) within that chapter
+  // - If no chapter: you could still use legacy topics via URL, but UI only exposes chapter flow now
+  const [topics, setTopics] = useState<string[]>([]);
   // Build chapter list dynamically from aggregated questions (unique, sorted)
   const chapterOptions = useMemo(() => {
     const set = new Set<string>();
@@ -37,7 +33,30 @@ const TeacherPortal = () => {
     if (!chapter && chapterOptions.length > 0) setChapter(chapterOptions[0]);
   }, [chapter, chapterOptions]);
   const [live, setLive] = useState<LiveTask[]>([]);
-  const toggleTopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+
+  // Map of chapter -> available subtopics (unique question.topic values)
+  const chapterTopics = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const q of questions) {
+      const ch = (q.chapter || '').trim();
+      const tp = (q.topic || '').trim();
+      if (!ch || !tp) continue;
+      if (!map.has(ch)) map.set(ch, new Set());
+      map.get(ch)!.add(tp);
+    }
+    const obj: Record<string, string[]> = {};
+    for (const [ch, set] of map.entries()) {
+      obj[ch] = Array.from(set).sort((a,b) => a.localeCompare(b));
+    }
+    return obj;
+  }, []);
+  const availableSubtopics = useMemo(() => chapterTopics[chapter] || [], [chapter, chapterTopics]);
+  const toggleSubtopic = (t: string) => setTopics(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  useEffect(() => {
+    // When chapter changes, drop any selected topics that don't belong to the new chapter
+    if (!chapter) { setTopics([]); return; }
+    setTopics(prev => prev.filter(t => availableSubtopics.includes(t)));
+  }, [chapter, availableSubtopics]);
 
   useEffect(() => {
     (async () => {
@@ -132,14 +151,22 @@ const TeacherPortal = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Topics</label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {topicOptions.map(({ key, label }) => (
-                    <label key={key} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={topics.includes(key)} onChange={() => toggleTopic(key)} />
-                      {label}
-                    </label>
-                  ))}
+                <label className="text-xs text-muted-foreground">Topics in Chapter (optional)</label>
+                {availableSubtopics.length === 0 ? (
+                  <div className="text-xs text-muted-foreground mt-1">No topics found for this chapter.</div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-44 overflow-auto p-1 border rounded-md bg-white/50">
+                    {availableSubtopics.map(tp => (
+                      <label key={tp} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={topics.includes(tp)} onChange={() => toggleSubtopic(tp)} />
+                        <span className="truncate" title={tp}>{tp}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setTopics([])}>Clear</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setTopics(availableSubtopics)}>Select All</Button>
                 </div>
               </div>
             </div>
