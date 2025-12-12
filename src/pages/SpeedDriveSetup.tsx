@@ -50,7 +50,7 @@ const SpeedDriveSetup = () => {
           {/* Topic Selection (Checkboxes) */}
           <div className="mt-6 text-left">
             <h3 className="text-sm font-semibold text-muted-foreground mb-2">Select Topics</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: 'addition', label: 'Addition' },
                 { key: 'subtraction', label: 'Subtraction' },
@@ -59,8 +59,8 @@ const SpeedDriveSetup = () => {
                 { key: 'fractions', label: 'Fractions' },
                 { key: 'algebra', label: 'Algebra' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
-                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                <label key={key} className="flex items-center gap-3.5 p-3.5 rounded-lg border border-gray-200 bg-white/70 hover:bg-gray-50 transition shadow-sm">
+                  <Checkbox className="h-5 w-5" checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
                   <span className="text-sm font-medium">{label}</span>
                 </label>
               ))}

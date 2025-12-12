@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3 } from "lucide-react";
+import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
 import { Progress } from "@/components/ui/progress";
@@ -54,9 +54,10 @@ const Modes = () => {
   }, [user?.id, guest]);
 
   const startPractice = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
-  const startSpeed = () => isTeacher ? navigate('/modes/solo/speed') : toTasks();
-  const startAI = () => isTeacher ? navigate('/modes/compete/ai') : toTasks();
-  const goFriends = () => isTeacher ? navigate('/modes/compete/friends') : toTasks();
+  // Locked for students: no navigation
+  const startSpeed = () => { if (isTeacher) navigate('/modes/solo/speed'); };
+  const startAI = () => { if (isTeacher) navigate('/modes/compete/ai'); };
+  const goFriends = () => { if (isTeacher) navigate('/modes/compete/friends'); };
   const revisitTopics = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
   const goStats = () => navigate('/dashboard');
 
@@ -96,7 +97,7 @@ const Modes = () => {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+          <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6"/></div>
@@ -108,11 +109,20 @@ const Modes = () => {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
-              <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100]" onClick={startSpeed}>Start Speed Run</Button>
+              <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!isTeacher}>Start Speed Run</Button>
             </CardContent>
+            {!isTeacher && (
+              <div className="absolute inset-0 flex items-center justify-center bg-indigo-600/60 text-white text-center p-6">
+                <div>
+                  <Lock className="w-10 h-10 mx-auto mb-2" />
+                  <div className="font-bold">Locked</div>
+                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                </div>
+              </div>
+            )}
           </Card>
 
-          <Card className="rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+          <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6"/></div>
@@ -129,7 +139,7 @@ const Modes = () => {
                   { name: 'SMART AI', diff: 'Medium', color: 'text-amber-700 bg-amber-50', rate: 'Win Rate: 45%' },
                   { name: 'SPEED AI', diff: 'Hard', color: 'text-rose-700 bg-rose-50', rate: 'Win Rate: 20%' },
                 ].map((r, idx) => (
-                  <button key={idx} onClick={startAI} className="w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left hover:bg-gray-50">
+                  <button key={idx} onClick={startAI} disabled={!isTeacher} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${isTeacher ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
                     <div>
                       <div className="text-sm font-bold">{r.name}</div>
                       <div className="text-[12px] text-muted-foreground flex items-center gap-2">
@@ -141,11 +151,20 @@ const Modes = () => {
                   </button>
                 ))}
               </div>
-              <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0]" onClick={startAI}>Challenge Bot</Button>
+              <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!isTeacher}>Challenge Bot</Button>
             </CardContent>
+            {!isTeacher && (
+              <div className="absolute inset-0 flex items-center justify-center bg-violet-600/60 text-white text-center p-6">
+                <div>
+                  <Lock className="w-10 h-10 mx-auto mb-2" />
+                  <div className="font-bold">Locked</div>
+                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                </div>
+              </div>
+            )}
           </Card>
 
-          <Card className="rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+          <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6"/></div>
@@ -157,10 +176,19 @@ const Modes = () => {
             </CardHeader>
             <CardContent>
               <div className="flex gap-3">
-                <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F]" onClick={goFriends}>+ Create Room</Button>
-                <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9]" onClick={goFriends}>Join Room</Button>
+                <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>+ Create Room</Button>
+                <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>Join Room</Button>
               </div>
             </CardContent>
+            {!isTeacher && (
+              <div className="absolute inset-0 flex items-center justify-center bg-sky-600/60 text-white text-center p-6">
+                <div>
+                  <Lock className="w-10 h-10 mx-auto mb-2" />
+                  <div className="font-bold">Locked</div>
+                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
 

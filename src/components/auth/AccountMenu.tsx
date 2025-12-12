@@ -67,10 +67,18 @@ export const AccountMenu = () => {
           </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
             {role === 'teacher' && (
-              <DropdownMenuItem onClick={() => navigate("/portal/teacher", { replace: shouldReplace })}>Teacher Panel</DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => navigate("/portal/teacher", { replace: shouldReplace })}>Teacher Panel</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/portal/class", { replace: shouldReplace })}>Class Overview</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/portal/students", { replace: shouldReplace })}>Students</DropdownMenuItem>
+              </>
             )}
-            <DropdownMenuItem onClick={() => navigate("/dashboard", { replace: shouldReplace })}>Dashboard</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
+            {role !== 'teacher' && (
+              <>
+                <DropdownMenuItem onClick={() => navigate("/dashboard", { replace: shouldReplace })}>Dashboard</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>

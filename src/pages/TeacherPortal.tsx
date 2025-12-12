@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getProfile } from "@/services/profile";
 import { startLiveTask, endLiveTask, getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 import { toast } from "@/hooks/use-toast";
@@ -144,29 +146,36 @@ const TeacherPortal = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Chapter</label>
-                <select className="w-full border rounded-md h-10 px-2" value={chapter} onChange={e => setChapter(e.target.value)}>
+                <select className="w-full border rounded-md h-10 px-2 bg-white/70" value={chapter} onChange={e => setChapter(e.target.value)}>
                   {chapterOptions.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Topics in Chapter (optional)</label>
+                <label className="text-xs font-semibold text-muted-foreground">Topics in Chapter (optional)</label>
                 {availableSubtopics.length === 0 ? (
                   <div className="text-xs text-muted-foreground mt-1">No topics found for this chapter.</div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-44 overflow-auto p-1 border rounded-md bg-white/50">
-                    {availableSubtopics.map(tp => (
-                      <label key={tp} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={topics.includes(tp)} onChange={() => toggleSubtopic(tp)} />
-                        <span className="truncate" title={tp}>{tp}</span>
-                      </label>
-                    ))}
+                  <div className="mt-2 rounded-xl border bg-white/70 p-2 shadow-sm">
+                    <ScrollArea className="h-56">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-2">
+                        {availableSubtopics.map(tp => (
+                          <label key={tp} className="flex items-center gap-3 p-2.5 rounded-lg border bg-white hover:bg-gray-50 transition cursor-pointer select-none">
+                            <Checkbox className="h-5 w-5" checked={topics.includes(tp)} onCheckedChange={() => toggleSubtopic(tp)} />
+                            <span className="truncate text-sm font-medium" title={tp}>{tp}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 )}
-                <div className="flex gap-2 mt-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setTopics([])}>Clear</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setTopics(availableSubtopics)}>Select All</Button>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-xs text-muted-foreground">Choose one or more topics</div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setTopics([])}>Clear</Button>
+                    <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setTopics([...availableSubtopics])}>Select All</Button>
+                  </div>
                 </div>
               </div>
             </div>

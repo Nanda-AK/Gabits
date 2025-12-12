@@ -29,6 +29,8 @@ import TasksHub from "./pages/TasksHub";
 import TeacherReports from "./pages/TeacherReports";
 import TaskDetail from "./pages/TaskDetail";
 import StudentInspect from "./pages/StudentInspect";
+import ClassOverview from "./pages/ClassOverview";
+import TeacherStudents from "./pages/TeacherStudents";
 
 const queryClient = new QueryClient();
 
@@ -58,12 +60,17 @@ const App = () => (
               <Route path="/play" element={<Play />} />
               <Route path="/lobby/:code" element={<Lobby />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/treasure" element={<Treasure />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Student/Parent/Principal only pages */}
+              <Route element={<ProtectedRoleRoute roles={["student","parent","principal"]} />}>
+                <Route path="/treasure" element={<Treasure />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
               <Route path="/tasks" element={<TasksHub />} />
               {/* Role-gated routes */}
               <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
                 <Route path="/portal/teacher" element={<TeacherPortal />} />
+                <Route path="/portal/class" element={<ClassOverview />} />
+                <Route path="/portal/students" element={<TeacherStudents />} />
                 <Route path="/portal/reports" element={<TeacherReports />} />
                 <Route path="/portal/reports/tasks/:taskId" element={<TaskDetail />} />
                 <Route path="/portal/reports/students/:studentId" element={<StudentInspect />} />
