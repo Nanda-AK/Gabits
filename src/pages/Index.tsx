@@ -204,7 +204,7 @@ const Index = () => {
                     <span className="truncate">{t.title}</span>
                   </div>
                 ))}
-                <Button variant="ghost" className="px-0 text-indigo-600 hover:text-indigo-700" onClick={() => navigate('/modes')}>View tasks</Button>
+                <Button variant="ghost" className="px-0 text-indigo-600 hover:text-indigo-700" onClick={() => navigate('/tasks')}>View tasks</Button>
               </CardContent>
             </Card>
 
@@ -224,7 +224,7 @@ const Index = () => {
                     <span className="truncate">{t.title}</span>
                   </div>
                 ))}
-                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => navigate('/modes')}>Continue</Button>
+                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => navigate('/tasks')}>Continue</Button>
               </CardContent>
             </Card>
 

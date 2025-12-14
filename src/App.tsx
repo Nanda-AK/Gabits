@@ -30,7 +30,6 @@ import TeacherReports from "./pages/TeacherReports";
 import TaskDetail from "./pages/TaskDetail";
 import StudentInspect from "./pages/StudentInspect";
 import ClassOverview from "./pages/ClassOverview";
-import TeacherStudents from "./pages/TeacherStudents";
 
 const queryClient = new QueryClient();
 
@@ -70,7 +69,6 @@ const App = () => (
               <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
                 <Route path="/portal/teacher" element={<TeacherPortal />} />
                 <Route path="/portal/class" element={<ClassOverview />} />
-                <Route path="/portal/students" element={<TeacherStudents />} />
                 <Route path="/portal/reports" element={<TeacherReports />} />
                 <Route path="/portal/reports/tasks/:taskId" element={<TaskDetail />} />
                 <Route path="/portal/reports/students/:studentId" element={<StudentInspect />} />

@@ -22,13 +22,17 @@ const TasksHub = () => {
   }, [user?.id, guest]);
 
   const join = (t: LiveTask) => {
-    const qs = new URLSearchParams();
-    qs.set('task', t.id);
-    qs.set('mode', t.mode);
-    if (t.difficulty) qs.set('difficulty', t.difficulty);
-    if (t.topics_csv) qs.set('topics', t.topics_csv);
-    if (t.chapter) qs.set('chapter', t.chapter);
-    navigate(`/play?${qs.toString()}`);
+    try {
+      const payload = {
+        id: t.id,
+        mode: t.mode,
+        difficulty: t.difficulty,
+        topics_csv: t.topics_csv,
+        chapter: t.chapter,
+      } as const;
+      localStorage.setItem('play:pending_task', JSON.stringify(payload));
+    } catch {}
+    navigate('/modes');
   };
 
   return (

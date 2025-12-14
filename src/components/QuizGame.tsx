@@ -142,8 +142,9 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
 }
 
 // Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
+// Uses LOCAL date for rollover and never pads with duplicates — result may be < 10 if pool is small.
 function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string): Question[] {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalYMD();
   const key = `dailyQuizData:${difficulty}:${topicsKey || 'all'}`;
   const storedData = localStorage.getItem(key);
   if (storedData) {
@@ -152,17 +153,9 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
       if (date === today) return storedQuestions as Question[];
     } catch {}
   }
-  let newQuestions = pickDailyQuestions(pool, 10);
-  // If the filtered pool has fewer than 10, pad from the SAME pool (allow repeats) to keep count=10
-  if (newQuestions.length < 10 && pool.length > 0) {
-    const padded = newQuestions.slice();
-    let i = 0;
-    while (padded.length < 10) {
-      padded.push(pool[i % pool.length]);
-      i++;
-    }
-    newQuestions = padded;
-  }
+  // Pick up to 10 unique questions deterministically for the day
+  const count = Math.min(10, Math.max(0, pool.length));
+  const newQuestions = pickDailyQuestions(pool, count);
   try { localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions })); } catch {}
   return newQuestions;
 }

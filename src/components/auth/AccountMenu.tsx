@@ -70,7 +70,6 @@ export const AccountMenu = () => {
               <>
                 <DropdownMenuItem onClick={() => navigate("/portal/teacher", { replace: shouldReplace })}>Teacher Panel</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/portal/class", { replace: shouldReplace })}>Class Overview</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/portal/students", { replace: shouldReplace })}>Students</DropdownMenuItem>
               </>
             )}
             {role !== 'teacher' && (

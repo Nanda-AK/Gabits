@@ -32,6 +32,16 @@ const Modes = () => {
 
   const isTeacher = role === 'teacher';
   const toTasks = () => navigate('/tasks');
+  const [pending, setPending] = useState<null | { id: string; mode: string; difficulty: any; topics_csv: string | null; chapter: string | null }>(null);
+
+  // Read pending task stored by TasksHub join
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('play:pending_task');
+      if (raw) setPending(JSON.parse(raw));
+      else setPending(null);
+    } catch { setPending(null); }
+  }, []);
 
   // Today's progression (count reward events today, cap 5)
   useEffect(() => {
@@ -53,7 +63,23 @@ const Modes = () => {
     return () => { alive = false; };
   }, [user?.id, guest]);
 
-  const startPractice = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
+  const startPractice = () => {
+    if (isTeacher) { navigate('/modes/solo/practice'); return; }
+    // If a pending task was selected from Assignments, start it immediately
+    if (pending?.id) {
+      const qs = new URLSearchParams();
+      qs.set('task', pending.id);
+      qs.set('mode', pending.mode || 'practice');
+      if (pending.difficulty) qs.set('difficulty', String(pending.difficulty));
+      if (pending.topics_csv) qs.set('topics', pending.topics_csv);
+      if (pending.chapter) qs.set('chapter', pending.chapter);
+      try { localStorage.removeItem('play:pending_task'); } catch {}
+      navigate(`/play?${qs.toString()}`);
+      return;
+    }
+    // Fallback: open Assignments page if nothing is pending
+    toTasks();
+  };
   // Locked for students: no navigation
   const startSpeed = () => { if (isTeacher) navigate('/modes/solo/speed'); };
   const startAI = () => { if (isTeacher) navigate('/modes/compete/ai'); };
