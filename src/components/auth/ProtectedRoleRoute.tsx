@@ -15,7 +15,7 @@ export const ProtectedRoleRoute: React.FC<{ roles: Array<'student'|'parent'|'tea
       if (loading) return;
       if (!user) { setAllowed(false); return; }
       const p = await getProfile(user.id);
-      const role = p?.role as any;
+      const role = (p?.role as any) || 'student';
       if (!cancelled) setAllowed(roles.includes(role));
     })();
     return () => { cancelled = true; };

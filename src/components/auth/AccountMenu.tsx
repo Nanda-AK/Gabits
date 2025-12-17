@@ -75,7 +75,7 @@ export const AccountMenu = () => {
             {role !== 'teacher' && (
               <>
                 <DropdownMenuItem onClick={() => navigate("/dashboard", { replace: shouldReplace })}>Dashboard</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/treasure", { replace: shouldReplace })}>My Treasure</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/treasure")}>My Treasure</DropdownMenuItem>
               </>
             )}
             <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>

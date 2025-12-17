@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
 import { getActiveTasks, type LiveTask } from "@/services/tasks";
 import { getUserBalances, getXpLeaderboard } from "@/services/rewards";
+import { getRecentRunsForStudent, type TaskRunWithTask } from "@/services/taskRuns";
 import { supabase } from "@/lib/supabase";
+import { CompletedTodayModal } from "@/components/CompletedTodayModal";
 import { getLocalYMD } from "@/lib/date";
 import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2 } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -95,7 +97,7 @@ const Index = () => {
   }, [user]);
 
   // Recent reward events (14 days)
-  const [recentEvents, setRecentEvents] = useState<Array<{ date: string; source: string; meta: any }>>([]);
+  const [recentEvents, setRecentEvents] = useState<Array<{ date: string; created_at: string; source: string; meta: any }>>([]);
   useEffect(() => {
     (async () => {
       if (!user) { setRecentEvents([]); return; }
@@ -104,11 +106,11 @@ const Index = () => {
       const from = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const { data } = await supabase
         .from('reward_events')
-        .select('date, source, meta')
+        .select('date, created_at, source, meta')
         .eq('user_id', user.id)
         .gte('date', from)
         .lte('date', to)
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .order('id', { ascending: false });
       setRecentEvents((data as any[]) || []);
     })();
@@ -149,6 +151,17 @@ const Index = () => {
       .slice(0, 3);
   }, [recentEvents]);
 
+  // Last 3 completed runs for the student with titles
+  const [recentRuns, setRecentRuns] = useState<TaskRunWithTask[]>([]);
+  const [todayModalOpen, setTodayModalOpen] = useState(false);
+  useEffect(() => {
+    (async () => {
+      if (!user?.id) { setRecentRuns([]); return; }
+      const runs = await getRecentRunsForStudent(user.id, 3);
+      setRecentRuns(runs);
+    })();
+  }, [user?.id]);
+
   return (
     // Gate: if not authenticated, show sign-in screen first
     (!user) ? (
@@ -183,6 +196,9 @@ const Index = () => {
             </CardContent>
           </Card>
 
+          {/* Completed Today Modal */}
+          <CompletedTodayModal open={todayModalOpen} onOpenChange={setTodayModalOpen} userId={user?.id || null} isGuest={!user} />
+
           {/* Tasks header */}
           <div className="mb-3">
             <Button variant="outline" size="sm" className="rounded-full">Your Tasks</Button>
@@ -194,7 +210,7 @@ const Index = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold flex items-center justify-between">
                   <span className="flex items-center gap-2"><ClipboardList className="w-5 h-5 text-indigo-600"/> New tasks</span>
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{newTasks.length}</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{activeTasks.length}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600 space-y-2">
@@ -236,13 +252,37 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600 space-y-2">
-                {recentEvents.slice(0,3).map((e, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2"/>
-                    <span className="truncate capitalize">{e.source.replace('compete-','compete ')} • {e.meta?.difficulty || e.meta?.type || '—'}</span>
-                  </div>
-                ))}
-                <Button variant="ghost" className="px-0 text-indigo-600 hover:text-indigo-700" onClick={() => navigate('/treasure')}>View rewards</Button>
+                {(recentRuns.length > 0 ? recentRuns : recentPlayed).length === 0 ? (
+                  <div>No completed tasks yet</div>
+                ) : (
+                  (recentRuns.length > 0 ? recentRuns : recentPlayed).map((item: any, idx: number) => {
+                    if ('mode' in item) {
+                      // TaskRunWithTask item
+                      const r = item as TaskRunWithTask;
+                      const title = r.live_tasks?.title || (r.mode === 'practice' ? 'Practice Session' : r.mode === 'speed' ? 'Speed Run' : r.mode === 'battle-ai' ? 'AI Battle' : 'Friends Battle');
+                      const diff = r.difficulty || (r as any).difficulty || '—';
+                      return (
+                        <div key={r.id} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2"/>
+                          <span className="truncate">{title} • {r.mode} • {diff}</span>
+                        </div>
+                      );
+                    } else {
+                      // Reward event fallback
+                      const e = item as { source: string; meta: any };
+                      const mode = e.source.includes('practice') ? 'practice' : e.source.includes('speed') ? 'speed' : e.source.includes('compete-ai') ? 'battle-ai' : e.source.includes('compete-friends') ? 'battle-friends' : 'activity';
+                      const title = mode === 'practice' ? 'Practice Session' : mode === 'speed' ? 'Speed Run' : mode === 'battle-ai' ? 'AI Battle' : mode === 'battle-friends' ? 'Friends Battle' : 'Activity';
+                      const diff = e.meta?.difficulty || e.meta?.type || '—';
+                      return (
+                        <div key={`evt-${idx}`} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2"/>
+                          <span className="truncate">{title} • {mode} • {diff}</span>
+                        </div>
+                      );
+                    }
+                  })
+                )}
+                <Button variant="ghost" className="px-0 text-indigo-600 hover:text-indigo-700" onClick={() => setTodayModalOpen(true)}>View</Button>
               </CardContent>
             </Card>
           </div>
@@ -300,7 +340,7 @@ const Index = () => {
                             <div className="font-semibold capitalize">{e.source.replace('compete-','compete ')}</div>
                             <div className="text-xs text-gray-500">{e.meta?.difficulty || e.meta?.type || '—'}</div>
                           </div>
-                          <div className="text-xs text-gray-500 whitespace-nowrap">{timeAgo(e.date)}</div>
+                          <div className="text-xs text-gray-500 whitespace-nowrap">{timeAgo(e.created_at)}</div>
                         </div>
                       ))}
                     </div>
@@ -317,7 +357,7 @@ const Index = () => {
                       <div className="text-xs text-gray-500">{e.meta.type}{e.meta.difficulty ? ` • ${e.meta.difficulty}` : ''}</div>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 whitespace-nowrap">{timeAgo(e.date)}</div>
+                  <div className="text-xs text-gray-500 whitespace-nowrap">{timeAgo(e.created_at)}</div>
                 </div>
               ))}
             </CardContent>

@@ -57,6 +57,50 @@ export async function createRun(params: {
   }
 }
 
+// Get recent completed runs for a student (joins live_tasks for title)
+export async function getRecentRunsForStudent(userId: string, limit = 3): Promise<TaskRunWithTask[]> {
+  try {
+    const { data, error } = await supabase
+      .from('task_runs')
+      .select('*, live_tasks(title, chapter)')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(limit);
+    if (error || !data) return [] as any;
+    return data as any;
+  } catch {
+    return [] as any;
+  }
+}
+
+// Get latest completed run for today (local day boundaries) for a student
+export async function getLatestRunForToday(userId: string): Promise<TaskRunWithTask | null> {
+  try {
+    const now = new Date();
+    const startLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    // Convert local boundaries to UTC ISO for filtering completed_at (stored as ISO UTC)
+    const startUtcIso = new Date(startLocal.getTime() - startLocal.getTimezoneOffset() * 60000).toISOString();
+    const endUtcIso = new Date(endLocal.getTime() - endLocal.getTimezoneOffset() * 60000).toISOString();
+
+    const { data, error } = await supabase
+      .from('task_runs')
+      .select('*, live_tasks(title, chapter)')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .gte('completed_at', startUtcIso)
+      .lte('completed_at', endUtcIso)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    return (data as any) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type TaskRunWithTask = TaskRun & {
   live_tasks?: {
     id: string;
