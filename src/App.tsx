@@ -11,7 +11,6 @@ import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import AuthCallback from "./pages/AuthCallback";
 import Leaderboard from "./pages/Leaderboard";
 import Treasure from "./pages/Treasure";
-import Dashboard from "./pages/Dashboard";
 import { GlobalLogo } from "@/components/GlobalLogo";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ProtectedRoleRoute } from "./components/auth/ProtectedRoleRoute";
@@ -62,7 +61,8 @@ const App = () => (
               {/* Student/Parent/Principal only pages */}
               <Route element={<ProtectedRoleRoute roles={["student","parent","principal"]} />}>
                 <Route path="/treasure" element={<Treasure />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                {/* Student Dashboard should show the same landing dashboard as "/" */}
+                <Route path="/dashboard" element={<Index />} />
               </Route>
               <Route path="/tasks" element={<TasksHub />} />
               {/* Role-gated routes */}

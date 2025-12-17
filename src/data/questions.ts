@@ -1,6 +1,10 @@
 import { constructionQuestions } from './chapters/constructions';
 import { fractionQuestions } from './chapters/fractions';
 import { perimeterQuestions } from './chapters/perimeter_area';
+import { LinesAnglesQuestions } from './chapters/LinesandAngles';
+import { NumberplayQuestions } from './chapters/Numberplay';
+import { PatternsInMathematicsQuestions } from './chapters/Patternsinmathematics';
+import { PrimeTimesQuestion } from './chapters/Primetime';
 
 export type Difficulty = 'easy' | 'moderate' | 'difficult';
 
@@ -573,6 +577,7 @@ export const questions: Question[] = [
   hint: "Anything multiplied by 0 becomes 0.",
   }
   , ...fractionQuestions, ...constructionQuestions, ...perimeterQuestions
+  , ...PrimeTimesQuestion, ...LinesAnglesQuestions, ...NumberplayQuestions, ...PatternsInMathematicsQuestions
 ];
 
 export const getDifficultyCoins = (difficulty: Difficulty): number => {

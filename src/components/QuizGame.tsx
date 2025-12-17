@@ -142,8 +142,8 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
 }
 
 // Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
-// Uses LOCAL date for rollover and never pads with duplicates — result may be < 10 if pool is small.
-function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string): Question[] {
+// Uses LOCAL date for rollover and ALWAYS pads to 10 unique by cross-topic/chapter backfill when needed.
+function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string, fallbackPool: Question[]): Question[] {
   const today = getLocalYMD();
   const key = `dailyQuizData:${difficulty}:${topicsKey || 'all'}`;
   const storedData = localStorage.getItem(key);
@@ -153,11 +153,18 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
       if (date === today) return storedQuestions as Question[];
     } catch {}
   }
-  // Pick up to 10 unique questions deterministically for the day
-  const count = Math.min(10, Math.max(0, pool.length));
-  const newQuestions = pickDailyQuestions(pool, count);
-  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions })); } catch {}
-  return newQuestions;
+  // Pick deterministically from primary pool
+  const primary = pickDailyQuestions(pool, Math.min(10, Math.max(0, pool.length)));
+  // Backfill deterministically from the broader fallback pool (same difficulty), excluding already chosen
+  let result = primary.slice();
+  if (result.length < 10) {
+    const need = 10 - result.length;
+    const candidates = fallbackPool.filter(q => !result.some(r => r.id === q.id));
+    const extras = pickDailyQuestions(candidates, need);
+    result = result.concat(extras);
+  }
+  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch {}
+  return result;
 }
 
 export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode, chapter }: QuizGameProps) => {
@@ -386,9 +393,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         return;
       }
 
-      // If topics are explicitly selected, use topics-aware local daily set (avoid cross-topic backfill)
+      // If topics are explicitly selected, use topics-aware local daily set with deterministic cross-topic backfill to ensure 10
       if (selectedTopics.size > 0) {
-        const arr = fallbackLocal(pool, difficulty, topicsKey);
+        const arr = fallbackLocal(pool, difficulty, topicsKey, all);
         if (!cancelled) {
           setDailyQuestions(arr);
           setLoadingDaily(false);
@@ -407,7 +414,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
           if (cancelled) return;
           const mapped = ids.map(id => pool.find(q => q.id === id)).filter(Boolean) as Question[];
-          let arr = mapped.length ? mapped : [];
+          // Deduplicate by ID in case server returns repeated IDs
+          const seen = new Set<number>();
+          let arr = [] as Question[];
+          for (const q of mapped) { if (!seen.has(q.id)) { seen.add(q.id); arr.push(q); } }
           if (arr.length < 10) {
             const need = 10 - arr.length;
             const extras = pool.filter(q => !arr.some(a => a.id === q.id)).slice(0, need);
@@ -418,11 +428,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           }
           setDailyQuestions(arr);
         } catch {
-          const arr = fallbackLocal(pool, difficulty, topicsKey);
+          const arr = fallbackLocal(pool, difficulty, topicsKey, all);
           setDailyQuestions(arr);
         }
       } else {
-        const arr = fallbackLocal(pool, difficulty, topicsKey);
+        const arr = fallbackLocal(pool, difficulty, topicsKey, all);
         setDailyQuestions(arr);
       }
       setLoadingDaily(false);
@@ -449,6 +459,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       try {
         const saved = JSON.parse(raw);
         if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
+          // If an older snapshot had < 10 questions, discard it to avoid the 6-questions issue
+          if ((saved.shuffledQuestions as any[]).length < 10) {
+            try { localStorage.removeItem(storageKey); } catch {}
+            setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
+            setCurrentQuestion(0);
+            return;
+          }
           if (saved.completed) {
             try { localStorage.removeItem(storageKey); } catch {}
             setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
