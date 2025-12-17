@@ -84,7 +84,7 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
         const rawEvents = (evQ.data as any[]) ?? [];
         const filtered = rawEvents.filter((e: any) => {
           const s = String(e.source || '');
-          return s.includes('practice') || s.includes('speed') || s.includes('compete-ai') || s.includes('compete-friends');
+          return s.includes('practice') || s.includes('speed') || s.includes('compete');
         });
         if (!cancelled) setEvents(filtered);
       } finally {
@@ -144,8 +144,8 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
               } else {
                 const e = it.data as RewardEvent;
                 const s = e.source || '';
-                const mode = s.includes('practice') ? 'practice' : s.includes('speed') ? 'speed' : s.includes('compete-ai') ? 'battle-ai' : s.includes('compete-friends') ? 'battle-friends' : 'activity';
-                const title = mode === 'practice' ? 'Practice Session' : mode === 'speed' ? 'Speed Run' : mode === 'battle-ai' ? 'AI Battle' : mode === 'battle-friends' ? 'Friends Battle' : 'Activity';
+                const mode = s.includes('practice') ? 'practice' : s.includes('speed') ? 'speed' : s.includes('compete-ai') ? 'battle-ai' : s.includes('compete-friends') ? 'battle-friends' : s.includes('compete') ? 'battle' : 'activity';
+                const title = mode === 'practice' ? 'Practice Session' : mode === 'speed' ? 'Speed Run' : mode === 'battle-ai' ? 'AI Battle' : mode === 'battle-friends' ? 'Friends Battle' : mode === 'battle' ? 'Battle' : 'Activity';
                 const diff = e.meta?.difficulty || e.meta?.type || '—';
                 const res = e.meta?.result as string | undefined;
                 const acc = typeof e.meta?.acc === 'number' ? `${Math.round(e.meta.acc * 100)}%` : undefined;
