@@ -26,7 +26,17 @@ const PracticeSetup = () => {
 
   const start = () => {
     const csv = topics.join(',');
-    navigate(`/play?mode=practice&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}`);
+    // Rotate between 3 variants using a counter in localStorage for the day
+    let pv = 0;
+    try {
+      const today = new Date().toISOString().slice(0,10);
+      const key = `practice:pv:${today}`;
+      const raw = localStorage.getItem(key);
+      const n = raw ? parseInt(raw) : 0;
+      pv = Number.isFinite(n) ? (n % 3) : 0;
+      localStorage.setItem(key, String((pv + 1) % 3));
+    } catch {}
+    navigate(`/play?mode=practice&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}&pv=${pv}`);
   };
 
   return (

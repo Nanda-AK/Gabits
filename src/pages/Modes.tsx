@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
+import { getSpeedUnlockStatus } from "@/services/practice";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/lib/supabase";
 import { getLocalYMD } from "@/lib/date";
@@ -31,6 +32,32 @@ const Modes = () => {
   }, [user?.id, guest]);
 
   const isTeacher = role === 'teacher';
+  const [speedUnlocked, setSpeedUnlocked] = useState<boolean>(false);
+  const [unlockAvg, setUnlockAvg] = useState<number>(0);
+  const [unlockCount, setUnlockCount] = useState<number>(0);
+  const [unlockThreshold, setUnlockThreshold] = useState<number>(0.8);
+  const [unlockProgress, setUnlockProgress] = useState<number>(0);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!user || guest) { if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); } return; }
+        const s = await getSpeedUnlockStatus(user.id, 0.8, 3);
+        if (!alive) return;
+        setSpeedUnlocked(!!s.unlocked);
+        setUnlockAvg(s.avg);
+        setUnlockCount(s.count);
+        setUnlockThreshold(s.threshold);
+        const sessionFactor = Math.min(1, (s.count || 0) / 3);
+        const accuracyFactor = Math.min(1, (s.avg || 0) / (s.threshold || 0.8));
+        const composite = Math.max(0, Math.min(1, sessionFactor * accuracyFactor));
+        setUnlockProgress(composite);
+      } catch {
+        if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [user?.id, guest]);
   const toTasks = () => navigate('/tasks');
   const [pending, setPending] = useState<null | { id: string; mode: string; difficulty: any; topics_csv: string | null; chapter: string | null }>(null);
 
@@ -81,7 +108,7 @@ const Modes = () => {
     toTasks();
   };
   // Locked for students: no navigation
-  const startSpeed = () => { if (isTeacher) navigate('/modes/solo/speed'); };
+  const startSpeed = () => { if (isTeacher || speedUnlocked) navigate('/modes/solo/speed'); };
   const startAI = () => { if (isTeacher) navigate('/modes/compete/ai'); };
   const goFriends = () => { if (isTeacher) navigate('/modes/compete/friends'); };
   const revisitTopics = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
@@ -135,14 +162,20 @@ const Modes = () => {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
-              <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!isTeacher}>Start Speed Run</Button>
+              <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!(isTeacher || speedUnlocked)}>Start Speed Run</Button>
             </CardContent>
-            {!isTeacher && (
-              <div className="absolute inset-0 flex items-center justify-center bg-indigo-600/60 text-white text-center p-6">
-                <div>
+            {!isTeacher && !speedUnlocked && (
+              <div className="absolute inset-0 select-none">
+                {/* Dynamic blue cover, width = remaining to unlock */}
+                <div className="h-full bg-indigo-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - unlockProgress) * 100))}%` }} />
+                {/* Foreground hint */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
-                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                  <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / {Math.round((unlockThreshold || 0.8) * 100)}% • Sessions {unlockCount}/3</div>
+                  <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(unlockProgress * 100))}%` }} />
+                  </div>
                 </div>
               </div>
             )}

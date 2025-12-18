@@ -21,6 +21,7 @@ import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
+import { logPracticeSession } from "@/services/practice";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
 import { createRun, completeRun } from "@/services/taskRuns";
@@ -142,7 +143,7 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
 }
 
 // Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
-// Uses LOCAL date for rollover and ALWAYS pads to 10 unique by cross-topic/chapter backfill when needed.
+// Uses LOCAL date for rollover and pads to 10 using the provided fallbackPool only (keeps chapter isolation when applicable).
 function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string, fallbackPool: Question[]): Question[] {
   const today = getLocalYMD();
   const key = `dailyQuizData:${difficulty}:${topicsKey || 'all'}`;
@@ -153,19 +154,22 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
       if (date === today) return storedQuestions as Question[];
     } catch {}
   }
-  // Pick deterministically from primary pool
-  const primary = pickDailyQuestions(pool, Math.min(10, Math.max(0, pool.length)));
-  // Backfill deterministically from the broader fallback pool (same difficulty), excluding already chosen
+  // Deterministic pick seeded by topicsKey to support multi-variant practice sets
+  const baseSeed = stringToSeed(`${today}:${difficulty}:${topicsKey || 'all'}`);
+  const primary = pickQuestionsWithSeed(pool, Math.min(10, Math.max(0, pool.length)), baseSeed);
   let result = primary.slice();
   if (result.length < 10) {
     const need = 10 - result.length;
     const candidates = fallbackPool.filter(q => !result.some(r => r.id === q.id));
-    const extras = pickDailyQuestions(candidates, need);
+    const extras = pickQuestionsWithSeed(candidates, need, baseSeed ^ 0x9e3779b9);
     result = result.concat(extras);
   }
   try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch {}
   return result;
 }
+
+// Practice progression: unlock Speed when average accuracy across last 3 practice sessions >= threshold
+const SPEED_UNLOCK_THRESHOLD = 0.8; // 80%
 
 export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode, chapter }: QuizGameProps) => {
   const location = useLocation();
@@ -177,6 +181,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const taskId = query.get('task');
   const topicsCsvParam = query.get('topics') || null;
+  const pvParam = query.get('pv');
   const [displayName, setDisplayName] = useState<string>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -347,8 +352,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const base = (!useSet || useSet.size === 0)
       ? 'all'
       : Array.from(useSet).sort().join('-');
-    return base + (chapter ? `:ch=${chapter}` : '');
-  }, [selectedTopics, selectedSubtopics, chapter]);
+    const variant = (() => {
+      if (mode !== 'practice') return 0;
+      if (taskId) return 0; // keep teacher tasks stable
+      const n = parseInt(pvParam || '0');
+      if (Number.isFinite(n)) return Math.max(0, Math.min(2, n % 3));
+      return 0;
+    })();
+    return base + (chapter ? `:ch=${chapter}` : '') + (mode === 'practice' && !taskId ? `:pv=${variant}` : '');
+  }, [selectedTopics, selectedSubtopics, chapter, mode, taskId, pvParam]);
 
   // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
   const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
@@ -364,7 +376,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const all = questions.filter(q => q.difficulty === difficulty);
       // Optional chapter filter
       const byChapter = (chapter && chapter.trim())
-        ? all.filter(q => (q.chapter || '').toLowerCase() === chapter.toLowerCase())
+        ? all.filter(q => (q.chapter || '').trim().toLowerCase() === chapter.trim().toLowerCase())
         : all;
       // Topic filtering
       let filtered: Question[];
@@ -373,11 +385,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         filtered = (selectedSubtopics.size > 0)
           ? byChapter.filter(q => selectedSubtopics.has(((q.topic || '')).trim().toLowerCase()))
           : byChapter;
+        // If subtopics selected but yielded zero, fall back to entire chapter (never outside chapter)
+        if ((selectedSubtopics.size > 0) && filtered.length === 0) {
+          filtered = byChapter;
+        }
       } else {
         // Legacy category filtering based on inferred type
         filtered = selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter;
       }
-      let pool = filtered.length ? filtered : all; // fallback if empty
+      // When a chapter is specified, NEVER fall back to global pool
+      let pool = (chapter && chapter.trim()) ? filtered : (filtered.length ? filtered : all);
 
       // battle-friends: build deterministic set locally and skip server daily logic
       if (mode === 'battle-friends') {
@@ -393,9 +410,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         return;
       }
 
-      // If topics are explicitly selected, use topics-aware local daily set with deterministic cross-topic backfill to ensure 10
-      if (selectedTopics.size > 0) {
-        const arr = fallbackLocal(pool, difficulty, topicsKey, all);
+      // Topics-aware local set. If chapter is set, keep padding within that chapter only
+      if (selectedTopics.size > 0 || (chapter && chapter.trim())) {
+        const arr = fallbackLocal(pool, difficulty, topicsKey, (chapter && chapter.trim()) ? byChapter : all);
         if (!cancelled) {
           setDailyQuestions(arr);
           setLoadingDaily(false);
@@ -404,9 +421,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       }
 
       // No topics filter: use server daily set for authenticated users; fallback to local for guests
-      // Ensure we always have at least 10 by backfilling from the remaining 'all'
+      // Ensure at least 10 by backfilling within chapter when applicable
       if (pool.length < 10) {
-        const backfill = all.filter(q => !pool.includes(q));
+        const scope = (chapter && chapter.trim()) ? byChapter : all;
+        const backfill = scope.filter(q => !pool.includes(q));
         pool = pool.concat(backfill).slice(0, Math.max(10, pool.length));
       }
       if (userId && !guest) {
@@ -439,7 +457,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
     load();
     return () => { cancelled = true; };
-  }, [difficulty, userId, guest, today, selectedTopics, mode, lobbyCode, rematchNonce]);
+  }, [difficulty, userId, guest, today, selectedTopics, selectedSubtopics, chapter, topicsKey, mode, lobbyCode, rematchNonce]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const total = shuffledQuestions.length || dailyQuestions.length;
@@ -675,6 +693,33 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       if (ok) runCompletedRef.current = true;
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameCompleted]);
+
+  // Practice completion: persist session summary to DB for server-side unlock checks
+  useEffect(() => {
+    if (!gameCompleted) return;
+    if (mode !== 'practice') return;
+    if (!userId || guest) return;
+    const totalQ = (shuffledQuestions.length || dailyQuestions.length);
+    if (totalQ <= 0) return;
+    const correctCount = answerCorrectList.filter(Boolean).length;
+    const topicsCsv = topicsCsvParam;
+    const chapterName = chapter || null;
+    const localDate = getLocalYMD();
+    (async () => {
+      try {
+        await logPracticeSession({
+          user_id: userId,
+          date: localDate,
+          difficulty,
+          topics_csv: topicsCsv,
+          chapter: chapterName,
+          total: totalQ,
+          correct: correctCount,
+          used_seconds: overallTime,
+        });
+      } catch {}
+    })();
   }, [gameCompleted]);
 
   // Best-effort mark as abandoned on unload/navigation while in-progress
