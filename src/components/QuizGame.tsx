@@ -142,6 +142,19 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
   return idxs.slice(0, Math.min(count, all.length)).map((i) => all[i]);
 }
 
+// Utility: make array unique by derived key
+function uniqueBy<T>(arr: T[], key: (t: T) => string | number): T[] {
+  const out: T[] = [];
+  const seen = new Set<string | number>();
+  for (const item of arr) {
+    const k = key(item);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(item);
+  }
+  return out;
+}
+
 // Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
 // Uses LOCAL date for rollover and pads to 10 using the provided fallbackPool only (keeps chapter isolation when applicable).
 function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string, fallbackPool: Question[]): Question[] {
@@ -164,6 +177,8 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
     const extras = pickQuestionsWithSeed(candidates, need, baseSeed ^ 0x9e3779b9);
     result = result.concat(extras);
   }
+  // Final safety: de-duplicate by question text
+  result = uniqueBy(result, q => (q.question || '').trim().toLowerCase());
   try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch {}
   return result;
 }
@@ -375,9 +390,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // Base pool by difficulty
       const all = questions.filter(q => q.difficulty === difficulty);
       // Optional chapter filter
-      const byChapter = (chapter && chapter.trim())
+      const byChapterRaw = (chapter && chapter.trim())
         ? all.filter(q => (q.chapter || '').trim().toLowerCase() === chapter.trim().toLowerCase())
         : all;
+      // De-duplicate by question text to avoid repeats inside a session
+      const byChapter = uniqueBy(byChapterRaw, q => (q.question || '').trim().toLowerCase());
       // Topic filtering
       let filtered: Question[];
       if (chapter && chapter.trim()) {
@@ -385,6 +402,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         filtered = (selectedSubtopics.size > 0)
           ? byChapter.filter(q => selectedSubtopics.has(((q.topic || '')).trim().toLowerCase()))
           : byChapter;
+        // Ensure dedupe after subtopic filter as well
+        filtered = uniqueBy(filtered, q => (q.question || '').trim().toLowerCase());
         // If subtopics selected but yielded zero, fall back to entire chapter (never outside chapter)
         if ((selectedSubtopics.size > 0) && filtered.length === 0) {
           filtered = byChapter;
@@ -392,6 +411,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       } else {
         // Legacy category filtering based on inferred type
         filtered = selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter;
+        filtered = uniqueBy(filtered, q => (q.question || '').trim().toLowerCase());
       }
       // When a chapter is specified, NEVER fall back to global pool
       let pool = (chapter && chapter.trim()) ? filtered : (filtered.length ? filtered : all);
@@ -714,6 +734,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           difficulty,
           topics_csv: topicsCsv,
           chapter: chapterName,
+          topic: inferMathType(shuffledQuestions) || 'mixed',
           total: totalQ,
           correct: correctCount,
           used_seconds: overallTime,

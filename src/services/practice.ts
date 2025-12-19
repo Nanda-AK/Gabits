@@ -7,6 +7,7 @@ export async function logPracticeSession(params: {
   difficulty: 'easy' | 'moderate' | 'difficult';
   topics_csv: string | null;
   chapter: string | null;
+  topic: string | null; // e.g., 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra' | 'mixed'
   total: number;
   correct: number;
   used_seconds: number;
@@ -18,6 +19,7 @@ export async function logPracticeSession(params: {
       difficulty: params.difficulty,
       topics_csv: params.topics_csv,
       chapter: params.chapter,
+      topic: params.topic ?? 'mixed',
       total: Math.max(0, Math.floor(params.total || 0)),
       correct: Math.max(0, Math.floor(params.correct || 0)),
       used_seconds: Math.max(0, Math.floor(params.used_seconds || 0)),
@@ -44,27 +46,38 @@ export async function getPracticeCountToday(userId: string): Promise<number> {
   }
 }
 
-export async function getSpeedUnlockStatus(userId: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; threshold: number; }> {
+// Monthly reset: compute unlock on last `window` sessions within `days` days (defaults 3 sessions within 30 days)
+export async function getSpeedUnlockStatus(userId: string, threshold = 0.8, window = 3, days = 30): Promise<{ unlocked: boolean; avg: number; count: number; threshold: number; }> {
   if (!userId) return { unlocked: false, avg: 0, count: 0, threshold };
   try {
-    const { data, error } = await supabase
-      .from('practice_sessions')
-      .select('total, correct, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(window);
-    if (error || !data || data.length === 0) return { unlocked: false, avg: 0, count: 0, threshold };
-    const last = data as Array<{ total: number; correct: number }>;
-    const ratios = last
-      .map(r => {
-        const t = Math.max(1, r.total || 0);
-        const c = Math.max(0, r.correct || 0);
-        return Math.min(1, c / t);
-      });
-    const count = ratios.length;
-    const avg = ratios.reduce((s, v) => s + v, 0) / count;
-    const unlocked = count >= Math.min(window, 3) && avg >= threshold;
-    return { unlocked, avg, count, threshold };
+    const { data, error } = await supabase.rpc('get_speed_unlock_monthly', {
+      p_user_id: userId,
+      p_threshold: threshold,
+      p_window: window,
+      p_days: days,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, threshold };
+    const row = Array.isArray(data) ? data[0] : data;
+    return { unlocked: !!row?.unlocked, avg: Number(row?.avg || 0), count: Number(row?.count || 0), threshold };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, threshold };
+  }
+}
+
+// Teacher view: read a student's unlock status (secured by SQL function)
+export async function getSpeedUnlockForTeacher(teacherId: string, studentUserId: string, threshold = 0.8, window = 3, days = 30): Promise<{ unlocked: boolean; avg: number; count: number; threshold: number; }> {
+  if (!teacherId || !studentUserId) return { unlocked: false, avg: 0, count: 0, threshold };
+  try {
+    const { data, error } = await supabase.rpc('get_speed_unlock_for_teacher', {
+      p_teacher_id: teacherId,
+      p_student_id: studentUserId,
+      p_threshold: threshold,
+      p_window: window,
+      p_days: days,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, threshold };
+    const row = Array.isArray(data) ? data[0] : data;
+    return { unlocked: !!row?.unlocked, avg: Number(row?.avg || 0), count: Number(row?.count || 0), threshold };
   } catch {
     return { unlocked: false, avg: 0, count: 0, threshold };
   }
