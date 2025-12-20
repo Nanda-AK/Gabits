@@ -21,13 +21,14 @@ import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
-import { logPracticeSession } from "@/services/practice";
+import { logPracticeSession, getSeenQuestionIds, markSeenQuestionIds, ensureChapterSpeedUnlock } from "@/services/practice";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
 import { createRun, completeRun } from "@/services/taskRuns";
 import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { toLabel } from "@/data/chaptersMap";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
@@ -389,9 +390,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       setLoadingDaily(true);
       // Base pool by difficulty
       const all = questions.filter(q => q.difficulty === difficulty);
-      // Optional chapter filter
+      // Optional chapter filter (tolerate slug by mapping to display label)
+      const chapterName = (chapter && chapter.trim()) ? (toLabel(chapter) || chapter) : '';
       const byChapterRaw = (chapter && chapter.trim())
-        ? all.filter(q => (q.chapter || '').trim().toLowerCase() === chapter.trim().toLowerCase())
+        ? all.filter(q => (q.chapter || '').trim().toLowerCase() === chapterName.trim().toLowerCase())
         : all;
       // De-duplicate by question text to avoid repeats inside a session
       const byChapter = uniqueBy(byChapterRaw, q => (q.question || '').trim().toLowerCase());
@@ -430,14 +432,48 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         return;
       }
 
-      // Topics-aware local set. If chapter is set, keep padding within that chapter only
-      if (selectedTopics.size > 0 || (chapter && chapter.trim())) {
-        const arr = fallbackLocal(pool, difficulty, topicsKey, (chapter && chapter.trim()) ? byChapter : all);
-        if (!cancelled) {
-          setDailyQuestions(arr);
-          setLoadingDaily(false);
+      // Topics-aware local set or chapter path
+      if (chapter && chapter.trim()) {
+        // Authenticated: use DB to avoid repeats within the same day
+        if (userId && !guest) {
+          try {
+            const seen = await getSeenQuestionIds(userId, today, chapterName, difficulty);
+            const unseen = pool.filter(q => !seen.has(q.id));
+            const baseSeed = stringToSeed(`${today}:${difficulty}:${chapter}:${userId}:${Date.now()}`);
+            const pickCount = Math.min(10, pool.length);
+            const primary = pickQuestionsWithSeed(unseen, Math.min(pickCount, unseen.length), baseSeed);
+            let arr = primary.slice();
+            if (arr.length < pickCount) {
+              const need = pickCount - arr.length;
+              const remaining = pool.filter(q => !arr.some(a => a.id === q.id));
+              const extras = pickQuestionsWithSeed(remaining, Math.min(need, remaining.length), baseSeed ^ 0x9e3779b9);
+              arr = arr.concat(extras);
+            }
+            arr = uniqueBy(arr, q => (q.question || '').trim().toLowerCase());
+            await markSeenQuestionIds(userId, today, chapterName, difficulty, arr.map(q => q.id));
+            if (!cancelled) {
+              setDailyQuestions(arr);
+              setLoadingDaily(false);
+            }
+            return;
+          } catch {
+            // fallback local if any DB issue
+            const arr = fallbackLocal(pool, difficulty, topicsKey, byChapter);
+            if (!cancelled) {
+              setDailyQuestions(arr);
+              setLoadingDaily(false);
+            }
+            return;
+          }
+        } else {
+          // Guests: local fallback
+          const arr = fallbackLocal(pool, difficulty, topicsKey, byChapter);
+          if (!cancelled) {
+            setDailyQuestions(arr);
+            setLoadingDaily(false);
+          }
+          return;
         }
-        return;
       }
 
       // No topics filter: use server daily set for authenticated users; fallback to local for guests
@@ -739,6 +775,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           correct: correctCount,
           used_seconds: overallTime,
         });
+        // Persist lifetime per-chapter unlock if eligible
+        if (chapterName) {
+          try { await ensureChapterSpeedUnlock(userId, chapterName, 0.8, 3); } catch {}
+        }
       } catch {}
     })();
   }, [gameCompleted]);

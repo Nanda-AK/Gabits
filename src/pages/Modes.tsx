@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
-import { getSpeedUnlockStatus } from "@/services/practice";
+import { getChapterSpeedUnlock } from "@/services/practice";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/lib/supabase";
 import { getLocalYMD } from "@/lib/date";
@@ -42,16 +42,25 @@ const Modes = () => {
     (async () => {
       try {
         if (!user || guest) { if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); } return; }
-        const s = await getSpeedUnlockStatus(user.id, 0.8, 3);
-        if (!alive) return;
-        setSpeedUnlocked(!!s.unlocked);
-        setUnlockAvg(s.avg);
-        setUnlockCount(s.count);
-        setUnlockThreshold(s.threshold);
-        const sessionFactor = Math.min(1, (s.count || 0) / 3);
-        const accuracyFactor = Math.min(1, (s.avg || 0) / (s.threshold || 0.8));
-        const composite = Math.max(0, Math.min(1, sessionFactor * accuracyFactor));
-        setUnlockProgress(composite);
+        // Chapter-aware: require a selected pending task with chapter
+        try {
+          const raw = localStorage.getItem('play:pending_task');
+          const p = raw ? JSON.parse(raw) : null;
+          const chapter = p?.chapter as string | null;
+          if (!chapter) { if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); } return; }
+          const s = await getChapterSpeedUnlock(user.id, chapter, 0.8, 3);
+          if (!alive) return;
+          setSpeedUnlocked(!!s.unlocked);
+          setUnlockAvg(s.avg);
+          setUnlockCount(s.count);
+          setUnlockThreshold(0.8);
+          const sessionFactor = Math.min(1, (s.count || 0) / 3);
+          const accuracyFactor = Math.min(1, (s.avg || 0) / 0.8);
+          const composite = Math.max(0, Math.min(1, sessionFactor * accuracyFactor));
+          setUnlockProgress(composite);
+          return;
+        } catch {}
+        if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
       } catch {
         if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
       }
@@ -100,7 +109,6 @@ const Modes = () => {
       if (pending.difficulty) qs.set('difficulty', String(pending.difficulty));
       if (pending.topics_csv) qs.set('topics', pending.topics_csv);
       if (pending.chapter) qs.set('chapter', pending.chapter);
-      try { localStorage.removeItem('play:pending_task'); } catch {}
       navigate(`/play?${qs.toString()}`);
       return;
     }
@@ -108,7 +116,23 @@ const Modes = () => {
     toTasks();
   };
   // Locked for students: no navigation
-  const startSpeed = () => { if (isTeacher || speedUnlocked) navigate('/modes/solo/speed'); };
+  const startSpeed = () => {
+    if (isTeacher) { navigate('/modes/solo/speed'); return; }
+    if (!speedUnlocked) return;
+    // Use selected pending task chapter/difficulty/topics to start Speed in Play
+    try {
+      const raw = localStorage.getItem('play:pending_task');
+      const p = raw ? JSON.parse(raw) : null;
+      if (!p?.id) { return; }
+      const qs = new URLSearchParams();
+      qs.set('task', p.id);
+      qs.set('mode', 'speed');
+      if (p.difficulty) qs.set('difficulty', String(p.difficulty));
+      if (p.topics_csv) qs.set('topics', p.topics_csv);
+      if (p.chapter) qs.set('chapter', p.chapter);
+      navigate(`/play?${qs.toString()}`);
+    } catch {}
+  };
   const startAI = () => { if (isTeacher) navigate('/modes/compete/ai'); };
   const goFriends = () => { if (isTeacher) navigate('/modes/compete/friends'); };
   const revisitTopics = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
@@ -172,7 +196,7 @@ const Modes = () => {
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
-                  <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / {Math.round((unlockThreshold || 0.8) * 100)}% • Sessions {unlockCount}/3</div>
+                  <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / 80% • Sessions {unlockCount}/3</div>
                   <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
                     <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(unlockProgress * 100))}%` }} />
                   </div>

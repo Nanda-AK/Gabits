@@ -82,3 +82,107 @@ export async function getSpeedUnlockForTeacher(teacherId: string, studentUserId:
     return { unlocked: false, avg: 0, count: 0, threshold };
   }
 }
+
+// Lifetime per-chapter unlock: compute and persist if eligible
+export async function ensureChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
+{
+  if (!userId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  try {
+    const { data, error } = await supabase.rpc('ensure_chapter_speed_unlock', {
+      p_user_id: userId,
+      p_chapter: chapter,
+      p_threshold: threshold,
+      p_window: window,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      unlocked: !!row?.unlocked,
+      avg: Number(row?.avg || 0),
+      count: Number(row?.count || 0),
+      unlocked_at: row?.unlocked_at || null,
+    };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  }
+}
+
+// Read per-chapter unlock (persisted), and compute/persist if not present and eligible
+export async function getChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
+{
+  if (!userId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  try {
+    const { data, error } = await supabase.rpc('get_chapter_speed_unlock', {
+      p_user_id: userId,
+      p_chapter: chapter,
+      p_threshold: threshold,
+      p_window: window,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      unlocked: !!row?.unlocked,
+      avg: Number(row?.avg || 0),
+      count: Number(row?.count || 0),
+      unlocked_at: row?.unlocked_at || null,
+    };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  }
+}
+
+// Teacher view of per-chapter unlock
+export async function getChapterSpeedUnlockForTeacher(teacherId: string, studentUserId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
+{
+  if (!teacherId || !studentUserId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  try {
+    const { data, error } = await supabase.rpc('get_chapter_speed_unlock_for_teacher', {
+      p_teacher_id: teacherId,
+      p_student_id: studentUserId,
+      p_chapter: chapter,
+      p_threshold: threshold,
+      p_window: window,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      unlocked: !!row?.unlocked,
+      avg: Number(row?.avg || 0),
+      count: Number(row?.count || 0),
+      unlocked_at: row?.unlocked_at || null,
+    };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  }
+}
+
+// Seen questions (per day, per chapter, per difficulty)
+export async function getSeenQuestionIds(userId: string, dateYMD: string, chapter: string, difficulty: 'easy' | 'moderate' | 'difficult'): Promise<Set<number>> {
+  if (!userId || !dateYMD || !chapter) return new Set();
+  try {
+    const { data, error } = await supabase
+      .from('practice_seen_questions')
+      .select('question_id')
+      .eq('user_id', userId)
+      .eq('date', dateYMD)
+      .eq('chapter', chapter)
+      .eq('difficulty', difficulty);
+    if (error || !data) return new Set();
+    return new Set((data as any[]).map(r => Number(r.question_id)));
+  } catch {
+    return new Set();
+  }
+}
+
+export async function markSeenQuestionIds(userId: string, dateYMD: string, chapter: string, difficulty: 'easy' | 'moderate' | 'difficult', ids: number[]): Promise<boolean> {
+  if (!userId || !dateYMD || !chapter || !ids?.length) return true;
+  try {
+    const rows = ids.map(id => ({ user_id: userId, date: dateYMD, chapter, difficulty, question_id: Number(id) }));
+    const { error } = await supabase
+      .from('practice_seen_questions')
+      .upsert(rows, { onConflict: 'user_id,date,chapter,difficulty,question_id' });
+    return !error;
+  } catch {
+    return false;
+  }
+}

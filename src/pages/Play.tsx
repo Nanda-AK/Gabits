@@ -51,8 +51,8 @@ const Play = () => {
   // include taskId so navigating to different task works
   }, [user?.id, guest, taskId, role]);
 
-  // Final settings: if task present, prefer its values
-  const mode = (task?.mode || qsMode);
+  // Final settings: allow query ?mode to override task.mode (needed to start Speed for a Practice task)
+  const mode = (q.get('mode') as any) ? qsMode : (task?.mode || qsMode);
   const difficulty = (task?.difficulty || qsDifficulty) as 'easy' | 'moderate' | 'difficult';
   const topics = (task?.topics_csv ? task.topics_csv.split(',').map(s => s.trim()).filter(Boolean) : qsTopics);
   const topic = qsTopic; // kept for backward-compat; "topics" takes precedence in QuizGame
