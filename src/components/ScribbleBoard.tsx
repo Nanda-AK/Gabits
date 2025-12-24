@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Pen, RotateCcw, Grid, X, Sparkles, Loader2, Copy, Type, Palette } from "lucide-react";
+import { Pen, RotateCcw, Grid, X, Sparkles, Loader2, Copy, Type, Palette, Square } from "lucide-react";
 import type { Question } from "@/data/questions";
-import { aiSolveShortIndian } from "@/services/openrouter";
+import { aiSolveShortIndian, aiSolveShortIndianStream, type DiagramPlan } from "@/services/grok";
 
 /**
  * Lightweight scribble board with a simple pen/eraser.
@@ -25,6 +25,9 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
   const [showSolutionOverlay, setShowSolutionOverlay] = useState(false);
   const [penColor, setPenColor] = useState<string>("#1f2937");
   const resizeStateRef = useRef<{ active: boolean; startY: number; startH: number }>({ active: false, startY: 0, startH: 0 });
+  const [streaming, setStreaming] = useState(false);
+  const streamCancelRef = useRef<{ cancel: () => void } | null>(null);
+  const [diagramPlan, setDiagramPlan] = useState<DiagramPlan | null>(null);
 
   // Resize canvas to match wrapper size (preserving existing drawing)
   const resizeToContainer = (preserve: boolean) => {
@@ -95,7 +98,10 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
 
   // Clear previous solution when question changes
   useEffect(() => {
+    if (streamCancelRef.current) { streamCancelRef.current.cancel(); streamCancelRef.current = null; }
+    setStreaming(false);
     setSolution(null);
+    setDiagramPlan(null);
     setLoadingSolve(false);
   }, [question?.id]);
 
@@ -143,18 +149,48 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const handleSolve = async () => {
+  const handleSolve = () => {
     if (!question) return;
     setShowSolutionOverlay(true);
-    setLoadingSolve(true);
+    if (streamCancelRef.current) { streamCancelRef.current.cancel(); streamCancelRef.current = null; }
+    setSolution("");
+    setDiagramPlan(null);
+    setStreaming(true);
     try {
-      const text = await aiSolveShortIndian(question);
-      setSolution(text);
+      const ctl = aiSolveShortIndianStream(question, {
+        mode: 'fast',
+        onDelta: (delta) => setSolution(prev => (prev ?? "") + delta),
+        onDone: (full, plan) => {
+          setSolution(full || "");
+          if (plan) setDiagramPlan(plan);
+          setStreaming(false);
+          streamCancelRef.current = null;
+        },
+        onError: () => {
+          setSolution("Sorry, couldn't fetch the solution. Try again.");
+          setStreaming(false);
+          streamCancelRef.current = null;
+        }
+      });
+      if (ctl) {
+        streamCancelRef.current = ctl;
+      } else {
+        // Fallback to non-streaming
+        setLoadingSolve(true);
+        aiSolveShortIndian(question)
+          .then(setSolution)
+          .catch(() => setSolution("Sorry, couldn't fetch the solution. Try again."))
+          .finally(() => { setLoadingSolve(false); setStreaming(false); });
+      }
     } catch {
-      setSolution("Sorry, couldn't fetch the solution. Try again.");
-    } finally {
-      setLoadingSolve(false);
+      setSolution("Sorry, couldn't start the AI stream. Try again.");
+      setStreaming(false);
     }
+  };
+
+  const handleStop = () => {
+    if (streamCancelRef.current) { streamCancelRef.current.cancel(); streamCancelRef.current = null; }
+    setStreaming(false);
   };
 
   const copySolution = async () => {
@@ -203,6 +239,35 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
     ctx.restore();
   };
 
+  const drawDiagramToCanvas = () => {
+    if (!diagramPlan) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width; const h = rect.height;
+    const sx = (x: number) => x * w;
+    const sy = (y: number) => y * h;
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = "#0ea5e9"; // sky-500
+    ctx.fillStyle = "#0ea5e9";
+    ctx.lineWidth = 2;
+    for (const s of diagramPlan.shapes) {
+      if ((s as any).type === "line") {
+        const L = s as any; ctx.beginPath(); ctx.moveTo(sx(L.x), sy(L.y)); ctx.lineTo(sx(L.x2), sy(L.y2)); ctx.stroke();
+      } else if ((s as any).type === "rect") {
+        const R = s as any; ctx.strokeRect(sx(R.x), sy(R.y), R.w * w, R.h * h);
+      } else if ((s as any).type === "circle") {
+        const C = s as any; ctx.beginPath(); ctx.arc(sx(C.x), sy(C.y), C.r * Math.min(w, h), 0, Math.PI * 2); ctx.stroke();
+      } else if ((s as any).type === "label") {
+        const T = s as any; ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace"; ctx.fillText(String(T.text ?? ""), sx(T.x), sy(T.y));
+      }
+    }
+    ctx.restore();
+  };
+
   return (
     <div className={`w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg ${fullHeight ? 'h-full flex flex-col' : ''}`}>
       <div className="flex items-center justify-between mb-3">
@@ -217,10 +282,16 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
           <Button size="icon" variant="outline" className="h-8 w-8" onClick={clear}>
             <RotateCcw className="w-4 h-4" />
           </Button>
+          {/* Fast mode is always used for quick responses */}
           {question && (
             <Button size="sm" variant="outline" className="h-8 px-3 ml-1" onClick={handleSolve} disabled={loadingSolve}>
-              {loadingSolve ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}        
+              {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}        
               <span className="ml-1 text-[12px] font-semibold">Solve</span>
+            </Button>
+          )}
+          {streaming && (
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleStop} title="Stop streaming">
+              <Square className="w-4 h-4" />
             </Button>
           )}
           {onOpenTables && (
@@ -276,6 +347,11 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
                     <Button size="icon" variant="outline" className="h-8 w-8" onClick={writeSolutionToCanvas} title="Write on board">
                       <Type className="w-4 h-4" />
                     </Button>
+                    {diagramPlan && (
+                      <Button size="icon" variant="outline" className="h-8 w-8" onClick={drawDiagramToCanvas} title="Draw diagram on board">
+                        <Grid className="w-4 h-4" />
+                      </Button>
+                    )}
                   </>
                 )}
                 <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setShowSolutionOverlay(false)}>

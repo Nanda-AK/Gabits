@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bot, Sparkles } from "lucide-react";
-import { aiTaunt } from "@/services/openrouter";
+import { aiTaunt } from "@/services/grok";
 
 const DiffBtn: React.FC<{ v: 'easy' | 'moderate' | 'difficult'; cur: string; onPick: (v: any) => void; children?: ReactNode }> = ({ v, cur, onPick, children }) => (
   <Button variant={cur === v ? 'default' : 'outline'} className="w-full h-12 text-lg" onClick={() => onPick(v)}>
