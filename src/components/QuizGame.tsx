@@ -10,10 +10,11 @@ import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
 import { BattleSummary } from "./BattleSummary";
-import { ScribbleBoard } from "./ScribbleBoard";
+import { ScribbleBoard, type ScribbleBoardHandle } from "./ScribbleBoard";
 import { TableBoard } from "./TableBoard";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Pen, Grid, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
 // removed Achievement modal usage; use Treasure page instead
@@ -166,7 +167,7 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
     try {
       const { date, questions: storedQuestions } = JSON.parse(storedData);
       if (date === today) return storedQuestions as Question[];
-    } catch {}
+    } catch { }
   }
   // Deterministic pick seeded by topicsKey to support multi-variant practice sets
   const baseSeed = stringToSeed(`${today}:${difficulty}:${topicsKey || 'all'}`);
@@ -180,7 +181,7 @@ function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: stri
   }
   // Final safety: de-duplicate by question text
   result = uniqueBy(result, q => (q.question || '').trim().toLowerCase());
-  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch {}
+  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch { }
   return result;
 }
 
@@ -257,10 +258,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
   const [speedRewards, setSpeedRewards] = useState<{ coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null>(null);
+  // Mobile only: inline scribble panel under the question
+  const [mobileScribbleOpen, setMobileScribbleOpen] = useState(false);
+  const sbRef = useRef<ScribbleBoardHandle | null>(null);
 
   const [treasureModalOpen, setTreasureModalOpen] = useState(false);
 
-   const inferMathType = (qs: Question[]): string => {
+  const inferMathType = (qs: Question[]): string => {
     let add = 0, sub = 0, mul = 0, div = 0;
     const inc = (h: string, q: string) => {
       const H = (h || '').toLowerCase();
@@ -276,11 +280,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       { k: 'subtraction', v: sub },
       { k: 'multiplication', v: mul },
       { k: 'division', v: div },
-    ].sort((a,b) => b.v - a.v);
+    ].sort((a, b) => b.v - a.v);
     return arr[0].v === 0 ? 'mixed' : arr[0].k;
   };
 
-  
+
 
   // Canonicalize question type and requested topics
   const canonicalize = (t: string): string => {
@@ -339,7 +343,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
 
     // 7) Fallback to declared type if present and valid; else default to addition
-    const allowed = new Set(['addition','subtraction','multiplication','division','fractions','algebra']);
+    const allowed = new Set(['addition', 'subtraction', 'multiplication', 'division', 'fractions', 'algebra']);
     const byType = canonicalize((q as any).type || '');
     if (allowed.has(byType)) return byType;
     return 'addition';
@@ -535,13 +539,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
           // If an older snapshot had < 10 questions, discard it to avoid the 6-questions issue
           if ((saved.shuffledQuestions as any[]).length < 10) {
-            try { localStorage.removeItem(storageKey); } catch {}
+            try { localStorage.removeItem(storageKey); } catch { }
             setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
             setCurrentQuestion(0);
             return;
           }
           if (saved.completed) {
-            try { localStorage.removeItem(storageKey); } catch {}
+            try { localStorage.removeItem(storageKey); } catch { }
             setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
             setCurrentQuestion(0);
             return;
@@ -567,7 +571,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           }
           return;
         }
-      } catch {}
+      } catch { }
     }
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
@@ -588,7 +592,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       milestones: milestonesState,
       completed: gameCompleted,
     };
-    try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch {}
+    try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch { }
   }, [storageKey, currentQuestion, hearts, coins, correctAnswers, answerCorrectList, withinTimeList, shuffledQuestions, overallTime, milestonesState, gameCompleted]);
 
   // Maintain a completion flag to allow other UI (logo, account menu) to replace navigation
@@ -599,13 +603,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       } else {
         localStorage.removeItem('play:completed');
       }
-    } catch {}
+    } catch { }
   }, [gameCompleted]);
 
   // Cleanup completion flag on unmount
   useEffect(() => {
     return () => {
-      try { localStorage.removeItem('play:completed'); } catch {}
+      try { localStorage.removeItem('play:completed'); } catch { }
     };
   }, []);
 
@@ -620,7 +624,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setBlinkHeart(false);
     setShowResult(false);
     setQuestionTime(0); // Reset question timer
-    
+
     // Set time threshold / limit based on difficulty
     if (question) {
       if (mode === 'battle-ai' || mode === 'battle-friends') {
@@ -663,7 +667,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         };
         setMilestonesState(loaded);
         milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
-      } catch {}
+      } catch { }
     })();
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
@@ -724,7 +728,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       }
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, role]);
 
   // Complete the run when game is completed
@@ -748,7 +752,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       });
       if (ok) runCompletedRef.current = true;
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameCompleted]);
 
   // Practice completion: persist session summary to DB for server-side unlock checks
@@ -777,9 +781,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         });
         // Persist lifetime per-chapter unlock if eligible
         if (chapterName) {
-          try { await ensureChapterSpeedUnlock(userId, chapterName, 0.8, 3); } catch {}
+          try { await ensureChapterSpeedUnlock(userId, chapterName, 0.8, 3); } catch { }
         }
-      } catch {}
+      } catch { }
     })();
   }, [gameCompleted]);
 
@@ -792,11 +796,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const totalQ = shuffledQuestions.length;
       const correctCount = answerCorrectList.filter(Boolean).length;
       const timeMs = Date.now() - gameStartAtRef.current;
-      try { completeRun(id, { total: totalQ, correct: correctCount, time_ms: timeMs, status: 'abandoned' }); } catch {}
+      try { completeRun(id, { total: totalQ, correct: correctCount, time_ms: timeMs, status: 'abandoned' }); } catch { }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
   // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
@@ -807,7 +811,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }, 1000);
     return () => clearInterval(overallInterval);
   }, [practiceMode, mode, treasureModalOpen]);
-  
+
   useEffect(() => {
     if (practiceMode || mode === 'battle-ai') return; // no per-question timer in practice or battle AI
     if (treasureModalOpen) return; // pause per-question timer while modal open
@@ -822,11 +826,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           return newTime;
         });
       }, 1000);
-      
+
       return () => clearInterval(questionInterval);
     }
   }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode, mode, treasureModalOpen]);
-  
+
   // Overall time limit check (disabled in practice mode)
   useEffect(() => {
     if (practiceMode) return;
@@ -858,7 +862,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         if (!ended && opponentId) {
           toast({ title: 'Opponent left', description: 'Match ended.', duration: 4000 });
           ended = true;
-          try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+          try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch { }
           setFriendsDone(true);
           setGameCompleted(true);
           // compute with whatever answers we have so far
@@ -932,7 +936,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     });
 
     return () => {
-      try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+      try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch { }
       ch.unsubscribe();
       matchChannelRef.current = null;
     };
@@ -972,28 +976,28 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const seed = (Math.floor(Math.random() * 2147483647) ^ stringToSeed(`${Date.now()}:${userId}:${lobbyCode}`)) >>> 0;
     rematchSeedRef.current = seed;
     setRematchWaiting(true);
-    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
+    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
   };
 
   const acceptRematch = () => {
     const ch = matchChannelRef.current;
     const seed = rematchSeedRef.current ?? (stringToSeed(`${Date.now()}:${lobbyCode}`));
-    try { ch?.send({ type: 'broadcast', event: 'rematch_accept', payload: { seed } }); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'rematch_accept', payload: { seed } }); } catch { }
     startRematch(seed);
   };
 
   const declineRematch = () => {
     const ch = matchChannelRef.current;
-    try { ch?.send({ type: 'broadcast', event: 'rematch_decline', payload: {} }); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'rematch_decline', payload: {} }); } catch { }
     setRematchInviteFrom(null);
   };
 
   const handleLeaveFriends = () => {
     const ch = matchChannelRef.current;
-    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
-    try { ch?.unsubscribe(); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
+    try { ch?.unsubscribe(); } catch { }
     // Navigate away with replace so Back doesn't return to finished game
-    try { localStorage.removeItem('play:completed'); } catch {}
+    try { localStorage.removeItem('play:completed'); } catch { }
     navigate('/modes', { replace: true });
   };
 
@@ -1004,7 +1008,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (!userId) return;
     try {
       matchChannelRef.current.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
-    } catch {}
+    } catch { }
   }, [displayName, mode, userId, guest]);
 
   // Compute points and winners for friends battle
@@ -1053,7 +1057,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       question_coins: 0, // Practice: NO per-question coins, only streak rewards
     }).then(result => {
       if (result) setPracticeRewards(result);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
 
   // Compete (AI): after battle resolved and marked done, grant rewards once
@@ -1072,7 +1076,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       date: localDate,
       difficulty,
       result,
-    }).catch(() => {});
+    }).catch(() => { });
   }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
 
   // Compete (Friends): grant rewards once when computed
@@ -1085,7 +1089,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     friendsGrantRef.current = true;
     const localDate = getLocalYMD();
     const result: 'win' | 'loss' | 'draw' = playerPoints > aiScore ? 'win' : (playerPoints < aiScore ? 'loss' : 'draw');
-    grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => {});
+    grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => { });
   }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
 
   // Speed: after completion, log run and capture rewards (coins, gems, badges)
@@ -1114,7 +1118,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     } as const;
     logSpeedRun(payload).then(res => {
       if (res) setSpeedRewards(res);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions]);
 
   const triggerCoinAnimation = (amount: number) => {
@@ -1131,9 +1135,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const curr = Number(localStorage.getItem('player:coins') || '0');
       const next = Math.max(0, curr + amount);
       localStorage.setItem('player:coins', String(next));
-    } catch {}
+    } catch { }
   };
-  
+
   const handleTimeUp = () => {
     // Auto-skip question when time runs out
     if (showResult || gameCompleted) return;
@@ -1146,7 +1150,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       next[currentQuestion] = false;
       return next;
     });
-    
+
     // Loses a heart
     const newHearts = hearts - 1;
     setHearts(newHearts);
@@ -1171,7 +1175,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setStudentTimesList(prev => { const next = prev.slice(); next[idx] = elapsed; return next; });
     try {
       matchChannelRef.current?.send({ type: 'broadcast', event: 'answer', payload: { idx, correct: isLocalCorrect, timeMs: elapsed } });
-    } catch {}
+    } catch { }
 
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
@@ -1181,7 +1185,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     } else {
       setFriendsDone(true);
       setGameCompleted(true);
-      try { matchChannelRef.current?.send({ type: 'broadcast', event: 'done', payload: {} }); } catch {}
+      try { matchChannelRef.current?.send({ type: 'broadcast', event: 'done', payload: {} }); } catch { }
       // Wait briefly; actual compute happens when we receive opponent 'done' OR presence reports leave
       setTimeout(() => { if (opponentDone) computeFriendsResults(); }, 200);
     }
@@ -1206,7 +1210,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         const studentShouldWin = Math.random() < studentWinProbRef.current;
         // Decide AI correctness and speed
         const aiWillBeCorrect = studentShouldWin ? Math.random() < 0.5 : true; // sometimes let AI be wrong even if student should win
-        let aiElapsed = Math.max(1200, Math.min(8000, Math.round(studentElapsed + (studentShouldWin ? 500 + Math.random()*1500 : -500 - Math.random()*1500))));
+        let aiElapsed = Math.max(1200, Math.min(8000, Math.round(studentElapsed + (studentShouldWin ? 500 + Math.random() * 1500 : -500 - Math.random() * 1500))));
         let studentWinsRound = false;
         if (!aiWillBeCorrect) {
           // AI wrong => student wins the point implicitly
@@ -1248,7 +1252,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }, 2000);
         if (userId && !guest && mode !== 'speed') {
           // Persist only for non-speed here. Speed session is logged at completion.
-          incrementTotals(userId, earned, 0).catch(() => {});
+          incrementTotals(userId, earned, 0).catch(() => { });
         }
       }
       // Increment correct count and award milestones
@@ -1256,7 +1260,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         const newCount = prev + 1;
         const ratio = newCount / total; // 0..1 for the daily set of 10
         if (userId && !guest && mode !== 'speed') {
-          incrementTotals(userId, 0, 1).catch(() => {});
+          incrementTotals(userId, 0, 1).catch(() => { });
         }
         // 10% milestone: internal flag only for speed logging
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
@@ -1399,7 +1403,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
         });
         // Lifetime totals: count correct answers from this battle (no coins here)
-        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch { }
         // Internal milestone flags for logging only
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
         if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
@@ -1456,7 +1460,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           ai_points: res.aiPoints,
           result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
         });
-        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch { }
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
         if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
         if (ratio >= 0.25) { setMilestonesState(s => ({ ...s, m25: true })); }
@@ -1529,7 +1533,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       milestones: milestonesState as Record<string, boolean>,
       completed: gameCompleted,
     };
-    saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => {});
+    saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => { });
   }, [userId, guest, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
 
   // Persist last seen progress snapshot for Treasure page (local)
@@ -1537,7 +1541,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     try {
       localStorage.setItem('player:lastProgressCorrect', String(correctAnswers));
       localStorage.setItem('player:lastProgressTotal', String(total));
-    } catch {}
+    } catch { }
   }, [correctAnswers, total]);
 
   // When a Speed run completes, log it to the server (coins, correct, milestones, fast_flawless)
@@ -1560,15 +1564,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       m75: m.m75,
       m100: m.m100,
       fast_flawless: ff,
-    }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => {});
+    }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
 
   if (loadingDaily) {
-    return <div className="min-h-screen flex items-center justify-center">Loading daily set...</div>;
+    return <div className="min-h-[100svh] md:min-h-screen flex items-center justify-center">Loading daily set...</div>;
   }
 
   if (!shuffledQuestions.length) {
-    return <div className="min-h-screen flex items-center justify-center">No questions available.</div>;
+    return <div className="min-h-[100svh] md:min-h-screen flex items-center justify-center">No questions available.</div>;
   }
 
   // Battle AI: start screen and summary
@@ -1576,7 +1580,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const aiTypeLabel = difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI');
     if (!battleStarted) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+        <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
           <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
@@ -1590,7 +1594,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
               <div className="lg:col-span-7 min-w-0">
-                <div className="bg-white/90 border-2 border-secondary/20 rounded-3xl p-10 shadow-2xl flex items-center justify-center">
+                <div className="bg-white/90 border-2 border-secondary/20 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl flex items-center justify-center">
                   <button onClick={() => { setBattleStarted(true); questionStartAtRef.current = Date.now(); }} className="px-10 py-3 rounded-full bg-green-600 hover:bg-green-700 text-white font-extrabold shadow-lg">
                     Start Game
                   </button>
@@ -1624,7 +1628,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           aiPoints={aiScore}
           rows={rows}
           onRestart={handleRestart}
-          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch {}; navigate('/modes', { replace: true }); }}
+          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch { }; navigate('/modes', { replace: true }); }}
         />
       );
     }
@@ -1679,12 +1683,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute top-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-20 right-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
       <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-accent/10 rounded-full blur-2xl" />
-      
+
       {/* Coin Animations */}
       {coinAnimations.map(anim => (
         <CoinAnimation key={anim.id} amount={anim.amount} />
@@ -1692,11 +1696,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
       {/* Game Header (hidden in Battle AI) */}
       {mode !== 'battle-ai' && (
-        <GameHeader 
-          hearts={hearts} 
-          coins={coins} 
-          progress={progress} 
-          blinkHeart={blinkHeart} 
+        <GameHeader
+          hearts={hearts}
+          coins={coins}
+          progress={progress}
+          blinkHeart={blinkHeart}
           coinGain={coinGain}
           overallTime={overallTime}
           overallTimeLimit={overallTimeLimit}
@@ -1705,7 +1709,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           onTreasureClick={() => setTreasureModalOpen(true)}
         />
       )}
-      
+
       {/* In-game Treasure quick modal is available via header chest while playing */}
 
       {/* Battle header (visible during match) */}
@@ -1723,16 +1727,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       )}
 
       {/* Main Game Area */}
-      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
+      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 lg:pb-6" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
-          {/* Left: AI Panel in Battle-AI, else Monkey Progress */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
+          {/* Left: AI Panel in Battle-AI, else Monkey Progress (hidden on mobile) */}
+          <div className="lg:col-span-2 hidden lg:flex justify-center lg:justify-start min-w-0">
             {mode === 'battle-ai' ? (
-            <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
-              <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
-              <div className="text-sm font-bold">AI Answer:</div>
-              <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
-            </div>
+              <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
+                <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
+                <div className="text-sm font-bold">AI Answer:</div>
+                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
+              </div>
             ) : mode === 'practice' || mode === 'speed' ? (
               <div className="w-full max-w-[200px]" aria-hidden="true" />
             ) : (
@@ -1768,8 +1772,89 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               showDifficultyBadge={mode !== 'practice'}
               disableSkipHint={mode === 'battle-friends'}
               requireSelectionForNext={mode !== 'battle-friends'}
+              hideOptions={mobileScribbleOpen}
             />
+            {/* Mobile scribble collapsed bar (inline) */}
+            {(mode === 'practice' || mode === 'speed') && !mobileScribbleOpen && (
+              <div className="block lg:hidden mt-3">
+                <button
+                  onClick={() => setMobileScribbleOpen(true)}
+                  className="w-full flex items-center justify-between rounded-2xl border-2 border-primary/20 bg-white/90 backdrop-blur px-4 py-3 shadow"
+                >
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <Pen className="w-4 h-4 text-primary" /> Scribble Board
+                  </span>
+                  <span className="inline-flex items-center gap-3 text-gray-500">
+                    <Grid className="w-4 h-4" />
+                    <RotateCcw className="w-4 h-4" />
+                    <ChevronUp className="w-4 h-4" />
+                  </span>
+                </button>
+              </div>
+            )}
 
+            {/* Mobile scribble expanded inline block */}
+            {(mode === 'practice' || mode === 'speed') && mobileScribbleOpen && (
+              <div className="block lg:hidden mt-3">
+                <div className="rounded-2xl border-2 border-primary/20 bg-white/95 backdrop-blur shadow">
+                  <div className="px-3 pt-3">
+                    {/* Scribble area with optional tables overlay */}
+                    <div className="relative">
+                      <ScribbleBoard ref={sbRef as unknown as any} question={question} fullHeight={false} showHeader={false} onOpenTables={() => setShowTable(true)} />
+                      {showTable && (
+                        <div className="absolute inset-0 z-10 overflow-auto">
+                          <TableBoard onClose={() => setShowTable(false)} />
+                        </div>
+                      )}
+                    </div>
+                    {/* Tools row (from 3rd ss) placed below the canvas as in 2nd ss */}
+                    <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="inline-flex items-center gap-2 font-bold text-sm">
+                        <Grid className="w-4 h-4 text-primary" /> Scribble Board
+                      </div>
+                      <div className="inline-flex items-center gap-2">
+                        <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.setPen()} title="Pen">
+                          <Pen className="w-4 h-4 text-primary" />
+                        </button>
+                        <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.clear()} title="Clear">
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                        <button className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold" onClick={() => sbRef.current?.solve()} title="Solve">
+                          ✨ Solve
+                        </button>
+                        <button className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold" onClick={() => setShowTable(true)} title="Tables 2–12">
+                          Tables 2–12
+                        </button>
+                      </div>
+                    </div>
+                    {/* Quick answer chips */}
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      {(question?.options || []).map((opt, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleAnswerSelect(idx)}
+                          className={`px-3 py-1.5 rounded-xl border text-sm shadow-sm ${selectedAnswer === idx ? 'bg-primary/10 border-primary/40 font-semibold' : 'bg-gray-50 border-gray-200'}`}
+                        >
+                          {String.fromCharCode(65 + idx)}. {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Collapse bar at the bottom */}
+                  <div className="px-3 pb-3">
+                    <button
+                      onClick={() => setMobileScribbleOpen(false)}
+                      className="w-full mt-2 flex items-center justify-between rounded-2xl border bg-white/90 px-4 py-2 text-sm shadow"
+                    >
+                      <span className="inline-flex items-center gap-2 text-gray-800 font-semibold">
+                        Scribble Board
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right column: User panel or tools (hidden on xl in favor of fixed sidebar) */}
@@ -1783,7 +1868,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
             ) : (mode === 'practice' || mode === 'speed') ? (
-              <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
+              <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
                 <div className="relative flex-1">
                   {/* Scribble is always visible and fills available height */}
                   <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
@@ -1799,9 +1884,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </div>
         </div>
       </div>
+      {/* Inline mobile scribble handled in the center column above */}
       {/* Fixed right sidebar on xl screens to utilize full right viewport space */}
       {(mode === 'practice' || mode === 'speed') && (
-        <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40">
+        <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
           <div className="flex flex-col w-full h-full">
             <div className="relative flex-1">
               <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />

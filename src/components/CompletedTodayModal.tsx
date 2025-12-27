@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Coins, Trophy, Gamepad2, Rocket, CalendarDays, CheckCircle2, XCircle } from "lucide-react";
+import { Coins, Trophy, Gamepad2, Rocket, CalendarDays, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { getLocalYMD } from "@/lib/date";
 import { supabase } from "@/lib/supabase";
 import type { TaskRun } from "@/services/taskRuns";
@@ -41,8 +41,21 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
   const [loading, setLoading] = useState(false);
   const [runs, setRuns] = useState<TaskRunWithTask[]>([]);
   const [events, setEvents] = useState<RewardEvent[]>([]);
+  const today = useMemo(() => getLocalYMD(), []);
+  const [selectedDate, setSelectedDate] = useState<string>(today);
 
-  // fetch all sessions for today when opened
+  // Helpers to move date by +/- n days (local)
+  const shiftYmd = (ymd: string, delta: number) => {
+    const [y, m, d] = ymd.split('-').map((n) => parseInt(n));
+    const base = new Date(y, (m || 1) - 1, d || 1);
+    base.setDate(base.getDate() + delta);
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, '0');
+    const dd = String(base.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // fetch all sessions for the selected date when opened or date changes
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -54,10 +67,10 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
           setEvents([]);
           return;
         }
-        // Local day bounds to UTC range
-        const now = new Date();
-        const startLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        const endLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        // Local day bounds to UTC range for selectedDate
+        const [y, m, d] = selectedDate.split('-').map((n) => parseInt(n));
+        const startLocal = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+        const endLocal = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
         const startUtcIso = new Date(startLocal.getTime() - startLocal.getTimezoneOffset() * 60000).toISOString();
         const endUtcIso = new Date(endLocal.getTime() - endLocal.getTimezoneOffset() * 60000).toISOString();
 
@@ -73,12 +86,11 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
         if (!cancelled) setRuns((runsQ.data as any[]) ?? []);
 
         // 2) All reward events today (practice/speed/compete completions)
-        const today = getLocalYMD();
         const evQ = await supabase
           .from('reward_events')
           .select('id, created_at, source, coins_delta, gems_delta, badges_delta, meta')
           .eq('user_id', userId)
-          .eq('date', today)
+          .eq('date', selectedDate)
           .order('created_at', { ascending: true })
           .order('id', { ascending: true });
         const rawEvents = (evQ.data as any[]) ?? [];
@@ -93,7 +105,7 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
     }
     load();
     return () => { cancelled = true; };
-  }, [open, userId, isGuest]);
+  }, [open, userId, isGuest, selectedDate]);
 
   const items: Item[] = useMemo(() => {
     const runItems: Item[] = runs.map(r => ({ kind: 'run', time: (r as any).completed_at || (r as any).updated_at || '', data: r }));
@@ -114,9 +126,17 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
       <DialogContent className="sm:max-w-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-white">
         <DialogHeader>
           <DialogTitle className="text-lg font-black flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-600" /> Today's Completions
+            <Trophy className="w-5 h-5 text-amber-600" /> Completions
           </DialogTitle>
-          <DialogDescription className="text-xs flex items-center gap-2"><CalendarDays className="w-3.5 h-3.5" /> {getLocalYMD()}</DialogDescription>
+          <div className="flex items-center justify-between">
+            <DialogDescription className="text-xs flex items-center gap-2">
+              <CalendarDays className="w-3.5 h-3.5" /> {selectedDate}
+            </DialogDescription>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate((d) => shiftYmd(d, -1))} aria-label="Previous day"><ChevronLeft className="w-4 h-4"/></Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate((d) => shiftYmd(d, +1))} aria-label="Next day" disabled={selectedDate >= today}><ChevronRight className="w-4 h-4"/></Button>
+            </div>
+          </div>
         </DialogHeader>
 
         {loading ? (
@@ -169,7 +189,7 @@ export function CompletedTodayModal({ open, onOpenChange, userId, isGuest }: Com
         ) : (
           <div className="py-4">
             <div className="p-4 rounded-xl border-2 border-dashed border-amber-200 bg-white/60 text-center">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground"><Gamepad2 className="w-5 h-5"/> No completed session recorded today.</div>
+              <div className="flex items-center justify-center gap-2 text-muted-foreground"><Gamepad2 className="w-5 h-5"/> No completions recorded on {selectedDate}.</div>
             </div>
             <div className="mt-4 flex justify-center">{primary}</div>
           </div>

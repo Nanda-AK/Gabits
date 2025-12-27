@@ -32,6 +32,8 @@ interface QuestionCardProps {
   disableSkipHint?: boolean;
   // When true, Next/Finish requires an answer selection; set false for friends mode
   requireSelectionForNext?: boolean;
+  // When true, hides the answer options list (used when mobile scribble shows chips below the canvas)
+  hideOptions?: boolean;
 }
 
 export const QuestionCard = ({
@@ -61,6 +63,7 @@ export const QuestionCard = ({
   showDifficultyBadge = true,
   disableSkipHint = false,
   requireSelectionForNext = true,
+  hideOptions = false,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -154,6 +157,7 @@ export const QuestionCard = ({
       </div>
 
       {/* Answer Options */}
+      {!hideOptions && (
       <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
         {question.options.map((option, index) => {
           const isSelected = selectedAnswer === index;
@@ -196,6 +200,7 @@ export const QuestionCard = ({
           );
         })}
       </div>
+      )}
 
       {/* Hint Section */}
       {showHint && (

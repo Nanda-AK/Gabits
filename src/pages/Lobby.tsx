@@ -135,7 +135,7 @@ const Lobby = () => {
   const canStart = role === 'host' && players.length >= 2;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-rose-50 to-indigo-50">
+    <div className="relative min-h-[100svh] md:min-h-screen overflow-hidden bg-gradient-to-br from-amber-50 via-rose-50 to-indigo-50">
       <div className="container mx-auto px-4 py-10 max-w-3xl">
         <Button variant="secondary" className="rounded-full mb-6" onClick={leave}><ArrowLeft className="w-4 h-4 mr-2"/>Back</Button>
         <Card className="p-6 rounded-3xl border-0 bg-white/70 backdrop-blur-xl shadow-xl">

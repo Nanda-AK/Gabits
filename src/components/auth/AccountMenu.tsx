@@ -52,8 +52,13 @@ export const AccountMenu = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Do not render on the in-game Play screen to prevent header overlap
+  if (location.pathname.startsWith('/play')) {
+    return null;
+  }
+
   return (
-    <div className="fixed right-4 top-4 z-50">
+    <div className="fixed right-2 top-2 sm:right-4 sm:top-4 z-40">
       {user && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

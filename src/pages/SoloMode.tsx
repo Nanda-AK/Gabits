@@ -21,7 +21,7 @@ const GlowTile: React.FC<{ title: string; subtitle: string; icon: React.ReactNod
 const SoloMode = () => {
   const navigate = useNavigate();
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
+    <div className="relative min-h-[100svh] md:min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="container mx-auto px-4 py-10">
         <Button variant="secondary" className="mb-6 rounded-full" onClick={() => navigate("/modes")}> <ArrowLeft className="w-4 h-4 mr-2"/> Back to Modes</Button>
         <div className="mb-6">

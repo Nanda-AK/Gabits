@@ -118,8 +118,12 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
-    min-height: 100vh;
+    /* Prefer small/dynamic viewport units on mobile to avoid URL-bar jumps */
+    min-height: 100svh;
+    min-height: 100dvh;
+    min-height: 100vh; /* fallback */
     max-width: 100vw;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Ensure root container fits viewport */

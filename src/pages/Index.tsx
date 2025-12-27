@@ -11,7 +11,7 @@ import { getRecentRunsForStudent, type TaskRunWithTask } from "@/services/taskRu
 import { supabase } from "@/lib/supabase";
 import { CompletedTodayModal } from "@/components/CompletedTodayModal";
 import { getLocalYMD } from "@/lib/date";
-import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2 } from "lucide-react";
+import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2, Eye } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 
 type XpRow = Awaited<ReturnType<typeof getXpLeaderboard>>[number];
@@ -165,7 +165,7 @@ const Index = () => {
   return (
     // Gate: if not authenticated, show sign-in screen first
     (!user) ? (
-      <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-[#21D4FD] via-[#00A6FF] to-[#005BFF]">
+      <div className="min-h-[100svh] md:min-h-screen relative overflow-hidden bg-gradient-to-b from-[#21D4FD] via-[#00A6FF] to-[#005BFF]">
         {/* Soft background orbs */}
         <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/20 blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full bg-white/10 blur-3xl" />
@@ -180,8 +180,8 @@ const Index = () => {
         </div>
       </div>
     ) : (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto max-w-6xl px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+    <div className="min-h-[100svh] md:min-h-screen bg-white">
+      <div className="container mx-auto max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 pt-14 sm:pt-16" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         {/* Main column */}
         <div>
           {/* Greeting & Course completion */}
@@ -282,7 +282,13 @@ const Index = () => {
                     }
                   })
                 )}
-                <Button variant="ghost" className="px-0 text-indigo-600 hover:text-indigo-700" onClick={() => setTodayModalOpen(true)}>View</Button>
+                <button
+                  onClick={() => setTodayModalOpen(true)}
+                  className="mt-2 w-full flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-indigo-100 transition"
+                >
+                  <span className="inline-flex items-center gap-2"><Eye className="w-4 h-4 text-indigo-600"/> View Completed Tasks</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white text-indigo-700 text-sm font-bold shadow-sm">{completedCount}</span>
+                </button>
               </CardContent>
             </Card>
           </div>

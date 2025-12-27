@@ -211,8 +211,8 @@ const Dashboard = () => {
   }, [user, guest]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50">
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50">
+      <div className="container mx-auto px-4 pt-14 sm:pt-16 pb-10 max-w-4xl" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-indigo-700 to-emerald-700 bg-clip-text text-transparent flex items-center gap-3">
             <BarChart3 className="w-7 h-7" /> Dashboard

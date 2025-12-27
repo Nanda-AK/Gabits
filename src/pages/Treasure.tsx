@@ -242,8 +242,8 @@ const Treasure = () => {
   // Note: Weekly progress data not yet tracked server-side; showing required UI only
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
-      <div className="container mx-auto px-4 py-10 max-w-3xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
+      <div className="container mx-auto px-4 pt-16 sm:pt-10 pb-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2">
             <img src={todayAward ? "/treasure_open.png" : "/treasure_close.png"} className="w-8 h-8"/> My Treasure

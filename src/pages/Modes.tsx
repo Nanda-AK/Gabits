@@ -139,13 +139,10 @@ const Modes = () => {
   const goStats = () => navigate('/dashboard');
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto max-w-6xl px-4 py-10">
+    <div className="min-h-[100svh] md:min-h-screen bg-white">
+      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-10" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-primary text-xs font-semibold mb-2">
-              <Sparkles className="w-3.5 h-3.5" /> Choose Your Mode
-            </div>
             <h1 className="text-3xl sm:text-4xl font-black">Choose Your Mode</h1>
           </div>
           <div className="w-full sm:w-80" style={{ ['--primary' as any]: '249 74% 64%' }}>

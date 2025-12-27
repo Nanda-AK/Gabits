@@ -58,8 +58,8 @@ const Leaderboard = () => {
   const seed = user?.id ?? displayName;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <div className="container mx-auto px-4 py-10 max-w-3xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="container mx-auto px-4 pt-16 sm:pt-10 pb-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
             <Trophy className="w-7 h-7 text-amber-500"/> Leaderboard

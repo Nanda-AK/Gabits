@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Pen, RotateCcw, Grid, X, Sparkles, Loader2, Copy, Type, Palette, Square } from "lucide-react";
 import type { Question } from "@/data/questions";
@@ -11,9 +11,18 @@ import { aiSolveShortIndian, aiSolveShortIndianStream, type DiagramPlan } from "
  */
 const CSS_CANVAS_H = 260; // css pixels; container uses this height
 
-type Props = { onClose?: () => void; question?: Question; fullHeight?: boolean; onOpenTables?: () => void };
+export type ScribbleBoardHandle = {
+  setPen: () => void;
+  clear: () => void;
+  solve: () => void;
+  stop: () => void;
+};
 
-export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight = false, onOpenTables }) => {
+type Props = { onClose?: () => void; question?: Question; fullHeight?: boolean; onOpenTables?: () => void; showHeader?: boolean } & {
+  ref?: React.Ref<ScribbleBoardHandle>;
+};
+
+export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onClose, question, fullHeight = false, onOpenTables, showHeader = true }, ref) => {
   const drawWrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
@@ -193,6 +202,14 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
     setStreaming(false);
   };
 
+  // Expose imperative methods for parent controls (mobile sheet footer)
+  useImperativeHandle(ref, () => ({
+    setPen: () => setMode('pen'),
+    clear,
+    solve: handleSolve,
+    stop: handleStop,
+  }), [clear, handleSolve, handleStop]);
+
   const copySolution = async () => {
     if (!solution) return;
     try { await navigator.clipboard.writeText(solution); } catch {}
@@ -270,45 +287,47 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
 
   return (
     <div className={`w-full bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg ${fullHeight ? 'h-full flex flex-col' : ''}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <Grid className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-bold">Scribble Board</h3>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <Grid className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-bold">Scribble Board</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="icon" variant={mode === "pen" ? "default" : "outline"} className="h-8 w-8" onClick={() => setMode("pen")}>
+              <Pen className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={clear}>
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+            {/* Fast mode is always used for quick responses */}
+            {question && (
+              <Button size="sm" variant="outline" className="h-8 px-3 ml-1" onClick={handleSolve} disabled={loadingSolve}>
+                {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}        
+                <span className="ml-1 text-[12px] font-semibold">Solve</span>
+              </Button>
+            )}
+            {streaming && (
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleStop} title="Stop streaming">
+                <Square className="w-4 h-4" />
+              </Button>
+            )}
+            {onOpenTables && (
+              <Button size="sm" variant="outline" className="h-8 px-3" onClick={onOpenTables}>
+                Tables 2–12
+              </Button>
+            )}
+            {onClose && (
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="icon" variant={mode === "pen" ? "default" : "outline"} className="h-8 w-8" onClick={() => setMode("pen")}>
-            <Pen className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="outline" className="h-8 w-8" onClick={clear}>
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          {/* Fast mode is always used for quick responses */}
-          {question && (
-            <Button size="sm" variant="outline" className="h-8 px-3 ml-1" onClick={handleSolve} disabled={loadingSolve}>
-              {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}        
-              <span className="ml-1 text-[12px] font-semibold">Solve</span>
-            </Button>
-          )}
-          {streaming && (
-            <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleStop} title="Stop streaming">
-              <Square className="w-4 h-4" />
-            </Button>
-          )}
-          {onOpenTables && (
-            <Button size="sm" variant="outline" className="h-8 px-3" onClick={onOpenTables}>
-              Tables 2–12
-            </Button>
-          )}
-          {onClose && (
-            <Button size="icon" variant="outline" className="h-8 w-8" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+      )}
       <div
         ref={drawWrapRef}
-        className={`relative mb-3 overflow-auto rounded-lg border bg-white select-none ${fullHeight ? 'flex-1 min-h-[216px]' : 'min-h-[216px] h-[312px]'}`}
+        className={`relative mb-3 overflow-auto rounded-lg border bg-white select-none ${fullHeight ? 'flex-1 min-h-[216px]' : 'min-h-[200px] h-[45vh] max-h-[70vh] sm:min-h-[216px] sm:h-[312px]'}`}
       >
         <canvas
           ref={canvasRef}
@@ -388,4 +407,4 @@ export const ScribbleBoard: React.FC<Props> = ({ onClose, question, fullHeight =
       {/* Inline solution block removed; shown in overlay now */}
     </div>
   );
-};
+});

@@ -36,7 +36,7 @@ const TasksHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="container mx-auto px-4 py-10 max-w-3xl">
         <Card>
           <CardHeader>
