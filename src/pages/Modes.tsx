@@ -37,6 +37,8 @@ const Modes = () => {
   const [unlockCount, setUnlockCount] = useState<number>(0);
   const [unlockThreshold, setUnlockThreshold] = useState<number>(0.8);
   const [unlockProgress, setUnlockProgress] = useState<number>(0);
+  // Mobile-only stepper: 0 => Practice/Speed, 1 => AI/Friends
+  const [mobileStep, setMobileStep] = useState<number>(0);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -139,13 +141,14 @@ const Modes = () => {
   const goStats = () => navigate('/dashboard');
 
   return (
-    <div className="min-h-[100svh] md:min-h-screen bg-white">
-      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-10" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="min-h-[100svh] md:min-h-screen bg-white flex flex-col">
+      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-0 md:pb-10 flex flex-col flex-1" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl font-black">Choose Your Mode</h1>
           </div>
-          <div className="w-full sm:w-80" style={{ ['--primary' as any]: '249 74% 64%' }}>
+          {/* Hide header progress block on mobile; it will appear between cards instead */}
+          <div className="w-full md:w-80 hidden md:block" style={{ ['--primary' as any]: '249 74% 64%' }}>
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-muted-foreground">Progression</span>
               <span className="font-semibold">{progressCount}/{progressGoal} Quizzes</span>
@@ -154,7 +157,145 @@ const Modes = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+        {/* Mobile two-screen flow */}
+        <div className="md:hidden flex-1 flex flex-col space-y-4">
+          {mobileStep === 0 ? (
+            <>
+              {/* Practice Card (mobile) */}
+              <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6"/></div>
+                    <div>
+                      <CardTitle className="text-xl">Practice Mode</CardTitle>
+                      <p className="text-sm text-muted-foreground">Start with concept-wise practice at your own pace.</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
+                  <Button className="rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0]" onClick={startPractice}>Start Practice</Button>
+                </CardContent>
+              </Card>
+
+              {/* Mid unlock strip between Practice and Speed (mobile) */}
+              <div className="px-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {!isTeacher && !speedUnlocked && <Lock className="w-4 h-4 text-indigo-700" />}
+                    <span className={`text-xs font-semibold ${!isTeacher && !speedUnlocked ? 'text-indigo-700' : 'text-emerald-700'}`}>{isTeacher ? 'Unlocked' : (speedUnlocked ? 'Unlocked' : 'Locked')}</span>
+                  </div>
+                  <span className="text-[11px] text-gray-500">{Math.max(0, Math.min(100, Math.round(unlockProgress * 100)))}%</span>
+                </div>
+                <Progress className="h-2 bg-gray-200" value={Math.max(0, Math.min(100, unlockProgress * 100))} />
+                {!isTeacher && !speedUnlocked && (
+                  <div className="mt-1 text-[11px] text-gray-600">Average {Math.round((unlockAvg || 0) * 100)}% / {Math.round(unlockThreshold*100)}% • Sessions {unlockCount}/3</div>
+                )}
+              </div>
+
+              {/* Speed Card (mobile, no full overlay) */}
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6"/></div>
+                    <div>
+                      <CardTitle className="text-xl">Speed Drive</CardTitle>
+                      <p className="text-sm text-muted-foreground">Solve fast. Earn speed badges.</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
+                  <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!(isTeacher || speedUnlocked)}>Start Speed Run</Button>
+                </CardContent>
+              </Card>
+
+              <div className="mt-auto pt-3 pb-[env(safe-area-inset-bottom,0px)] text-center">
+                <Button variant="secondary" className="rounded-full" onClick={() => setMobileStep(1)}>Go to next</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* AI Rivals (mobile) */}
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6"/></div>
+                    <div>
+                      <CardTitle className="text-xl">AI Rivals</CardTitle>
+                      <p className="text-sm text-muted-foreground">Challenge smart bots and climb the ranks!</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'STEADY AI', diff: 'Easy', color: 'text-emerald-700 bg-emerald-50', rate: 'Win Rate: 60%' },
+                      { name: 'SMART AI', diff: 'Medium', color: 'text-amber-700 bg-amber-50', rate: 'Win Rate: 45%' },
+                      { name: 'SPEED AI', diff: 'Hard', color: 'text-rose-700 bg-rose-50', rate: 'Win Rate: 20%' },
+                    ].map((r, idx) => (
+                      <button key={idx} onClick={startAI} disabled={!isTeacher} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${isTeacher ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
+                        <div>
+                          <div className="text-sm font-bold">{r.name}</div>
+                          <div className="text-[12px] text-muted-foreground flex items-center gap-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.color}`}>{r.diff}</span>
+                            <span>{r.rate}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-300"/>
+                      </button>
+                    ))}
+                  </div>
+                  <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!isTeacher}>Challenge Bot</Button>
+                </CardContent>
+                {!isTeacher && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-violet-600/60 text-white text-center p-6">
+                    <div>
+                      <Lock className="w-10 h-10 mx-auto mb-2" />
+                      <div className="font-bold">Locked</div>
+                      <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* Friends (mobile) */}
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6"/></div>
+                    <div>
+                      <CardTitle className="text-xl">Battle With Friends</CardTitle>
+                      <p className="text-sm text-muted-foreground">Compete live with your classmates!</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>+ Create Room</Button>
+                    <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>Join Room</Button>
+                  </div>
+                </CardContent>
+                {!isTeacher && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-sky-600/60 text-white text-center p-6">
+                    <div>
+                      <Lock className="w-10 h-10 mx-auto mb-2" />
+                      <div className="font-bold">Locked</div>
+                      <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              <div className="mt-auto pt-3 pb-[env(safe-area-inset-bottom,0px)] text-center">
+                <Button variant="secondary" className="rounded-full" onClick={() => setMobileStep(0)}>Go to Previous</Button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Desktop/Tablet original grid */}
+        <div className="hidden md:grid md:grid-cols-2 gap-8">
           <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
@@ -185,8 +326,9 @@ const Modes = () => {
               <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
               <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!(isTeacher || speedUnlocked)}>Start Speed Run</Button>
             </CardContent>
+            {/* Keep full overlay only for desktop/tablet */}
             {!isTeacher && !speedUnlocked && (
-              <div className="absolute inset-0 select-none">
+              <div className="absolute inset-0 select-none hidden md:block">
                 {/* Dynamic blue cover, width = remaining to unlock */}
                 <div className="h-full bg-indigo-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - unlockProgress) * 100))}%` }} />
                 {/* Foreground hint */}
@@ -272,7 +414,7 @@ const Modes = () => {
           </Card>
         </div>
 
-        <div className="mt-8 flex items-center justify-end gap-8 text-sm">
+        <div className="mt-8 hidden md:flex items-center justify-end gap-8 text-sm">
           <button className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900" onClick={revisitTopics}>
             <BookOpen className="w-4 h-4"/> Revisit Previous Topics
           </button>

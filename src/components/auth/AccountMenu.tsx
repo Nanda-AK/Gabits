@@ -62,12 +62,11 @@ export const AccountMenu = () => {
       {user && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full border bg-white/80 backdrop-blur px-3 py-1.5 shadow hover:shadow-md transition">
+            <button className="flex items-center rounded-full border bg-white/80 backdrop-blur p-1.5 shadow hover:shadow-md transition" aria-label="Profile menu">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={avatarUrl} alt={displayName || "avatar"} />
                 <AvatarFallback>{(displayName || "?").slice(0,1).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <span className="max-w-[140px] truncate text-sm font-semibold text-gray-700">{displayName}</span>
             </button>
           </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

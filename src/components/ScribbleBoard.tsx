@@ -114,7 +114,7 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
     setLoadingSolve(false);
   }, [question?.id]);
 
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getPos = (e: { clientX: number; clientY: number }) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -150,6 +150,43 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
     ctx.lineTo(curr.x, curr.y);
     ctx.stroke();
     lastPos.current = curr;
+  };
+
+  // Pointer events (unified for mouse, pen, touch)
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    setDrawing(true);
+    lastPos.current = getPos(e);
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.globalCompositeOperation = mode === "eraser" ? "destination-out" : "source-over";
+    ctx.strokeStyle = mode === "eraser" ? "rgba(0,0,0,1)" : penColor;
+    ctx.fillStyle = mode === "eraser" ? "rgba(0,0,0,1)" : penColor;
+    ctx.beginPath();
+    ctx.arc(lastPos.current.x, lastPos.current.y, penSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing || !lastPos.current) return;
+    e.preventDefault();
+    const curr = getPos(e);
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.globalCompositeOperation = mode === "eraser" ? "destination-out" : "source-over";
+    ctx.strokeStyle = mode === "eraser" ? "rgba(0,0,0,1)" : penColor;
+    ctx.lineWidth = penSize;
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(curr.x, curr.y);
+    ctx.stroke();
+    lastPos.current = curr;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    setDrawing(false);
+    lastPos.current = null;
   };
 
   const clear = () => {
@@ -331,7 +368,14 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
       >
         <canvas
           ref={canvasRef}
-          className="w-full h-full cursor-crosshair"
+          className="w-full h-full cursor-crosshair touch-none"
+          onContextMenu={(e) => e.preventDefault()}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerMove={handlePointerMove}
+          // Fallback mouse handlers (older browsers)
           onMouseDown={handleDown}
           onMouseUp={handleUp}
           onMouseLeave={handleUp}
