@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, BookOpen, Timer, Bot, Users, ChevronRight, BarChart3, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
-import { getChapterSpeedUnlock } from "@/services/practice";
+import { getChapterSpeedUnlock, getChapterModeUnlock } from "@/services/practice";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/lib/supabase";
 import { getLocalYMD } from "@/lib/date";
@@ -33,10 +33,20 @@ const Modes = () => {
 
   const isTeacher = role === 'teacher';
   const [speedUnlocked, setSpeedUnlocked] = useState<boolean>(false);
+  const [aiUnlocked, setAiUnlocked] = useState<boolean>(false);
+  const [friendsUnlocked, setFriendsUnlocked] = useState<boolean>(false);
   const [unlockAvg, setUnlockAvg] = useState<number>(0);
   const [unlockCount, setUnlockCount] = useState<number>(0);
   const [unlockThreshold, setUnlockThreshold] = useState<number>(0.8);
   const [unlockProgress, setUnlockProgress] = useState<number>(0);
+  // AI unlock progress
+  const [aiUnlockAvg, setAiUnlockAvg] = useState<number>(0);
+  const [aiUnlockCount, setAiUnlockCount] = useState<number>(0);
+  const [aiUnlockProgress, setAiUnlockProgress] = useState<number>(0);
+  // Friends unlock progress
+  const [friendsUnlockAvg, setFriendsUnlockAvg] = useState<number>(0);
+  const [friendsUnlockCount, setFriendsUnlockCount] = useState<number>(0);
+  const [friendsUnlockProgress, setFriendsUnlockProgress] = useState<number>(0);
   // Mobile-only stepper: 0 => Practice/Speed, 1 => AI/Friends
   const [mobileStep, setMobileStep] = useState<number>(0);
   useEffect(() => {
@@ -48,9 +58,10 @@ const Modes = () => {
         try {
           const raw = localStorage.getItem('play:pending_task');
           const p = raw ? JSON.parse(raw) : null;
-          const chapter = p?.chapter as string | null;
-          if (!chapter) { if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); } return; }
-          const s = await getChapterSpeedUnlock(user.id, chapter, 0.8, 3);
+          const qs = new URLSearchParams(window.location.search);
+          const chapter = (p?.chapter as string) ?? (qs.get('chapter') || null);
+          if (!chapter) { if (alive) { setSpeedUnlocked(false); setAiUnlocked(false); setFriendsUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); } return; }
+          const s = await getChapterModeUnlock(user.id, chapter, 'speed', 0.8, 3);
           if (!alive) return;
           setSpeedUnlocked(!!s.unlocked);
           setUnlockAvg(s.avg);
@@ -60,11 +71,33 @@ const Modes = () => {
           const accuracyFactor = Math.min(1, (s.avg || 0) / 0.8);
           const composite = Math.max(0, Math.min(1, sessionFactor * accuracyFactor));
           setUnlockProgress(composite);
+          // Also check AI/Friends gating for this chapter (lifetime)
+          try {
+            const ai = await getChapterModeUnlock(user.id, chapter, 'battle-ai', 0.8, 3);
+            const fr = await getChapterModeUnlock(user.id, chapter, 'battle-friends', 0.8, 3);
+            if (alive) {
+              setAiUnlocked(!!ai.unlocked);
+              setAiUnlockAvg(ai.avg);
+              setAiUnlockCount(ai.count);
+              const aiSessionFactor = Math.min(1, (ai.count || 0) / 3);
+              const aiAccuracyFactor = Math.min(1, (ai.avg || 0) / 0.8);
+              const aiComposite = Math.max(0, Math.min(1, aiSessionFactor * aiAccuracyFactor));
+              setAiUnlockProgress(aiComposite);
+
+              setFriendsUnlocked(!!fr.unlocked);
+              setFriendsUnlockAvg(fr.avg);
+              setFriendsUnlockCount(fr.count);
+              const frSessionFactor = Math.min(1, (fr.count || 0) / 3);
+              const frAccuracyFactor = Math.min(1, (fr.avg || 0) / 0.8);
+              const frComposite = Math.max(0, Math.min(1, frSessionFactor * frAccuracyFactor));
+              setFriendsUnlockProgress(frComposite);
+            }
+          } catch { if (alive) { setAiUnlocked(false); setFriendsUnlocked(false); } }
           return;
-        } catch {}
-        if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
+        } catch { }
+        if (alive) { setSpeedUnlocked(false); setAiUnlocked(false); setFriendsUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
       } catch {
-        if (alive) { setSpeedUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
+        if (alive) { setSpeedUnlocked(false); setAiUnlocked(false); setFriendsUnlocked(false); setUnlockAvg(0); setUnlockCount(0); setUnlockProgress(0); }
       }
     })();
     return () => { alive = false; };
@@ -103,14 +136,30 @@ const Modes = () => {
 
   const startPractice = () => {
     if (isTeacher) { navigate('/modes/solo/practice'); return; }
-    // If a pending task was selected from Assignments, start it immediately
-    if (pending?.id) {
+    // Read latest pending directly (avoid race with state)
+    let p: any = null;
+    try {
+      const raw = localStorage.getItem('play:pending_task');
+      p = raw ? JSON.parse(raw) : pending;
+    } catch { p = pending; }
+    // Start with task id if present
+    if (p?.id) {
       const qs = new URLSearchParams();
-      qs.set('task', pending.id);
-      qs.set('mode', pending.mode || 'practice');
-      if (pending.difficulty) qs.set('difficulty', String(pending.difficulty));
-      if (pending.topics_csv) qs.set('topics', pending.topics_csv);
-      if (pending.chapter) qs.set('chapter', pending.chapter);
+      qs.set('task', p.id);
+      qs.set('mode', p.mode || 'practice');
+      if (p.difficulty) qs.set('difficulty', String(p.difficulty));
+      if (p.topics_csv) qs.set('topics', p.topics_csv);
+      if (p.chapter) qs.set('chapter', p.chapter);
+      navigate(`/play?${qs.toString()}`);
+      return;
+    }
+    // Or chapter-only flow from Chapters Progress / modal
+    if (p?.chapter) {
+      const qs = new URLSearchParams();
+      qs.set('mode', 'practice');
+      qs.set('difficulty', String(p.difficulty || 'moderate'));
+      if (p.topics_csv) qs.set('topics', p.topics_csv);
+      qs.set('chapter', p.chapter);
       navigate(`/play?${qs.toString()}`);
       return;
     }
@@ -125,18 +174,17 @@ const Modes = () => {
     try {
       const raw = localStorage.getItem('play:pending_task');
       const p = raw ? JSON.parse(raw) : null;
-      if (!p?.id) { return; }
       const qs = new URLSearchParams();
-      qs.set('task', p.id);
       qs.set('mode', 'speed');
-      if (p.difficulty) qs.set('difficulty', String(p.difficulty));
-      if (p.topics_csv) qs.set('topics', p.topics_csv);
-      if (p.chapter) qs.set('chapter', p.chapter);
+      if (p?.id) qs.set('task', p.id);
+      qs.set('difficulty', String(p?.difficulty || 'moderate'));
+      if (p?.topics_csv) qs.set('topics', p.topics_csv);
+      if (p?.chapter) qs.set('chapter', p.chapter);
       navigate(`/play?${qs.toString()}`);
-    } catch {}
+    } catch { }
   };
-  const startAI = () => { if (isTeacher) navigate('/modes/compete/ai'); };
-  const goFriends = () => { if (isTeacher) navigate('/modes/compete/friends'); };
+  const startAI = () => { if (isTeacher || aiUnlocked) navigate('/modes/compete/ai'); };
+  const goFriends = () => { if (isTeacher || friendsUnlocked) navigate('/modes/compete/friends'); };
   const revisitTopics = () => isTeacher ? navigate('/modes/solo/practice') : toTasks();
   const goStats = () => navigate('/dashboard');
 
@@ -165,7 +213,7 @@ const Modes = () => {
               <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6"/></div>
+                    <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6" /></div>
                     <div>
                       <CardTitle className="text-xl">Practice Mode</CardTitle>
                       <p className="text-sm text-muted-foreground">Start with concept-wise practice at your own pace.</p>
@@ -189,7 +237,7 @@ const Modes = () => {
                 </div>
                 <Progress className="h-2 bg-gray-200" value={Math.max(0, Math.min(100, unlockProgress * 100))} />
                 {!isTeacher && !speedUnlocked && (
-                  <div className="mt-1 text-[11px] text-gray-600">Average {Math.round((unlockAvg || 0) * 100)}% / {Math.round(unlockThreshold*100)}% • Sessions {unlockCount}/3</div>
+                  <div className="mt-1 text-[11px] text-gray-600">Average {Math.round((unlockAvg || 0) * 100)}% / {Math.round(unlockThreshold * 100)}% • Sessions {unlockCount}/3</div>
                 )}
               </div>
 
@@ -197,7 +245,7 @@ const Modes = () => {
               <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6"/></div>
+                    <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6" /></div>
                     <div>
                       <CardTitle className="text-xl">Speed Drive</CardTitle>
                       <p className="text-sm text-muted-foreground">Solve fast. Earn speed badges.</p>
@@ -208,6 +256,20 @@ const Modes = () => {
                   <Pill className="bg-[#E8EDFF] text-[#4F46E5]">Standard 6</Pill>
                   <Button className="rounded-full bg-[#F4B400] hover:bg-[#E1A100] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startSpeed} disabled={!(isTeacher || speedUnlocked)}>Start Speed Run</Button>
                 </CardContent>
+                {/* Mobile overlay to match desktop: lock + dynamic blue cover */}
+                {!isTeacher && !speedUnlocked && (
+                  <div className="absolute inset-0 select-none">
+                    <div className="h-full bg-indigo-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - unlockProgress) * 100))}%` }} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                      <Lock className="w-10 h-10 mx-auto mb-2" />
+                      <div className="font-bold">Locked</div>
+                      <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / 80% • Sessions {unlockCount}/3</div>
+                      <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(unlockProgress * 100))}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Card>
 
               <div className="mt-auto pt-3 pb-[env(safe-area-inset-bottom,0px)] text-center">
@@ -220,7 +282,7 @@ const Modes = () => {
               <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6"/></div>
+                    <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6" /></div>
                     <div>
                       <CardTitle className="text-xl">AI Rivals</CardTitle>
                       <p className="text-sm text-muted-foreground">Challenge smart bots and climb the ranks!</p>
@@ -234,7 +296,7 @@ const Modes = () => {
                       { name: 'SMART AI', diff: 'Medium', color: 'text-amber-700 bg-amber-50', rate: 'Win Rate: 45%' },
                       { name: 'SPEED AI', diff: 'Hard', color: 'text-rose-700 bg-rose-50', rate: 'Win Rate: 20%' },
                     ].map((r, idx) => (
-                      <button key={idx} onClick={startAI} disabled={!isTeacher} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${isTeacher ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
+                      <button key={idx} onClick={startAI} disabled={!(isTeacher || aiUnlocked)} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${(isTeacher || aiUnlocked) ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
                         <div>
                           <div className="text-sm font-bold">{r.name}</div>
                           <div className="text-[12px] text-muted-foreground flex items-center gap-2">
@@ -242,18 +304,22 @@ const Modes = () => {
                             <span>{r.rate}</span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-300"/>
+                        <ChevronRight className="w-5 h-5 text-gray-300" />
                       </button>
                     ))}
                   </div>
-                  <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!isTeacher}>Challenge Bot</Button>
+                  <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!(isTeacher || aiUnlocked)}>Challenge Bot</Button>
                 </CardContent>
-                {!isTeacher && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-violet-600/60 text-white text-center p-6">
-                    <div>
+                {!isTeacher && !aiUnlocked && (
+                  <div className="absolute inset-0 select-none">
+                    <div className="h-full bg-violet-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - aiUnlockProgress) * 100))}%` }} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                       <Lock className="w-10 h-10 mx-auto mb-2" />
                       <div className="font-bold">Locked</div>
-                      <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                      <div className="text-xs opacity-95 mb-2">Speed avg {Math.round((aiUnlockAvg || 0) * 100)}% / 80% • Sessions {aiUnlockCount}/3</div>
+                      <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(aiUnlockProgress * 100))}%` }} />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -263,7 +329,7 @@ const Modes = () => {
               <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6"/></div>
+                    <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6" /></div>
                     <div>
                       <CardTitle className="text-xl">Battle With Friends</CardTitle>
                       <p className="text-sm text-muted-foreground">Compete live with your classmates!</p>
@@ -272,16 +338,20 @@ const Modes = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-3">
-                    <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>+ Create Room</Button>
-                    <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>Join Room</Button>
+                    <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!(isTeacher || friendsUnlocked)}>+ Create Room</Button>
+                    <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!(isTeacher || friendsUnlocked)}>Join Room</Button>
                   </div>
                 </CardContent>
-                {!isTeacher && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-sky-600/60 text-white text-center p-6">
-                    <div>
+                {!isTeacher && !friendsUnlocked && (
+                  <div className="absolute inset-0 select-none">
+                    <div className="h-full bg-sky-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - friendsUnlockProgress) * 100))}%` }} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                       <Lock className="w-10 h-10 mx-auto mb-2" />
                       <div className="font-bold">Locked</div>
-                      <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                      <div className="text-xs opacity-95 mb-2">AI avg {Math.round((friendsUnlockAvg || 0) * 100)}% / 80% • Sessions {friendsUnlockCount}/3</div>
+                      <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(friendsUnlockProgress * 100))}%` }} />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -299,7 +369,7 @@ const Modes = () => {
           <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6"/></div>
+                <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6" /></div>
                 <div>
                   <CardTitle className="text-xl">Practice Mode</CardTitle>
                   <p className="text-sm text-muted-foreground">Start with concept-wise practice at your own pace.</p>
@@ -315,7 +385,7 @@ const Modes = () => {
           <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6"/></div>
+                <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6" /></div>
                 <div>
                   <CardTitle className="text-xl">Speed Drive</CardTitle>
                   <p className="text-sm text-muted-foreground">Solve fast. Earn speed badges.</p>
@@ -347,7 +417,7 @@ const Modes = () => {
           <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6"/></div>
+                <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6" /></div>
                 <div>
                   <CardTitle className="text-xl">AI Rivals</CardTitle>
                   <p className="text-sm text-muted-foreground">Challenge smart bots and climb the ranks!</p>
@@ -361,7 +431,7 @@ const Modes = () => {
                   { name: 'SMART AI', diff: 'Medium', color: 'text-amber-700 bg-amber-50', rate: 'Win Rate: 45%' },
                   { name: 'SPEED AI', diff: 'Hard', color: 'text-rose-700 bg-rose-50', rate: 'Win Rate: 20%' },
                 ].map((r, idx) => (
-                  <button key={idx} onClick={startAI} disabled={!isTeacher} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${isTeacher ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
+                  <button key={idx} onClick={startAI} disabled={!(isTeacher || aiUnlocked)} className={`w-full flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 text-left ${(isTeacher || aiUnlocked) ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed'}`}>
                     <div>
                       <div className="text-sm font-bold">{r.name}</div>
                       <div className="text-[12px] text-muted-foreground flex items-center gap-2">
@@ -369,18 +439,22 @@ const Modes = () => {
                         <span>{r.rate}</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-300"/>
+                    <ChevronRight className="w-5 h-5 text-gray-300" />
                   </button>
                 ))}
               </div>
-              <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!isTeacher}>Challenge Bot</Button>
+              <Button className="w-full mt-4 rounded-full bg-[#6C5CE7] hover:bg-[#5A4FE0] disabled:opacity-60 disabled:cursor-not-allowed" onClick={startAI} disabled={!(isTeacher || aiUnlocked)}>Challenge Bot</Button>
             </CardContent>
-            {!isTeacher && (
-              <div className="absolute inset-0 flex items-center justify-center bg-violet-600/60 text-white text-center p-6">
-                <div>
+            {!isTeacher && !aiUnlocked && (
+              <div className="absolute inset-0 select-none hidden md:block">
+                <div className="h-full bg-violet-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - aiUnlockProgress) * 100))}%` }} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
-                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                  <div className="text-xs opacity-95 mb-2">Speed avg {Math.round((aiUnlockAvg || 0) * 100)}% / 80% • Sessions {aiUnlockCount}/3</div>
+                  <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(aiUnlockProgress * 100))}%` }} />
+                  </div>
                 </div>
               </div>
             )}
@@ -389,7 +463,7 @@ const Modes = () => {
           <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6"/></div>
+                <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6" /></div>
                 <div>
                   <CardTitle className="text-xl">Battle With Friends</CardTitle>
                   <p className="text-sm text-muted-foreground">Compete live with your classmates!</p>
@@ -398,16 +472,20 @@ const Modes = () => {
             </CardHeader>
             <CardContent>
               <div className="flex gap-3">
-                <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>+ Create Room</Button>
-                <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!isTeacher}>Join Room</Button>
+                <Button className="flex-1 rounded-full bg-[#16A34A] hover:bg-[#128A3F] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!(isTeacher || friendsUnlocked)}>+ Create Room</Button>
+                <Button className="flex-1 rounded-full bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-60 disabled:cursor-not-allowed" onClick={goFriends} disabled={!(isTeacher || friendsUnlocked)}>Join Room</Button>
               </div>
             </CardContent>
-            {!isTeacher && (
-              <div className="absolute inset-0 flex items-center justify-center bg-sky-600/60 text-white text-center p-6">
-                <div>
+            {!isTeacher && !friendsUnlocked && (
+              <div className="absolute inset-0 select-none hidden md:block">
+                <div className="h-full bg-sky-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - friendsUnlockProgress) * 100))}%` }} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
-                  <div className="text-xs opacity-90">Complete practice sessions to unlock.</div>
+                  <div className="text-xs opacity-95 mb-2">AI avg {Math.round((friendsUnlockAvg || 0) * 100)}% / 80% • Sessions {friendsUnlockCount}/3</div>
+                  <div className="w-40 h-2 bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white/90 transition-all" style={{ width: `${Math.max(0, Math.round(friendsUnlockProgress * 100))}%` }} />
+                  </div>
                 </div>
               </div>
             )}
@@ -416,10 +494,10 @@ const Modes = () => {
 
         <div className="mt-8 hidden md:flex items-center justify-end gap-8 text-sm">
           <button className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900" onClick={revisitTopics}>
-            <BookOpen className="w-4 h-4"/> Revisit Previous Topics
+            <BookOpen className="w-4 h-4" /> Revisit Previous Topics
           </button>
           <button className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900" onClick={goStats}>
-            <BarChart3 className="w-4 h-4"/> My Stats
+            <BarChart3 className="w-4 h-4" /> My Stats
           </button>
         </div>
       </div>

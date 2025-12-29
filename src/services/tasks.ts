@@ -114,3 +114,41 @@ export async function getTaskById(id: string): Promise<LiveTask | null> {
     return null;
   }
 }
+
+// Student task statuses (drives the "Tasks in Progress" modal)
+export type StudentTaskStatus = {
+  task_id: string;
+  chapter: string | null;
+  status: 'not_started' | 'in_progress' | 'completed';
+  speed_unlocked: boolean;
+  ai_unlocked: boolean;
+  friends_unlocked: boolean;
+  runs_count: number;
+  last_run_at: string | null;
+};
+
+export async function getStudentTaskStatuses(userId: string): Promise<StudentTaskStatus[]> {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase.rpc('get_student_task_statuses', { p_user_id: userId });
+    if (error || !data) return [];
+    return (Array.isArray(data) ? data : [data]) as StudentTaskStatus[];
+  } catch {
+    return [];
+  }
+}
+
+// Fetch multiple tasks by IDs in one query (used to render titles for statuses)
+export async function getTasksByIds(ids: string[]): Promise<LiveTask[]> {
+  if (!ids || ids.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from('live_tasks')
+      .select('*')
+      .in('id', ids);
+    if (error || !data) return [];
+    return data as LiveTask[];
+  } catch {
+    return [];
+  }
+}

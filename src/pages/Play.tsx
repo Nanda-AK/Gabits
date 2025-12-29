@@ -35,21 +35,27 @@ const Play = () => {
         const p = await getProfile(user.id);
         if (!cancelled) setRole((p?.role as string) || 'student');
       }
-      // If not teacher, require a valid active task
+      // If not teacher, either require a valid active task OR allow chapter-only launch
       const isTeacher = (role === 'teacher');
       if (!isTeacher) {
-        if (!taskId) { if (!cancelled) { setReady(true); navigate('/tasks', { replace: true }); } return; }
-        const t = await getTaskById(taskId);
-        if (!cancelled) {
-          if (!t || t.status !== 'active') { setReady(true); navigate('/tasks', { replace: true }); return; }
-          setTask(t);
+        if (!taskId) {
+          // Allow direct chapter launch (from Chapters Progress / modal)
+          if (!qsChapter) { if (!cancelled) { setReady(true); navigate('/tasks', { replace: true }); } return; }
+          // chapter present → proceed without fetching task
+          if (!cancelled) setTask(null);
+        } else {
+          const t = await getTaskById(taskId);
+          if (!cancelled) {
+            if (!t || t.status !== 'active') { setReady(true); navigate('/tasks', { replace: true }); return; }
+            setTask(t);
+          }
         }
       }
       if (!cancelled) setReady(true);
     })();
     return () => { cancelled = true; };
   // include taskId so navigating to different task works
-  }, [user?.id, guest, taskId, role]);
+  }, [user?.id, guest, taskId, role, qsChapter]);
 
   // Final settings: allow query ?mode to override task.mode (needed to start Speed for a Practice task)
   const mode = (q.get('mode') as any) ? qsMode : (task?.mode || qsMode);

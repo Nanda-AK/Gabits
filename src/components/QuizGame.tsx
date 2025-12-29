@@ -22,7 +22,7 @@ import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
-import { logPracticeSession, getSeenQuestionIds, markSeenQuestionIds, ensureChapterSpeedUnlock } from "@/services/practice";
+import { logPracticeSession, logChapterModeRun, getSeenQuestionIds, markSeenQuestionIds, ensureChapterSpeedUnlock, ensureChapterModeUnlock, grantChapterModeUnlock } from "@/services/practice";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
 import { createRun, completeRun } from "@/services/taskRuns";
@@ -779,6 +779,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           correct: correctCount,
           used_seconds: overallTime,
         });
+        // NEW: Log to chapter_mode_runs for unlock tracking
+        if (chapterName) {
+          try {
+            await logChapterModeRun({
+              user_id: userId,
+              chapter: chapterName,
+              mode: 'practice',
+              difficulty,
+              total: totalQ,
+              correct: correctCount,
+            });
+          } catch { }
+        }
         // Persist lifetime per-chapter unlock if eligible
         if (chapterName) {
           try { await ensureChapterSpeedUnlock(userId, chapterName, 0.8, 3); } catch { }
@@ -1077,7 +1090,29 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       difficulty,
       result,
     }).catch(() => { });
-  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const chAI = chapter || null;
+    const totalQ = shuffledQuestions.length || 10;
+    const correct = (studentCorrectList || []).filter(Boolean).length;
+    if (chAI) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: chAI,
+          mode: 'battle-ai',
+          difficulty,
+          total: totalQ,
+          correct: correct,
+        }).catch(() => { });
+      } catch { }
+    }
+    // Persist lifetime per-chapter unlock for AI mode if eligible
+    if (chAI) {
+      try { ensureChapterModeUnlock(userId, chAI, 'battle-ai', 0.8, 3); } catch { }
+      // Check if Friends should unlock (AI avg >= 80% over last 3 sessions)
+      try { ensureChapterModeUnlock(userId, chAI, 'battle-friends', 0.8, 3); } catch { }
+    }
+  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty, shuffledQuestions, studentCorrectList, chapter]);
 
   // Compete (Friends): grant rewards once when computed
   const friendsGrantRef = useRef<boolean>(false);
@@ -1090,6 +1125,26 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const localDate = getLocalYMD();
     const result: 'win' | 'loss' | 'draw' = playerPoints > aiScore ? 'win' : (playerPoints < aiScore ? 'loss' : 'draw');
     grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => { });
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const chFR = chapter || null;
+    const totalQ = shuffledQuestions.length || 10;
+    const correct = (studentCorrectList || []).filter(Boolean).length;
+    if (chFR) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: chFR,
+          mode: 'battle-friends',
+          difficulty,
+          total: totalQ,
+          correct: correct,
+        }).catch(() => { });
+      } catch { }
+    }
+    // Persist lifetime per-chapter unlock for Friends mode if eligible
+    if (chFR) {
+      try { ensureChapterModeUnlock(userId, chFR, 'battle-friends', 0.8, 3); } catch { }
+    }
   }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
 
   // Speed: after completion, log run and capture rewards (coins, gems, badges)
@@ -1119,7 +1174,26 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     logSpeedRun(payload).then(res => {
       if (res) setSpeedRewards(res);
     }).catch(() => { });
-  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions]);
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const ch = chapter || null;
+    if (ch) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: ch,
+          mode: 'speed',
+          difficulty,
+          total: totalQ,
+          correct: correctAnswers,
+        }).catch(() => { });
+      } catch { }
+    }
+    // No adhoc task_runs insert; schema requires a valid task_id
+    // Still ensure speed unlock computation
+    try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'speed', 0.8, 3).catch(() => { }); } } catch { }
+    // Check if AI should unlock (Speed avg >= 80% over last 3 sessions)
+    try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'battle-ai', 0.8, 3).catch(() => { }); } } catch { }
+  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions, chapter, overallTime]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();

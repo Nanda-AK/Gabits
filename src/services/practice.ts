@@ -29,8 +29,119 @@ export async function logPracticeSession(params: {
   } catch {
     return false;
   }
+
 }
 
+// NEW: Log a run to chapter_mode_runs for unlock tracking
+// This works for BOTH live tasks AND chapter-only sessions
+export async function logChapterModeRun(params: {
+  user_id: string;
+  chapter: string;
+  mode: 'practice' | 'speed' | 'battle-ai' | 'battle-friends';
+  difficulty: 'easy' | 'moderate' | 'difficult';
+  total: number;
+  correct: number;
+}): Promise<boolean> {
+  if (!params.user_id || !params.chapter) return false;
+  try {
+    const payload = {
+      user_id: params.user_id,
+      chapter: params.chapter,
+      mode: params.mode,
+      difficulty: params.difficulty,
+      total: Math.max(0, Math.floor(params.total || 0)),
+      correct: Math.max(0, Math.floor(params.correct || 0)),
+      completed_at: new Date().toISOString(),
+    } as any;
+    const { error } = await supabase.from('chapter_mode_runs').insert(payload);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// Directly grant a lifetime per-chapter unlock for a mode (upsert row)
+export async function grantChapterModeUnlock(
+  userId: string,
+  chapter: string,
+  mode: 'speed' | 'battle-ai' | 'battle-friends',
+  unlockedAt?: string,
+): Promise<boolean> {
+  if (!userId || !chapter || !mode) return false;
+  try {
+    const row = {
+      user_id: userId,
+      chapter,
+      mode,
+      unlocked_at: unlockedAt || new Date().toISOString(),
+    } as any;
+    const { error } = await supabase
+      .from('chapter_mode_unlocks')
+      .upsert(row, { onConflict: 'user_id,chapter,mode' });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// Generic per-mode lifetime unlock helpers (speed/ai/friends)
+export async function ensureChapterModeUnlock(
+  userId: string,
+  chapter: string,
+  mode: 'speed' | 'battle-ai' | 'battle-friends',
+  threshold = 0.8,
+  window = 3,
+): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }> {
+  if (!userId || !chapter || !mode) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  try {
+    const { data, error } = await supabase.rpc('ensure_chapter_mode_unlock', {
+      p_user_id: userId,
+      p_chapter: chapter,
+      p_mode: mode,
+      p_threshold: threshold,
+      p_window: window,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      unlocked: !!row?.unlocked,
+      avg: Number(row?.avg || 0),
+      count: Number(row?.count || 0),
+      unlocked_at: row?.unlocked_at || null,
+    };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  }
+}
+
+export async function getChapterModeUnlock(
+  userId: string,
+  chapter: string,
+  mode: 'speed' | 'battle-ai' | 'battle-friends',
+  threshold = 0.8,
+  window = 3,
+): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }> {
+  if (!userId || !chapter || !mode) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  try {
+    const { data, error } = await supabase.rpc('get_chapter_mode_unlock', {
+      p_user_id: userId,
+      p_chapter: chapter,
+      p_mode: mode,
+      p_threshold: threshold,
+      p_window: window,
+    });
+    if (error || !data) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      unlocked: !!row?.unlocked,
+      avg: Number(row?.avg || 0),
+      count: Number(row?.count || 0),
+      unlocked_at: row?.unlocked_at || null,
+    };
+  } catch {
+    return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
+  }
+}
 export async function getPracticeCountToday(userId: string): Promise<number> {
   if (!userId) return 0;
   try {
@@ -84,8 +195,7 @@ export async function getSpeedUnlockForTeacher(teacherId: string, studentUserId:
 }
 
 // Lifetime per-chapter unlock: compute and persist if eligible
-export async function ensureChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
-{
+export async function ensureChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }> {
   if (!userId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
   try {
     const { data, error } = await supabase.rpc('ensure_chapter_speed_unlock', {
@@ -108,8 +218,7 @@ export async function ensureChapterSpeedUnlock(userId: string, chapter: string, 
 }
 
 // Read per-chapter unlock (persisted), and compute/persist if not present and eligible
-export async function getChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
-{
+export async function getChapterSpeedUnlock(userId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }> {
   if (!userId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
   try {
     const { data, error } = await supabase.rpc('get_chapter_speed_unlock', {
@@ -132,8 +241,7 @@ export async function getChapterSpeedUnlock(userId: string, chapter: string, thr
 }
 
 // Teacher view of per-chapter unlock
-export async function getChapterSpeedUnlockForTeacher(teacherId: string, studentUserId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }>
-{
+export async function getChapterSpeedUnlockForTeacher(teacherId: string, studentUserId: string, chapter: string, threshold = 0.8, window = 3): Promise<{ unlocked: boolean; avg: number; count: number; unlocked_at: string | null; }> {
   if (!teacherId || !studentUserId || !chapter) return { unlocked: false, avg: 0, count: 0, unlocked_at: null };
   try {
     const { data, error } = await supabase.rpc('get_chapter_speed_unlock_for_teacher', {

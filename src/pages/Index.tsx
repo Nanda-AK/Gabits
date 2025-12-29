@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
-import { getActiveTasks, type LiveTask } from "@/services/tasks";
+import { getActiveTasks, type LiveTask, getStudentTaskStatuses, getTasksByIds, type StudentTaskStatus } from "@/services/tasks";
 import { getUserBalances, getXpLeaderboard } from "@/services/rewards";
 import { getRecentRunsForStudent, type TaskRunWithTask } from "@/services/taskRuns";
 import { supabase } from "@/lib/supabase";
 import { CompletedTodayModal } from "@/components/CompletedTodayModal";
+import { ChaptersInProgressModal } from "@/components/ChaptersInProgressModal";
 import { getLocalYMD } from "@/lib/date";
 import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2, Eye } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -87,12 +88,41 @@ const Index = () => {
     return Math.max(0, Math.min(100, Math.round(pct)));
   }, [balances]);
 
-  // Tasks
+  // Tasks and per-student statuses (fix counts)
   const [activeTasks, setActiveTasks] = useState<LiveTask[]>([]);
+  const [statuses, setStatuses] = useState<StudentTaskStatus[]>([]);
+  const [newTaskItems, setNewTaskItems] = useState<LiveTask[]>([]);
+  const [progressTaskItems, setProgressTaskItems] = useState<LiveTask[]>([]);
+  const [completedTaskItems, setCompletedTaskItems] = useState<LiveTask[]>([]);
+  const [newCount, setNewCount] = useState<number>(0);
+  const [progressCountCard, setProgressCountCard] = useState<number>(0);
+  const [completedCountCard, setCompletedCountCard] = useState<number>(0);
+
   useEffect(() => {
     (async () => {
-      if (!user) { setActiveTasks([]); return; }
-      setActiveTasks(await getActiveTasks());
+      if (!user) {
+        setActiveTasks([]); setStatuses([]);
+        setNewTaskItems([]); setProgressTaskItems([]); setCompletedTaskItems([]);
+        setNewCount(0); setProgressCountCard(0); setCompletedCountCard(0);
+        return;
+      }
+      const [tasks, st] = await Promise.all([
+        getActiveTasks(),
+        getStudentTaskStatuses(user.id),
+      ]);
+      setActiveTasks(tasks);
+      setStatuses(st);
+      // Map statuses to tasks
+      const byId = (await getTasksByIds(st.map(s => s.task_id))).reduce((m, t) => { (m as any)[t.id] = t; return m; }, {} as Record<string, LiveTask>);
+      const newStatuses = st.filter(s => s.status === 'not_started');
+      const progStatuses = st.filter(s => s.status === 'in_progress');
+      const doneStatuses = st.filter(s => s.status === 'completed');
+      setNewCount(newStatuses.length);
+      setProgressCountCard(progStatuses.length);
+      setCompletedCountCard(doneStatuses.length);
+      setNewTaskItems(newStatuses.map(s => byId[s.task_id]).filter(Boolean).slice(0,3));
+      setProgressTaskItems(progStatuses.map(s => byId[s.task_id]).filter(Boolean).slice(0,3));
+      setCompletedTaskItems(doneStatuses.map(s => byId[s.task_id]).filter(Boolean).slice(0,3));
     })();
   }, [user]);
 
@@ -141,9 +171,7 @@ const Index = () => {
     })();
   }, [user]);
 
-  // Derive task lists (basic wiring; deep task states can later be added)
-  const newTasks = activeTasks.slice(0,3);
-  const inProgress = activeTasks.slice(0,3); // placeholder wiring
+  // Completed modal count stays based on reward events (lifetime); card counts use statuses
   const completedCount = recentEvents.filter(e => e.source.includes('practice') || e.source.includes('speed') || e.source.includes('compete')).length;
   const recentPlayed = useMemo(() => {
     return recentEvents
@@ -154,6 +182,7 @@ const Index = () => {
   // Last 3 completed runs for the student with titles
   const [recentRuns, setRecentRuns] = useState<TaskRunWithTask[]>([]);
   const [todayModalOpen, setTodayModalOpen] = useState(false);
+  const [chaptersModalOpen, setChaptersModalOpen] = useState(false);
   useEffect(() => {
     (async () => {
       if (!user?.id) { setRecentRuns([]); return; }
@@ -210,11 +239,11 @@ const Index = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold flex items-center justify-between">
                   <span className="flex items-center gap-2"><ClipboardList className="w-5 h-5 text-indigo-600"/> New tasks</span>
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{activeTasks.length}</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{newCount}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600 space-y-2">
-                {newTasks.length === 0 ? <div>No new tasks</div> : newTasks.map((t) => (
+                {newTaskItems.length === 0 ? <div>No new tasks</div> : newTaskItems.map((t) => (
                   <div key={t.id} className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2"/>
                     <span className="truncate">{t.title}</span>
@@ -228,19 +257,19 @@ const Index = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold flex items-center justify-between">
                   <span className="flex items-center gap-2"><Hourglass className="w-5 h-5 text-violet-600"/> Tasks in progress</span>
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 text-violet-700 text-sm font-bold">{inProgress.length}</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 text-violet-700 text-sm font-bold">{progressCountCard}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600 space-y-2">
-                {inProgress.length === 0 ? (
+                {progressTaskItems.length === 0 ? (
                   <div>Nothing in progress</div>
-                ) : inProgress.map((t) => (
+                ) : progressTaskItems.map((t) => (
                   <div key={t.id} className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-2"/>
                     <span className="truncate">{t.title}</span>
                   </div>
                 ))}
-                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => navigate('/tasks')}>Continue</Button>
+                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => setChaptersModalOpen(true)}>Continue</Button>
               </CardContent>
             </Card>
 
@@ -248,7 +277,7 @@ const Index = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold flex items-center justify-between">
                   <span className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-indigo-600"/> Completed tasks</span>
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{completedCount}</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{completedCountCard}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-600 space-y-2">
@@ -284,10 +313,10 @@ const Index = () => {
                 )}
                 <button
                   onClick={() => setTodayModalOpen(true)}
-                  className="mt-2 w-full flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-indigo-100 transition"
+                  className="mt-2 w-full flex items-center justify-start gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-indigo-100 transition"
                 >
-                  <span className="inline-flex items-center gap-2"><Eye className="w-4 h-4 text-indigo-600"/> View Completed Tasks</span>
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white text-indigo-700 text-sm font-bold shadow-sm">{completedCount}</span>
+                  <Eye className="w-4 h-4 text-indigo-600"/>
+                  <span>View Completed Tasks</span>
                 </button>
               </CardContent>
             </Card>
@@ -387,6 +416,8 @@ const Index = () => {
           </Card>
         </div>
       </div>
+      {/* Modals */}
+      <ChaptersInProgressModal open={chaptersModalOpen} onOpenChange={setChaptersModalOpen} />
     </div>
   ));
 };
