@@ -12,32 +12,71 @@ const TasksHub = () => {
   const [tasks, setTasks] = useState<LiveTask[]>([]);
 
   useEffect(() => {
+    console.log('🔵 TasksHub useEffect triggered');
+    console.log('👤 User:', user?.id, 'Guest:', guest);
+
     let cancelled = false;
     const applyFilter = async (items: LiveTask[]) => {
-      if (!user || guest) return [] as LiveTask[];
+      console.log('🔍 applyFilter called with', items.length, 'items');
+      if (!user || guest) {
+        console.log('⚠️ No user or guest - returning empty');
+        return [] as LiveTask[];
+      }
       // Hide tasks whose chapter is already completed (Speed unlocked lifetime)
       const filtered: LiveTask[] = [];
       for (const t of items) {
-        if (!t.chapter) { filtered.push(t); continue; }
+        console.log('📝 Processing task:', t.id, t.chapter, t.title);
+        if (!t.chapter) {
+          console.log('  ✅ No chapter - including');
+          filtered.push(t);
+          continue;
+        }
         try {
           const r = await getChapterSpeedUnlock(user.id, t.chapter, 0.8, 3);
+          console.log('  🔓 Speed unlock check:', r.unlocked ? 'UNLOCKED (skip)' : 'LOCKED (include)');
           if (!r.unlocked) filtered.push(t);
-        } catch { filtered.push(t); }
+        } catch (e) {
+          console.log('  ❌ Speed check error:', e);
+          filtered.push(t);
+        }
       }
+      console.log('✅ Filtered result:', filtered.length, 'tasks');
       return filtered;
     };
+
     (async () => {
-      if (!user || guest) { setTasks([]); return; }
+      if (!user || guest) {
+        console.log('⚠️ Early return - no user');
+        setTasks([]);
+        return;
+      }
+      console.log('📡 Fetching active tasks...');
       const items = await getActiveTasks();
+      console.log('📦 Raw tasks from DB:', items.length, items);
+
       const filtered = await applyFilter(items);
-      if (!cancelled) setTasks(filtered);
+      console.log('🎯 Final filtered tasks:', filtered.length, filtered);
+
+      if (!cancelled) {
+        console.log('💾 Setting tasks state');
+        setTasks(filtered);
+      } else {
+        console.log('🚫 Cancelled - not setting state');
+      }
     })();
+
     const unsub = subscribeActiveTasks(async (items) => {
+      console.log('🔔 Realtime update received:', items.length, 'tasks');
       if (cancelled || !user || guest) return;
       const filtered = await applyFilter(items);
       if (!cancelled) setTasks(filtered);
     });
-    return () => { cancelled = true; unsub(); };
+
+    return () => {
+      console.log('🧹 Cleanup - cancelled');
+      cancelled = true;
+      unsub();
+    };
   }, [user?.id, guest]);
 
   const join = (t: LiveTask) => {
@@ -50,7 +89,7 @@ const TasksHub = () => {
         chapter: t.chapter,
       } as const;
       localStorage.setItem('play:pending_task', JSON.stringify(payload));
-    } catch {}
+    } catch { }
     navigate('/modes');
   };
 
