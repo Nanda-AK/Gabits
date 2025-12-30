@@ -67,7 +67,7 @@ const Play = () => {
   if (!ready) return null;
 
   return (
-    <div className="min-h-[100dvh] md:min-h-screen bg-background">
+    <div className="min-h-[100svh] md:min-h-screen bg-background">
       <QuizGame mode={mode} difficulty={difficulty} topic={topic} topics={topics} chapter={chapter || undefined} lobbyCode={lobby} />
     </div>
   );

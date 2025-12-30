@@ -67,10 +67,12 @@ const Modes = () => {
           setUnlockAvg(s.avg);
           setUnlockCount(s.count);
           setUnlockThreshold(0.8);
+          // Progress rule: do NOT reduce the lock overlay until accuracy meets 80%.
+          // Once accuracy >= 80%, show progress based on sessions (count/3) only.
           const sessionFactor = Math.min(1, (s.count || 0) / 3);
-          const accuracyFactor = Math.min(1, (s.avg || 0) / 0.8);
-          const composite = Math.max(0, Math.min(1, sessionFactor * accuracyFactor));
-          setUnlockProgress(composite);
+          const accuracyMet = (s.avg || 0) >= 0.8;
+          const progress = accuracyMet ? sessionFactor : 0;
+          setUnlockProgress(progress);
           // Also check AI/Friends gating for this chapter (lifetime)
           try {
             const ai = await getChapterModeUnlock(user.id, chapter, 'battle-ai', 0.8, 3);
@@ -80,17 +82,17 @@ const Modes = () => {
               setAiUnlockAvg(ai.avg);
               setAiUnlockCount(ai.count);
               const aiSessionFactor = Math.min(1, (ai.count || 0) / 3);
-              const aiAccuracyFactor = Math.min(1, (ai.avg || 0) / 0.8);
-              const aiComposite = Math.max(0, Math.min(1, aiSessionFactor * aiAccuracyFactor));
-              setAiUnlockProgress(aiComposite);
+              const aiAccuracyMet = (ai.avg || 0) >= 0.8;
+              const aiProgress = aiAccuracyMet ? aiSessionFactor : 0;
+              setAiUnlockProgress(aiProgress);
 
               setFriendsUnlocked(!!fr.unlocked);
               setFriendsUnlockAvg(fr.avg);
               setFriendsUnlockCount(fr.count);
               const frSessionFactor = Math.min(1, (fr.count || 0) / 3);
-              const frAccuracyFactor = Math.min(1, (fr.avg || 0) / 0.8);
-              const frComposite = Math.max(0, Math.min(1, frSessionFactor * frAccuracyFactor));
-              setFriendsUnlockProgress(frComposite);
+              const frAccuracyMet = (fr.avg || 0) >= 0.8;
+              const frProgress = frAccuracyMet ? frSessionFactor : 0;
+              setFriendsUnlockProgress(frProgress);
             }
           } catch { if (alive) { setAiUnlocked(false); setFriendsUnlocked(false); } }
           return;
@@ -189,8 +191,8 @@ const Modes = () => {
   const goStats = () => navigate('/dashboard');
 
   return (
-    <div className="min-h-[100dvh] md:min-h-screen bg-white flex flex-col">
-      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-[env(safe-area-inset-bottom,0px)] md:pb-10 flex flex-col flex-1" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+    <div className="min-h-[100svh] md:min-h-screen bg-white flex flex-col">
+      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-0 md:pb-10 flex flex-col flex-1" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl font-black">Choose Your Mode</h1>
@@ -206,11 +208,11 @@ const Modes = () => {
         </div>
 
         {/* Mobile two-screen flow */}
-        <div className="md:hidden flex-1 flex flex-col space-y-4">
+        <div className="md:hidden flex-1 flex flex-col space-y-4 pb-2">
           {mobileStep === 0 ? (
             <>
               {/* Practice Card (mobile) */}
-              <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+              <Card className="rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)] flex-[0.8] min-h-[160px]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className="rounded-xl p-3 bg-[#EEF2FF] text-[#4F46E5]"><BookOpen className="w-6 h-6" /></div>
@@ -242,7 +244,7 @@ const Modes = () => {
               </div>
 
               {/* Speed Card (mobile, no full overlay) */}
-              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_6px_24px_rgba(16,24,40,0.06)] flex-1 min-h-[220px]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className="rounded-xl p-3 bg-[#F5F3FF] text-[#7C3AED]"><Timer className="w-6 h-6" /></div>
@@ -272,14 +274,16 @@ const Modes = () => {
                 )}
               </Card>
 
-              <div className="mt-auto pt-3 pb-[env(safe-area-inset-bottom,0px)] text-center">
-                <Button variant="secondary" className="rounded-full" onClick={() => setMobileStep(1)}>Go to next</Button>
+              <div className="sticky bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white to-transparent pt-2 pb-[env(safe-area-inset-bottom,0px)]">
+                <div className="px-2">
+                  <Button variant="secondary" className="w-full rounded-full" onClick={() => setMobileStep(1)}>Go to next</Button>
+                </div>
               </div>
             </>
           ) : (
             <>
               {/* AI Rivals (mobile) */}
-              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)] flex-[0.9] min-h-[200px]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className="rounded-xl p-3 bg-[#E8EDFF] text-[#4F46E5]"><Bot className="w-6 h-6" /></div>
@@ -326,7 +330,7 @@ const Modes = () => {
               </Card>
 
               {/* Friends (mobile) */}
-              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)]">
+              <Card className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-[#F2F6FF] via-white to-white shadow-[0_6px_24px_rgba(16,24,40,0.06)] flex-1 min-h-[220px]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className="rounded-xl p-3 bg-[#E0F2FE] text-[#0284C7]"><Users className="w-6 h-6" /></div>
@@ -357,7 +361,11 @@ const Modes = () => {
                 )}
               </Card>
 
-              {/* Removed "Go to Previous" button per mobile UI spec */}
+              <div className="sticky bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-white to-transparent pt-2 pb-[env(safe-area-inset-bottom,0px)]">
+                <div className="px-2">
+                  <Button variant="secondary" className="w-full rounded-full" onClick={() => setMobileStep(0)}>Go to previous</Button>
+                </div>
+              </div>
             </>
           )}
         </div>

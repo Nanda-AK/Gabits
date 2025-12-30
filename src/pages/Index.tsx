@@ -9,8 +9,7 @@ import { getActiveTasks, type LiveTask, getStudentTaskStatuses, getTasksByIds, t
 import { getUserBalances, getXpLeaderboard } from "@/services/rewards";
 import { getRecentRunsForStudent, type TaskRunWithTask } from "@/services/taskRuns";
 import { supabase } from "@/lib/supabase";
-import { CompletedTodayModal } from "@/components/CompletedTodayModal";
-import { ChaptersInProgressModal } from "@/components/ChaptersInProgressModal";
+// Removed modals in favor of navigating to Tasks tabs
 import { getLocalYMD } from "@/lib/date";
 import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2, Eye } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -184,8 +183,6 @@ const Index = () => {
 
   // Last 3 completed runs for the student with titles
   const [recentRuns, setRecentRuns] = useState<TaskRunWithTask[]>([]);
-  const [todayModalOpen, setTodayModalOpen] = useState(false);
-  const [chaptersModalOpen, setChaptersModalOpen] = useState(false);
   useEffect(() => {
     (async () => {
       if (!user?.id) { setRecentRuns([]); return; }
@@ -228,8 +225,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Completed Today Modal */}
-          <CompletedTodayModal open={todayModalOpen} onOpenChange={setTodayModalOpen} userId={user?.id || null} isGuest={!user} />
+          {/* Completed Today Modal removed: using Tasks tabs */}
 
           {/* Tasks header */}
           <div className="mb-3">
@@ -272,7 +268,7 @@ const Index = () => {
                     <span className="truncate">{t.title}</span>
                   </div>
                 ))}
-                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => setChaptersModalOpen(true)}>Continue</Button>
+                <Button variant="ghost" className="px-0 text-violet-600 hover:text-violet-700" onClick={() => navigate('/tasks?tab=in_progress')}>Continue</Button>
               </CardContent>
             </Card>
 
@@ -315,7 +311,7 @@ const Index = () => {
                   })
                 )}
                 <button
-                  onClick={() => setTodayModalOpen(true)}
+                  onClick={() => navigate('/tasks?tab=completed')}
                   className="mt-2 w-full flex items-center justify-start gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-indigo-100 transition"
                 >
                   <Eye className="w-4 h-4 text-indigo-600"/>
@@ -419,8 +415,6 @@ const Index = () => {
           </Card>
         </div>
       </div>
-      {/* Modals */}
-      <ChaptersInProgressModal open={chaptersModalOpen} onOpenChange={setChaptersModalOpen} />
     </div>
   ));
 };

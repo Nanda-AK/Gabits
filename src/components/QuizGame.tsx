@@ -1757,7 +1757,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   }
 
   return (
-    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden flex flex-col">
       {/* Decorative background elements */}
       <div className="absolute top-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-20 right-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
@@ -1800,9 +1800,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         </div>
       )}
 
-      {/* Main Game Area */}
-      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 lg:pb-6" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
+      {/* Main   */}
+      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-0 md:pb-6 flex flex-col flex-1 min-h-0" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto h-full min-h-0">
+          
           {/* Left: AI Panel in Battle-AI, else Monkey Progress (hidden on mobile) */}
           <div className="lg:col-span-2 hidden lg:flex justify-center lg:justify-start min-w-0">
             {mode === 'battle-ai' ? (
@@ -1819,6 +1820,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </div>
           {/* Center: Question */}
           <div className="lg:col-span-7 min-w-0">
+            <div className="flex flex-col min-h-0" style={{ height: 'calc(100dvh - (env(safe-area-inset-top, 0px) + 56px))' }}>
+            <div className="mobile-qcard">
             <QuestionCard
               question={question}
               selectedAnswer={selectedAnswer}
@@ -1848,9 +1851,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               requireSelectionForNext={mode !== 'battle-friends'}
               hideOptions={mobileScribbleOpen}
             />
+            </div>
             {/* Mobile scribble collapsed bar (inline) */}
             {(mode === 'practice' || mode === 'speed') && !mobileScribbleOpen && (
-              <div className="block lg:hidden mt-3">
+              <div className="block lg:hidden mt-auto">
                 <button
                   onClick={() => setMobileScribbleOpen(true)}
                   className="w-full flex items-center justify-between rounded-2xl border-2 border-primary/20 bg-white/90 backdrop-blur px-4 py-3 shadow"
@@ -1869,7 +1873,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
             {/* Mobile scribble expanded inline block */}
             {(mode === 'practice' || mode === 'speed') && mobileScribbleOpen && (
-              <div className="block lg:hidden mt-3">
+              <div className="block lg:hidden mt-auto">
                 <div className="rounded-2xl border-2 border-primary/20 bg-white/95 backdrop-blur shadow">
                   <div className="px-3 pt-3">
                     {/* Scribble area with optional tables overlay */}
@@ -1929,6 +1933,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
             )}
+            </div>
           </div>
 
           {/* Right column: User panel or tools (hidden on xl in favor of fixed sidebar) */}

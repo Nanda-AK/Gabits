@@ -110,7 +110,9 @@ const ChaptersProgress = () => {
                 <div className="space-y-3">
                   {items.map((it) => {
                     const label = toLabel(it.chapter) || it.chapter;
-                    const pct = Math.max(0, Math.min(100, Math.round((Math.min(1, it.speed.count/3) * Math.min(1, it.speed.avg/0.8)) * 100)));
+                    const sessionFactor = Math.min(1, it.speed.count / 3);
+                    const accuracyFactor = Math.min(1, (it.speed.avg || 0) / 0.8);
+                    const pct = Math.max(0, Math.min(100, Math.round(sessionFactor * accuracyFactor * 100)));
                     return (
                       <div key={it.chapter} className="p-3 rounded-lg border bg-white/70">
                         <div className="flex items-center justify-between">

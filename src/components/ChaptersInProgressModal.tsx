@@ -68,8 +68,8 @@ export function ChaptersInProgressModal({ open, onOpenChange }: ChaptersInProgre
 
   const computePct = (it: ChapterItem) => {
     const sessions = Math.min(1, it.speed.count / 3);
-    const avg = Math.min(1, it.speed.avg / 0.8);
-    return Math.max(0, Math.min(100, Math.round(sessions * avg * 100)));
+    const accuracy = Math.min(1, (it.speed.avg || 0) / 0.8);
+    return Math.max(0, Math.min(100, Math.round(sessions * accuracy * 100)));
   };
 
   return (

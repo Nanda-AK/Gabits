@@ -301,3 +301,72 @@ All colors MUST be HSL.
     scrollbar-color: #667eea #f0f0f0;
   }
 }
+
+/* Mobile sizing overrides for QuestionCard when wrapped in .mobile-qcard */
+@media (max-width: 640px) {
+  /* Base scale for everything inside the card */
+  .mobile-qcard > div.relative {
+    font-size: 1.125rem !important; /* 18px base in card */
+    line-height: 1.5 !important;
+  }
+  /* Root card padding slightly larger */
+  .mobile-qcard > div.relative {
+    padding: 1rem !important;
+  }
+
+  /* Enlarge question text paragraph inside the text bubble */
+  .mobile-qcard > div.relative .flex.gap-2 .flex-1.min-w-0 p {
+    font-size: 1.25rem !important; /* ~20px */
+    line-height: 1.5 !important;
+  }
+
+  /* Make option buttons taller with larger font */
+  .mobile-qcard > div.relative .space-y-1\.5 button,
+  .mobile-qcard > div.relative .space-y-2 button,
+  .mobile-qcard > div.relative .space-y-3 button {
+    font-size: 1.25rem !important;
+    padding: 1.125rem 1.25rem !important; /* ~py-4.5 px-5 */
+  }
+
+  /* Enlarge the A./B./C./D. prefix */
+  .mobile-qcard > div.relative .space-y-1\.5 button span.mr-3,
+  .mobile-qcard > div.relative .space-y-2 button span.mr-3,
+  .mobile-qcard > div.relative .space-y-3 button span.mr-3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Slightly enlarge all action buttons (Skip/Hint/Check/Next) */
+  .mobile-qcard > div.relative .flex.flex-wrap.items-center button {
+    font-size: 1.125rem !important;
+    padding: 0.875rem 1.125rem !important;
+  }
+
+  /* Generic fallback: bump most text and all buttons inside the card */
+  .mobile-qcard > div.relative p,
+  .mobile-qcard > div.relative span,
+  .mobile-qcard > div.relative li,
+  .mobile-qcard > div.relative button {
+    font-size: 1.125rem !important; /* ~18px baseline */
+  }
+  .mobile-qcard > div.relative button {
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+  }
+
+  /* Override common Tailwind text sizes within the card */
+  .mobile-qcard .text-xs { font-size: 0.95rem !important; }
+  .mobile-qcard .text-sm { font-size: 1.05rem !important; }
+  .mobile-qcard .text-base { font-size: 1.15rem !important; }
+  .mobile-qcard .text-lg { font-size: 1.25rem !important; }
+
+  /* Override common paddings used by option buttons */
+  .mobile-qcard .py-1 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+  .mobile-qcard .py-1\.5 { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
+  .mobile-qcard .py-2 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .mobile-qcard .px-2 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .mobile-qcard .px-3 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .mobile-qcard .px-4 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+  .mobile-qcard .space-y-1\.5 button,
+  .mobile-qcard .space-y-2 button,
+  .mobile-qcard .space-y-3 button { min-height: 56px !important; }
+}
