@@ -80,7 +80,7 @@ const TeacherReports = () => {
       <div className="container mx-auto px-4 py-10 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-indigo-700 to-emerald-700 bg-clip-text text-transparent">
-            Class Reports
+            Activity Reports
           </h1>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
@@ -131,7 +131,7 @@ const TeacherReports = () => {
                       <div className="text-xs text-muted-foreground">{t.chapter ? `${t.chapter} • ` : ''}{t.topics_csv || 'mixed'}</div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>View Report</Button>
+                      <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>Activity Report</Button>
                     </div>
                   </div>
                 ))}

@@ -262,7 +262,7 @@ const Modes = () => {
                 {!isTeacher && !speedUnlocked && (
                   <div className="absolute inset-0 select-none">
                     <div className="h-full bg-indigo-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - unlockProgress) * 100))}%` }} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                       <Lock className="w-10 h-10 mx-auto mb-2" />
                       <div className="font-bold">Locked</div>
                       <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / 80% • Sessions {unlockCount}/3</div>
@@ -317,7 +317,7 @@ const Modes = () => {
                 {!isTeacher && !aiUnlocked && (
                   <div className="absolute inset-0 select-none">
                     <div className="h-full bg-violet-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - aiUnlockProgress) * 100))}%` }} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                       <Lock className="w-10 h-10 mx-auto mb-2" />
                       <div className="font-bold">Locked</div>
                       <div className="text-xs opacity-95 mb-2">Speed avg {Math.round((aiUnlockAvg || 0) * 100)}% / 80% • Sessions {aiUnlockCount}/3</div>
@@ -349,7 +349,7 @@ const Modes = () => {
                 {!isTeacher && !friendsUnlocked && (
                   <div className="absolute inset-0 select-none">
                     <div className="h-full bg-sky-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - friendsUnlockProgress) * 100))}%` }} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                       <Lock className="w-10 h-10 mx-auto mb-2" />
                       <div className="font-bold">Locked</div>
                       <div className="text-xs opacity-95 mb-2">AI avg {Math.round((friendsUnlockAvg || 0) * 100)}% / 80% • Sessions {friendsUnlockCount}/3</div>
@@ -408,7 +408,7 @@ const Modes = () => {
                 {/* Dynamic blue cover, width = remaining to unlock */}
                 <div className="h-full bg-indigo-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - unlockProgress) * 100))}%` }} />
                 {/* Foreground hint */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
                   <div className="text-xs opacity-95 mb-2">Average {Math.round((unlockAvg || 0) * 100)}% / 80% • Sessions {unlockCount}/3</div>
@@ -454,7 +454,7 @@ const Modes = () => {
             {!isTeacher && !aiUnlocked && (
               <div className="absolute inset-0 select-none hidden md:block">
                 <div className="h-full bg-violet-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - aiUnlockProgress) * 100))}%` }} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
                   <div className="text-xs opacity-95 mb-2">Speed avg {Math.round((aiUnlockAvg || 0) * 100)}% / 80% • Sessions {aiUnlockCount}/3</div>
@@ -485,7 +485,7 @@ const Modes = () => {
             {!isTeacher && !friendsUnlocked && (
               <div className="absolute inset-0 select-none hidden md:block">
                 <div className="h-full bg-sky-600/60 transition-all duration-500" style={{ width: `${Math.max(0, Math.round((1 - friendsUnlockProgress) * 100))}%` }} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none text-gray-800">
                   <Lock className="w-10 h-10 mx-auto mb-2" />
                   <div className="font-bold">Locked</div>
                   <div className="text-xs opacity-95 mb-2">AI avg {Math.round((friendsUnlockAvg || 0) * 100)}% / 80% • Sessions {friendsUnlockCount}/3</div>

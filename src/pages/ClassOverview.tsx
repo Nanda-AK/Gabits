@@ -181,7 +181,7 @@ export default function ClassOverview() {
                           <div className="text-xs text-muted-foreground">{t.chapter ? `${t.chapter} • ` : ''}{t.topics_csv || 'mixed'} • {t.status}</div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>View Report</Button>
+                          <Button variant="secondary" onClick={() => navigate(`/portal/reports/tasks/${t.id}`)}>Activity Report</Button>
                         </div>
                       </div>
                     ))}

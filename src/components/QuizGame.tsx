@@ -1363,10 +1363,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }
         return newCount;
       });
-      // Restore one heart ONLY if correct on first try (not during second chance)
-      if (!secondChance && hearts < 5) {
-        setHearts(h => Math.min(5, h + 1));
-      }
+      // Do not restore hearts on correct answers (hearts are lost permanently within a run)
       setBlinkHeart(false);
       setSecondChance(false);
     } else {

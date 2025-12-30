@@ -219,7 +219,7 @@ const Index = () => {
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold text-gray-700">{coursePct}% Course Completion</div>
-                <Button size="sm" className="rounded-full bg-[#E46DB6] hover:bg-[#D85FA9]">Level Up! Explorer Badge</Button>
+                <Button size="sm" className="rounded-full bg-[#E46DB6] hover:bg-[#E46DB6]">Level Up! Explorer Badge</Button>
               </div>
               <Progress className="h-2 bg-gray-200" value={coursePct} />
             </CardContent>
@@ -229,7 +229,7 @@ const Index = () => {
 
           {/* Tasks header */}
           <div className="mb-3">
-            <Button variant="outline" size="sm" className="rounded-full">Your Tasks</Button>
+            <Button variant="outline" size="sm" className="rounded-full hover:bg-transparent hover:text-inherit focus-visible:ring-0">Your Tasks</Button>
           </div>
 
           {/* Task cards */}
