@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 import { getChapterSpeedUnlock } from "@/services/practice";
+import { supabase } from "@/lib/supabase";
 
 const TasksHub = () => {
   const { user, guest } = useAuth();
@@ -12,68 +13,52 @@ const TasksHub = () => {
   const [tasks, setTasks] = useState<LiveTask[]>([]);
 
   useEffect(() => {
-    console.log('🔵 TasksHub useEffect triggered');
-    console.log('👤 User:', user?.id, 'Guest:', guest);
-
     let cancelled = false;
     const applyFilter = async (items: LiveTask[]) => {
-      console.log('🔍 applyFilter called with', items.length, 'items');
-      if (!user || guest) {
-        console.log('⚠️ No user or guest - returning empty');
-        return [] as LiveTask[];
-      }
-      // Hide tasks whose chapter is already completed (Speed unlocked lifetime)
-      const filtered: LiveTask[] = [];
-      for (const t of items) {
-        console.log('📝 Processing task:', t.id, t.chapter, t.title);
-        if (!t.chapter) {
-          console.log('  ✅ No chapter - including');
-          filtered.push(t);
-          continue;
-        }
+      if (!user || guest) return [] as LiveTask[];
+      // For each task decide: keep in "new tasks" or hide if in_progress/completed
+      const checks = await Promise.all((items || []).map(async (t) => {
+        if (!t.chapter) return { keep: true, t } as const;
         try {
-          const r = await getChapterSpeedUnlock(user.id, t.chapter, 0.8, 3);
-          console.log('  🔓 Speed unlock check:', r.unlocked ? 'UNLOCKED (skip)' : 'LOCKED (include)');
-          if (!r.unlocked) filtered.push(t);
-        } catch (e) {
-          console.log('  ❌ Speed check error:', e);
-          filtered.push(t);
+          // Completed if Speed unlocked for chapter
+          const speed = await getChapterSpeedUnlock(user.id, t.chapter!, 0.8, 3);
+          if (speed?.unlocked) return { keep: false, t } as const; // completed -> hide from new
+          // In progress for THIS specific task assignment if at least one completed run exists (full match >=10 questions)
+          const { count } = await supabase
+            .from('task_runs')
+            .select('id', { count: 'exact', head: true })
+            .eq('task_id', t.id)
+            .eq('user_id', user.id)
+            .eq('status', 'completed')
+            .gte('total', 10);
+          if ((count ?? 0) > 0) return { keep: false, t } as const; // in progress -> hide from new
+          return { keep: true, t } as const;
+        } catch {
+          return { keep: true, t } as const;
         }
-      }
-      console.log('✅ Filtered result:', filtered.length, 'tasks');
-      return filtered;
+      }));
+      return checks.filter(c => c.keep).map(c => c.t);
     };
 
     (async () => {
       if (!user || guest) {
-        console.log('⚠️ Early return - no user');
         setTasks([]);
         return;
       }
-      console.log('📡 Fetching active tasks...');
       const items = await getActiveTasks();
-      console.log('📦 Raw tasks from DB:', items.length, items);
-
       const filtered = await applyFilter(items);
-      console.log('🎯 Final filtered tasks:', filtered.length, filtered);
-
       if (!cancelled) {
-        console.log('💾 Setting tasks state');
         setTasks(filtered);
-      } else {
-        console.log('🚫 Cancelled - not setting state');
       }
     })();
 
     const unsub = subscribeActiveTasks(async (items) => {
-      console.log('🔔 Realtime update received:', items.length, 'tasks');
       if (cancelled || !user || guest) return;
       const filtered = await applyFilter(items);
       if (!cancelled) setTasks(filtered);
     });
 
     return () => {
-      console.log('🧹 Cleanup - cancelled');
       cancelled = true;
       unsub();
     };

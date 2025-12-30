@@ -131,8 +131,81 @@ export async function getStudentTaskStatuses(userId: string): Promise<StudentTas
   if (!userId) return [];
   try {
     const { data, error } = await supabase.rpc('get_student_task_statuses', { p_user_id: userId });
-    if (error || !data) return [];
-    return (Array.isArray(data) ? data : [data]) as StudentTaskStatus[];
+    if (error) return [];
+    const raw = (Array.isArray(data) ? data : [data]).filter(Boolean) as StudentTaskStatus[];
+
+    // If backend returns nothing, derive statuses for active tasks as a fallback
+    if (!raw || raw.length === 0) {
+      try {
+        const active = await getActiveTasks();
+        const derived: StudentTaskStatus[] = [];
+        for (const t of active) {
+          // Completed if speed unlocked for chapter
+          let speed_unlocked = false;
+          if (t.chapter) {
+            const { data: speedRow } = await supabase.rpc('get_chapter_speed_unlock', {
+              p_user_id: userId,
+              p_chapter: t.chapter,
+              p_threshold: 0.8,
+              p_window: 3,
+            });
+            const row = Array.isArray(speedRow) ? speedRow[0] : speedRow;
+            speed_unlocked = !!row?.unlocked;
+          }
+          // In-progress if one full completed run exists for this task
+          let inProgress = false;
+          if (!speed_unlocked) {
+            const { count } = await supabase
+              .from('task_runs')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', userId)
+              .eq('task_id', t.id)
+              .eq('status', 'completed')
+              .not('total', 'is', null)
+              .gte('total', 10);
+            inProgress = (count ?? 0) > 0;
+          }
+          const status: StudentTaskStatus['status'] = speed_unlocked ? 'completed' : inProgress ? 'in_progress' : 'not_started';
+          derived.push({
+            task_id: t.id,
+            chapter: t.chapter ?? null,
+            status,
+            speed_unlocked,
+            ai_unlocked: false,
+            friends_unlocked: false,
+            runs_count: 0,
+            last_run_at: null,
+          });
+        }
+        return derived;
+      } catch {
+        return [];
+      }
+    }
+
+    // Normalize statuses client-side to prevent discrepancies with Tasks page
+    const fixed = await Promise.all(raw.map(async (row) => {
+      // 1) Completed if speed is unlocked for the chapter
+      if (row.speed_unlocked) return { ...row, status: 'completed' as const };
+
+      // 2) In progress only if there exists at least one fully completed run for THIS task
+      try {
+        const { count } = await supabase
+          .from('task_runs')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('task_id', row.task_id)
+          .eq('status', 'completed')
+          .not('total', 'is', null)
+          .gte('total', 10);
+        if ((count ?? 0) > 0) return { ...row, status: 'in_progress' as const };
+      } catch {}
+
+      // 3) Otherwise not started
+      return { ...row, status: 'not_started' as const };
+    }));
+
+    return fixed;
   } catch {
     return [];
   }

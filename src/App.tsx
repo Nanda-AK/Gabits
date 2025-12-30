@@ -24,7 +24,7 @@ import BattleFriends from "./pages/BattleFriends";
 import Play from "./pages/Play";
 import Lobby from "./pages/Lobby";
 import TeacherPortal from "./pages/TeacherPortal";
-import TasksHub from "./pages/TasksHub";
+import TasksHub from "./pages/TasksHubV2";
 import TeacherReports from "./pages/TeacherReports";
 import TaskDetail from "./pages/TaskDetail";
 import StudentInspect from "./pages/StudentInspect";

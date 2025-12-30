@@ -189,8 +189,8 @@ const Modes = () => {
   const goStats = () => navigate('/dashboard');
 
   return (
-    <div className="min-h-[100svh] md:min-h-screen bg-white flex flex-col">
-      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-0 md:pb-10 flex flex-col flex-1" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+    <div className="min-h-[100dvh] md:min-h-screen bg-white flex flex-col">
+      <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-[env(safe-area-inset-bottom,0px)] md:pb-10 flex flex-col flex-1" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl font-black">Choose Your Mode</h1>
@@ -357,9 +357,7 @@ const Modes = () => {
                 )}
               </Card>
 
-              <div className="mt-auto pt-3 pb-[env(safe-area-inset-bottom,0px)] text-center">
-                <Button variant="secondary" className="rounded-full" onClick={() => setMobileStep(0)}>Go to Previous</Button>
-              </div>
+              {/* Removed "Go to Previous" button per mobile UI spec */}
             </>
           )}
         </div>

@@ -111,12 +111,15 @@ const Index = () => {
         getStudentTaskStatuses(user.id),
       ]);
       setActiveTasks(tasks);
-      setStatuses(st);
+      // Restrict statuses to ACTIVE tasks only, to match Assignments page
+      const activeIds = new Set(tasks.map(t => t.id));
+      const stActive = st.filter(s => activeIds.has(s.task_id));
+      setStatuses(stActive);
       // Map statuses to tasks
-      const byId = (await getTasksByIds(st.map(s => s.task_id))).reduce((m, t) => { (m as any)[t.id] = t; return m; }, {} as Record<string, LiveTask>);
-      const newStatuses = st.filter(s => s.status === 'not_started');
-      const progStatuses = st.filter(s => s.status === 'in_progress');
-      const doneStatuses = st.filter(s => s.status === 'completed');
+      const byId = (await getTasksByIds(stActive.map(s => s.task_id))).reduce((m, t) => { (m as any)[t.id] = t; return m; }, {} as Record<string, LiveTask>);
+      const newStatuses = stActive.filter(s => s.status === 'not_started');
+      const progStatuses = stActive.filter(s => s.status === 'in_progress');
+      const doneStatuses = stActive.filter(s => s.status === 'completed');
       setNewCount(newStatuses.length);
       setProgressCountCard(progStatuses.length);
       setCompletedCountCard(doneStatuses.length);
