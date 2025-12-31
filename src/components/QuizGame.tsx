@@ -256,6 +256,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
   // Practice/Speed: track per-question correctness for the review panel
   const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
+  // Practice mode: limit how many times AI Solve can be used per session
+  const [practiceSolveUses, setPracticeSolveUses] = useState(0);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
   const [speedRewards, setSpeedRewards] = useState<{ coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null>(null);
   // Mobile only: inline scribble panel under the question
@@ -1069,7 +1071,20 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       date: localDate,
       question_coins: 0, // Practice: NO per-question coins, only streak rewards
     }).then(result => {
-      if (result) setPracticeRewards(result);
+      if (result) {
+        setPracticeRewards(result);
+        const awarded = Number(result.coins_awarded || 0);
+        if (awarded > 0) {
+          // Reflect practice coins in this session and in the local wallet snapshot
+          setCoins(prev => prev + awarded);
+          addToWallet(awarded);
+          try {
+            if (userId && !guest) {
+              incrementTotals(userId, awarded, 0).catch(() => { });
+            }
+          } catch { }
+        }
+      }
     }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
 
@@ -1394,7 +1409,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }
         // if studentShouldWin, we treat as both wrong: no AI point
       }
-      setHearts(prev => Math.max(0, prev - 1));
+      setHearts(prev => {
+        const next = Math.max(0, prev - 1);
+        if (next === 0) {
+          setGameCompleted(true);
+        }
+        return next;
+      });
       setBlinkHeart(false);
       setSecondChance(false);
     }
@@ -1558,6 +1579,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
   };
 
+  // Practice mode: track AI Solve usage (shared across mobile/desktop Scribble)
+  const handleSolveAttempt = () => {
+    if (mode !== 'practice') {
+      // No limit outside practice
+      return true;
+    }
+    if (practiceSolveUses >= 3) {
+      return false;
+    }
+    setPracticeSolveUses(prev => prev + 1);
+    return true;
+  };
+
   const handleRestart = () => {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -1580,6 +1614,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setWithinTimeList([]);
     setPracticeRewards(null);
     setSpeedRewards(null);
+    setPracticeSolveUses(0);
     questionStartAtRef.current = Date.now();
     // Reset battle state
     setStudentCorrectList([]);
@@ -1730,6 +1765,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       />
     );
   }
+  if (hearts === 0) {
+    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver />;
+  }
 
   if (gameCompleted && mode !== 'battle-friends') {
     return (
@@ -1747,10 +1785,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         results={answerCorrectList}
       />
     );
-  }
-
-  if (hearts === 0) {
-    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver />;
   }
 
   return (
@@ -1818,37 +1852,37 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           {/* Center: Question */}
           <div className="lg:col-span-7 min-w-0">
             <div className="flex flex-col min-h-0" style={{ height: 'calc(100dvh - (env(safe-area-inset-top, 0px) + 56px))' }}>
-            <div className="mobile-qcard">
-            <QuestionCard
-              question={question}
-              selectedAnswer={selectedAnswer}
-              showResult={showResult}
-              isCorrect={isCorrect}
-              onAnswerSelect={handleAnswerSelect}
-              onCheckAnswer={handleCheckAnswer}
-              onNext={mode === 'battle-ai' ? handleNextBattle : (mode === 'battle-friends' ? handleNextFriends : handleNext)}
-              onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
-              onHint={handleHint}
-              showHint={showHint}
-              coins={coins}
-              questionReward={questionReward}
-              questionNumber={currentQuestion + 1}
-              totalQuestions={total}
-              questionTime={mode !== 'battle-ai' && !practiceMode ? questionTime : undefined}
-              questionTimeLimit={mode !== 'battle-ai' && !practiceMode ? questionTimeLimit : undefined}
-              showTimer={mode !== 'battle-ai' && !practiceMode}
-              lockedWrongIndex={lockedWrongIndex}
-              secondChance={secondChance}
-              difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
-              battleMode={mode === 'battle-ai' || mode === 'battle-friends'}
-              showCoinInfo={mode !== 'practice'}
-              hintFree={mode === 'practice'}
-              showDifficultyBadge={mode !== 'practice'}
-              disableSkipHint={mode === 'battle-friends'}
-              requireSelectionForNext={mode !== 'battle-friends'}
-              hideOptions={mobileScribbleOpen}
-            />
-            </div>
+              <div className="mobile-qcard">
+                <QuestionCard
+                  question={question}
+                  selectedAnswer={selectedAnswer}
+                  showResult={showResult}
+                  isCorrect={isCorrect}
+                  onAnswerSelect={handleAnswerSelect}
+                  onCheckAnswer={handleCheckAnswer}
+                  onNext={mode === 'battle-ai' ? handleNextBattle : (mode === 'battle-friends' ? handleNextFriends : handleNext)}
+                  onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
+                  onHint={handleHint}
+                  showHint={showHint}
+                  coins={coins}
+                  questionReward={questionReward}
+                  questionNumber={currentQuestion + 1}
+                  totalQuestions={total}
+                  questionTime={mode !== 'battle-ai' && !practiceMode ? questionTime : undefined}
+                  questionTimeLimit={mode !== 'battle-ai' && !practiceMode ? questionTimeLimit : undefined}
+                  showTimer={mode !== 'battle-ai' && !practiceMode}
+                  lockedWrongIndex={lockedWrongIndex}
+                  secondChance={secondChance}
+                  difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
+                  battleMode={mode === 'battle-ai' || mode === 'battle-friends'}
+                  showCoinInfo={mode !== 'practice'}
+                  hintFree={mode === 'practice'}
+                  showDifficultyBadge={mode !== 'practice'}
+                  disableSkipHint={mode === 'battle-friends'}
+                  requireSelectionForNext={mode !== 'battle-friends'}
+                  hideOptions={mobileScribbleOpen}
+                />
+              </div>
             {/* Mobile scribble collapsed bar (inline) */}
             {(mode === 'practice' || mode === 'speed') && !mobileScribbleOpen && (
               <div className="block lg:hidden mt-auto">
@@ -1871,21 +1905,41 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
             {/* Mobile scribble expanded inline block */}
             {(mode === 'practice' || mode === 'speed') && mobileScribbleOpen && (
               <div className="block lg:hidden mt-auto">
-                <div className="rounded-2xl border-2 border-primary/20 bg-white/95 backdrop-blur shadow">
-                  <div className="px-3 pt-3">
+                <div className="rounded-2xl border-2 border-primary/20 bg-white/95 backdrop-blur shadow flex flex-col">
+                  {/* Collapse / title bar placed directly below the question card and above the scribble canvas */}
+                  <div className="px-3 pt-3 pb-1">
+                    <button
+                      onClick={() => setMobileScribbleOpen(false)}
+                      className="w-full flex items-center justify-between rounded-2xl border bg-white/90 px-4 py-2 text-sm shadow"
+                    >
+                      <span className="inline-flex items-center gap-2 text-gray-800 font-semibold">
+                        <Grid className="w-4 h-4 text-primary" /> Scribble Board
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="px-3 pb-3 flex-1 flex flex-col min-h-0">
                     {/* Scribble area with optional tables overlay */}
-                    <div className="relative">
-                      <ScribbleBoard ref={sbRef as unknown as any} question={question} fullHeight={false} showHeader={false} onOpenTables={() => setShowTable(true)} />
+                    <div className="relative flex-1 min-h-[180px]">
+                      <ScribbleBoard
+                        ref={sbRef as unknown as any}
+                        question={question}
+                        fullHeight={false}
+                        showHeader={false}
+                        onOpenTables={() => setShowTable(true)}
+                        canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                        onSolveAttempt={handleSolveAttempt}
+                      />
                       {showTable && (
                         <div className="absolute inset-0 z-10 overflow-auto">
                           <TableBoard onClose={() => setShowTable(false)} />
                         </div>
                       )}
                     </div>
-                    {/* Tools row (from 3rd ss) placed below the canvas as in 2nd ss */}
+                    {/* Tools row placed below the canvas */}
                     <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
                       <div className="inline-flex items-center gap-2 font-bold text-sm">
-                        <Grid className="w-4 h-4 text-primary" /> Scribble Board
+                        <Grid className="w-4 h-4 text-primary" /> Scribble Tools
                       </div>
                       <div className="inline-flex items-center gap-2">
                         <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.setPen()} title="Pen">
@@ -1894,7 +1948,12 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                         <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.clear()} title="Clear">
                           <RotateCcw className="w-4 h-4" />
                         </button>
-                        <button className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold" onClick={() => sbRef.current?.solve()} title="Solve">
+                        <button
+                          className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => sbRef.current?.solve()}
+                          title="Solve"
+                          disabled={mode === 'practice' && practiceSolveUses >= 3}
+                        >
                           ✨ Solve
                         </button>
                         <button className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold" onClick={() => setShowTable(true)} title="Tables 2–12">
@@ -1914,18 +1973,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                         </button>
                       ))}
                     </div>
-                  </div>
-                  {/* Collapse bar at the bottom */}
-                  <div className="px-3 pb-3">
-                    <button
-                      onClick={() => setMobileScribbleOpen(false)}
-                      className="w-full mt-2 flex items-center justify-between rounded-2xl border bg-white/90 px-4 py-2 text-sm shadow"
-                    >
-                      <span className="inline-flex items-center gap-2 text-gray-800 font-semibold">
-                        Scribble Board
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1947,7 +1994,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
                 <div className="relative flex-1">
                   {/* Scribble is always visible and fills available height */}
-                  <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+                  <ScribbleBoard
+                    question={question}
+                    fullHeight
+                    onOpenTables={() => setShowTable(true)}
+                    canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                    onSolveAttempt={handleSolveAttempt}
+                  />
                   {/* Tables overlay above Scribble only */}
                   {showTable && (
                     <div className="absolute inset-0 z-10 overflow-auto">
@@ -1966,7 +2019,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
           <div className="flex flex-col w-full h-full">
             <div className="relative flex-1">
-              <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+              <ScribbleBoard
+                question={question}
+                fullHeight
+                onOpenTables={() => setShowTable(true)}
+                canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                onSolveAttempt={handleSolveAttempt}
+              />
               {showTable && (
                 <div className="absolute inset-0 z-10 overflow-auto">
                   <TableBoard onClose={() => setShowTable(false)} />

@@ -104,13 +104,13 @@ const TaskDetail = () => {
             </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <Card><CardHeader><CardTitle className="text-sm">Participants</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{summary.participants}</CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-sm">Activity count</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{summary.participants}</CardContent></Card>
               <Card><CardHeader><CardTitle className="text-sm">Avg Accuracy</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{Math.round(summary.avgAcc*100)}%</CardContent></Card>
               <Card><CardHeader><CardTitle className="text-sm">Avg Time</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{fmtMs(summary.avgTime)}</CardContent></Card>
             </div>
 
             <Card>
-              <CardHeader><CardTitle className="text-lg">Participants</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">Activity count</CardTitle></CardHeader>
               <CardContent>
                 {runs.length === 0 ? (
                   <div className="text-sm text-muted-foreground">No attempts yet.</div>

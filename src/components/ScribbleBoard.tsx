@@ -18,11 +18,20 @@ export type ScribbleBoardHandle = {
   stop: () => void;
 };
 
-type Props = { onClose?: () => void; question?: Question; fullHeight?: boolean; onOpenTables?: () => void; showHeader?: boolean } & {
+type Props = { 
+  onClose?: () => void; 
+  question?: Question; 
+  fullHeight?: boolean; 
+  onOpenTables?: () => void; 
+  showHeader?: boolean;
+  // Optional control from parent: when false, Solve is disabled; onSolveAttempt may veto a Solve
+  canSolve?: boolean;
+  onSolveAttempt?: () => boolean;
+} & {
   ref?: React.Ref<ScribbleBoardHandle>;
 };
 
-export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onClose, question, fullHeight = false, onOpenTables, showHeader = true }, ref) => {
+export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onClose, question, fullHeight = false, onOpenTables, showHeader = true, canSolve = true, onSolveAttempt }, ref) => {
   const drawWrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
@@ -197,6 +206,8 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
 
   const handleSolve = () => {
     if (!question) return;
+    if (!canSolve) return;
+    if (onSolveAttempt && !onSolveAttempt()) return;
     setShowSolutionOverlay(true);
     if (streamCancelRef.current) { streamCancelRef.current.cancel(); streamCancelRef.current = null; }
     setSolution("");
@@ -339,7 +350,13 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
             </Button>
             {/* Fast mode is always used for quick responses */}
             {question && (
-              <Button size="sm" variant="outline" className="h-8 px-3 ml-1" onClick={handleSolve} disabled={loadingSolve}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 ml-1"
+                onClick={handleSolve}
+                disabled={loadingSolve || !canSolve}
+              >
                 {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}        
                 <span className="ml-1 text-[12px] font-semibold">Solve</span>
               </Button>

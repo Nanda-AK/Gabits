@@ -13,6 +13,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has markings in centimetres and millimetres.",
     },
     
+    
     {
     id: 2,
     chapter: "Playing with Constructions",
@@ -24,6 +25,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is a semicircular tool with degree markings.",
     },
+    
     
     {
     id: 3,
@@ -37,6 +39,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has a pointed end and a pencil end.",
     },
     
+    
     {
     id: 4,
     chapter: "Playing with Constructions",
@@ -48,6 +51,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It comes in right-angled triangular shapes.",
     },
+    
     
     {
     id: 5,
@@ -61,6 +65,7 @@ export const constructionQuestions: Question[] = [
     hint: "One tool holds the pencil and rotates around a point.",
     },
     
+    
     {
     id: 6,
     chapter: "Playing with Constructions",
@@ -72,6 +77,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It has two pointed legs.",
     },
+    
     
     {
     id: 7,
@@ -85,6 +91,7 @@ export const constructionQuestions: Question[] = [
     hint: "It is used to measure angles.",
     },
     
+    
     {
     id: 8,
     chapter: "Playing with Constructions",
@@ -96,6 +103,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It has a 90° angle built in.",
     },
+    
     
     {
     id: 9,
@@ -109,6 +117,7 @@ export const constructionQuestions: Question[] = [
     hint: "It is a straight measuring device.",
     },
     
+    
     {
     id: 10,
     chapter: "Playing with Constructions",
@@ -120,6 +129,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It looks like a compass but without a pencil.",
     },
+    
     
     {
     id: 11,
@@ -133,6 +143,7 @@ export const constructionQuestions: Question[] = [
     hint: "One of the set squares is a right-angled triangle.",
     },
     
+    
     {
     id: 12,
     chapter: "Playing with Constructions",
@@ -144,6 +155,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It rotates around a fixed point.",
     },
+    
     
     {
     id: 13,
@@ -157,6 +169,7 @@ export const constructionQuestions: Question[] = [
     hint: "It lifts distance and compares with ruler.",
     },
     
+    
     {
     id: 14,
     chapter: "Playing with Constructions",
@@ -168,6 +181,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is straight and has markings.",
     },
+    
     
     {
     id: 15,
@@ -181,6 +195,7 @@ export const constructionQuestions: Question[] = [
     hint: "It shows degrees from 0° to 180°.",
     },
     
+    
     {
     id: 16,
     chapter: "Playing with Constructions",
@@ -192,6 +207,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It picks up distance.",
     },
+    
     
     {
     id: 17,
@@ -205,6 +221,7 @@ export const constructionQuestions: Question[] = [
     hint: "It uses one point as center.",
     },
     
+    
     {
     id: 18,
     chapter: "Playing with Constructions",
@@ -216,6 +233,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "One set square has angles 30°, 60°, 90°.",
     },
+    
     
     {
     id: 19,
@@ -229,6 +247,7 @@ export const constructionQuestions: Question[] = [
     hint: "Useful for short measurements.",
     },
     
+    
     {
     id: 20,
     chapter: "Playing with Constructions",
@@ -240,6 +259,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Right angle built in.",
     },
+    
     
     {
     id: 21,
@@ -253,6 +273,7 @@ export const constructionQuestions: Question[] = [
     hint: "It measures angles larger than 90°.",
     },
     
+    
     {
     id: 22,
     chapter: "Playing with Constructions",
@@ -264,6 +285,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Both look similar but have different purposes.",
     },
+    
     
     {
     id: 23,
@@ -277,6 +299,7 @@ export const constructionQuestions: Question[] = [
     hint: "It rotates around a center.",
     },
     
+    
     {
     id: 24,
     chapter: "Playing with Constructions",
@@ -288,6 +311,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Arcs help find midpoints.",
     },
+    
     
     {
     id: 25,
@@ -301,6 +325,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has numerical markings.",
     },
     
+    
     {
     id: 26,
     chapter: "Playing with Constructions",
@@ -312,6 +337,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "They are right-angled triangles.",
     },
+    
     
     {
     id: 27,
@@ -325,6 +351,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each set square includes a 90° angle.",
     },
     
+    
     {
     id: 28,
     chapter: "Playing with Constructions",
@@ -336,6 +363,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Sliding technique helps.",
     },
+    
     
     {
     id: 29,
@@ -349,6 +377,7 @@ export const constructionQuestions: Question[] = [
     hint: "Its tip rotates, not draws lines.",
     },
     
+    
     {
     id: 30,
     chapter: "Playing with Constructions",
@@ -360,6 +389,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It picks up distance between its metal points.",
     },
+    
     
     {
     id: 31,
@@ -373,6 +403,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has two pointed legs meant to carry distance.",
     },
     
+    
     {
     id: 32,
     chapter: "Playing with Constructions",
@@ -384,6 +415,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "One leg must stay anchored to keep a constant radius.",
     },
+    
     
     {
     id: 33,
@@ -397,6 +429,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has markings from 0° to 180°.",
     },
     
+    
     {
     id: 34,
     chapter: "Playing with Constructions",
@@ -408,6 +441,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Use cm and mm markings.",
     },
+    
     
     {
     id: 35,
@@ -421,6 +455,7 @@ export const constructionQuestions: Question[] = [
     hint: "One angle in this tool is exactly 90°.",
     },
     
+    
     {
     id: 36,
     chapter: "Playing with Constructions",
@@ -432,6 +467,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Correct positioning is important for accurate reading.",
     },
+    
     
     {
     id: 37,
@@ -445,6 +481,7 @@ export const constructionQuestions: Question[] = [
     hint: "One set square has angles 45°, 45°, and 90°.",
     },
     
+    
     {
     id: 38,
     chapter: "Playing with Constructions",
@@ -456,6 +493,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arcs help in finding midpoints.",
     },
+    
     
     {
     id: 39,
@@ -469,6 +507,7 @@ export const constructionQuestions: Question[] = [
     hint: "It does not use a pencil.",
     },
     
+    
     {
     id: 40,
     chapter: "Playing with Constructions",
@@ -480,6 +519,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The pencil must be at the correct distance from the needle.",
     },
+    
     
     {
     id: 41,
@@ -493,6 +533,7 @@ export const constructionQuestions: Question[] = [
     hint: "One tool is used to slide the other.",
     },
     
+    
     {
     id: 42,
     chapter: "Playing with Constructions",
@@ -504,6 +545,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "There are two scales depending on the angle direction.",
     },
+    
     
     {
     id: 43,
@@ -517,6 +559,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has no built-in angle property.",
     },
     
+    
     {
     id: 44,
     chapter: "Playing with Constructions",
@@ -528,6 +571,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "It adjusts radius easily.",
     },
+    
     
     {
     id: 45,
@@ -541,6 +585,7 @@ export const constructionQuestions: Question[] = [
     hint: "One set square has 30°, 60°, 90°.",
     },
     
+    
     {
     id: 46,
     chapter: "Playing with Constructions",
@@ -552,6 +597,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "It transfers lengths repeatedly.",
     },
+    
     
     {
     id: 47,
@@ -565,6 +611,7 @@ export const constructionQuestions: Question[] = [
     hint: "You need lengths and angle/arc construction.",
     },
     
+    
     {
     id: 48,
     chapter: "Playing with Constructions",
@@ -576,6 +623,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Sliding technique helps create parallel lines.",
     },
+    
     
     {
     id: 49,
@@ -589,6 +637,7 @@ export const constructionQuestions: Question[] = [
     hint: "It measures angles precisely.",
     },
     
+    
     {
     id: 50,
     chapter: "Playing with Constructions",
@@ -600,19 +649,22 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arcs from endpoints help in construction.",
     },
-    
     {
-    id: 51,
-    chapter: "Playing with Constructions",
-    topic: "Basic geometric tools",
-    question: "When using a protractor, the correct scale must be chosen based on:",
-    options: ["Protractor only", "Ruler only", "Compass and ruler", "Divider only"],
-    correctAnswer: 0,
-    difficulty: "moderate",
-    reward: 5,
-    hint: "Check which arm starts from 0°.",
+      "id": 51,
+      "chapter": "Playing with Constructions",
+      "topic": "Basic geometric tools",
+      "question": "When using a protractor, the correct scale must be chosen based on:",
+      "options": [
+        "the arm of the angle that starts from 0° on the protractor",
+        "the size of the angle to be measured",
+        "the color of the protractor",
+        "the length of the angle arms"
+      ],
+      "correctAnswer": 0,
+      "difficulty": "moderate",
+      "reward": 5,
+      "hint": "While measuring an angle, first see which arm of the angle lies along the 0° line of the protractor. The scale that starts from this 0° point is the correct scale to read the angle."
     },
-    
     {
     id: 52,
     chapter: "Playing with Constructions",
@@ -624,6 +676,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "All angle readings depend on correct center placement.",
     },
+    
     
     {
     id: 53,
@@ -637,6 +690,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides must be equal in length.",
     },
     
+    
     {
     id: 54,
     chapter: "Playing with Constructions",
@@ -648,6 +702,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "It cannot read degrees.",
     },
+    
     
     {
     id: 55,
@@ -661,6 +716,7 @@ export const constructionQuestions: Question[] = [
     hint: "Too much pressure tears paper.",
     },
     
+    
     {
     id: 56,
     chapter: "Playing with Constructions",
@@ -672,6 +728,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arcs replicate the angle.",
     },
+    
     
     {
     id: 57,
@@ -685,6 +742,7 @@ export const constructionQuestions: Question[] = [
     hint: "It ensures a perfect 90° angle.",
     },
     
+    
     {
     id: 58,
     chapter: "Playing with Constructions",
@@ -696,6 +754,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equilateral triangle method.",
     },
+    
     
     {
     id: 59,
@@ -709,6 +768,7 @@ export const constructionQuestions: Question[] = [
     hint: "It needs a fixed radius.",
     },
     
+    
     {
     id: 60,
     chapter: "Playing with Constructions",
@@ -720,6 +780,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "All are essential for different purposes.",
     },
+    
     
     {
     id: 61,
@@ -733,6 +794,7 @@ export const constructionQuestions: Question[] = [
     hint: "A protractor has two scales depending on how the arms are placed.",
     },
     
+    
     {
     id: 62,
     chapter: "Playing with Constructions",
@@ -744,6 +806,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Uneven leg opening changes the radius while drawing.",
     },
+    
     
     {
     id: 63,
@@ -757,6 +820,7 @@ export const constructionQuestions: Question[] = [
     hint: "Tiny slips of metal tips change the exact distance.",
     },
     
+    
     {
     id: 64,
     chapter: "Playing with Constructions",
@@ -768,6 +832,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "75° = 60° + 15°, both created through compass constructions.",
     },
+    
     
     {
     id: 65,
@@ -781,6 +846,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs must intersect above and below the line.",
     },
     
+    
     {
     id: 66,
     chapter: "Playing with Constructions",
@@ -792,6 +858,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Stability of the tool affects accuracy.",
     },
+    
     
     {
     id: 67,
@@ -805,6 +872,7 @@ export const constructionQuestions: Question[] = [
     hint: "There are two scales: inner and outer.",
     },
     
+    
     {
     id: 68,
     chapter: "Playing with Constructions",
@@ -816,6 +884,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Use circles/arcs to fix meeting points.",
     },
+    
     
     {
     id: 69,
@@ -829,6 +898,7 @@ export const constructionQuestions: Question[] = [
     hint: "Set squares can draw 45° directly.",
     },
     
+    
     {
     id: 70,
     chapter: "Playing with Constructions",
@@ -840,6 +910,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Start measurement from 0 cm.",
     },
+    
     
     {
     id: 71,
@@ -853,6 +924,7 @@ export const constructionQuestions: Question[] = [
     hint: "Its angles are fixed: 45°, 90° or 30°, 60°, 90°.",
     },
     
+    
     {
     id: 72,
     chapter: "Playing with Constructions",
@@ -864,6 +936,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arcs help transfer distances.",
     },
+    
     
     {
     id: 73,
@@ -877,6 +950,7 @@ export const constructionQuestions: Question[] = [
     hint: "Sliding method ensures parallelism.",
     },
     
+    
     {
     id: 74,
     chapter: "Playing with Constructions",
@@ -888,6 +962,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Direct transfer avoids visual error.",
     },
+    
     
     {
     id: 75,
@@ -901,6 +976,7 @@ export const constructionQuestions: Question[] = [
     hint: "It provides start points for further arcs.",
     },
     
+    
     {
     id: 76,
     chapter: "Playing with Constructions",
@@ -912,6 +988,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "An equilateral triangle has 60° angles.",
     },
+    
     
     {
     id: 77,
@@ -925,6 +1002,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs won't intersect if too small.",
     },
     
+    
     {
     id: 78,
     chapter: "Playing with Constructions",
@@ -936,6 +1014,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equal radii should meet if placed properly.",
     },
+    
     
     {
     id: 79,
@@ -949,6 +1028,7 @@ export const constructionQuestions: Question[] = [
     hint: "Even slight changes alter the radius.",
     },
     
+    
     {
     id: 80,
     chapter: "Playing with Constructions",
@@ -960,6 +1040,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Choosing the right zero is crucial.",
     },
+    
     
     {
     id: 81,
@@ -973,6 +1054,7 @@ export const constructionQuestions: Question[] = [
     hint: "It allows fine comparison of close distances.",
     },
     
+    
     {
     id: 82,
     chapter: "Playing with Constructions",
@@ -984,6 +1066,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Pick up the length before transferring.",
     },
+    
     
     {
     id: 83,
@@ -997,6 +1080,7 @@ export const constructionQuestions: Question[] = [
     hint: "Both legs must stay vertical and stable.",
     },
     
+    
     {
     id: 84,
     chapter: "Playing with Constructions",
@@ -1008,6 +1092,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Length readings change if ruler is slanted.",
     },
+    
     
     {
     id: 85,
@@ -1021,6 +1106,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs must be drawn with same radius.",
     },
     
+    
     {
     id: 86,
     chapter: "Playing with Constructions",
@@ -1032,6 +1118,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "15° = half of 30°.",
     },
+    
     
     {
     id: 87,
@@ -1045,6 +1132,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs must overlap to locate a point.",
     },
     
+    
     {
     id: 88,
     chapter: "Playing with Constructions",
@@ -1056,6 +1144,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Choosing the wrong 0° flips the measurement.",
     },
+    
     
     {
     id: 89,
@@ -1069,6 +1158,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides must meet exactly.",
     },
     
+    
     {
     id: 90,
     chapter: "Playing with Constructions",
@@ -1080,6 +1170,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Compass must remain stable at one point.",
     },
+    
     
     {
     id: 91,
@@ -1093,6 +1184,7 @@ export const constructionQuestions: Question[] = [
     hint: "One tool has a built-in 90° angle.",
     },
     
+    
     {
     id: 92,
     chapter: "Playing with Constructions",
@@ -1104,6 +1196,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It cuts the line exactly halfway.",
     },
+    
     
     {
     id: 93,
@@ -1117,6 +1210,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two arcs from both endpoints are needed.",
     },
     
+    
     {
     id: 94,
     chapter: "Playing with Constructions",
@@ -1128,6 +1222,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Perpendiculars form a right angle.",
     },
+    
     
     {
     id: 95,
@@ -1141,6 +1236,7 @@ export const constructionQuestions: Question[] = [
     hint: "Slide it along a ruler.",
     },
     
+    
     {
     id: 96,
     chapter: "Playing with Constructions",
@@ -1152,6 +1248,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "The line is divided into equal halves.",
     },
+    
     
     {
     id: 97,
@@ -1165,6 +1262,7 @@ export const constructionQuestions: Question[] = [
     hint: "It draws curves.",
     },
     
+    
     {
     id: 98,
     chapter: "Playing with Constructions",
@@ -1176,6 +1274,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It measures 90°.",
     },
+    
     
     {
     id: 99,
@@ -1189,6 +1288,7 @@ export const constructionQuestions: Question[] = [
     hint: "It creates two equal halves.",
     },
     
+    
     {
     id: 100,
     chapter: "Playing with Constructions",
@@ -1200,6 +1300,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It contains a 90° corner.",
     },
+    
     
     {
     id: 101,
@@ -1213,6 +1314,7 @@ export const constructionQuestions: Question[] = [
     hint: "The compass radius should be the same at both ends.",
     },
     
+    
     {
     id: 102,
     chapter: "Playing with Constructions",
@@ -1224,6 +1326,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It passes exactly through the middle.",
     },
+    
     
     {
     id: 103,
@@ -1237,6 +1340,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs above and below are essential.",
     },
     
+    
     {
     id: 104,
     chapter: "Playing with Constructions",
@@ -1248,6 +1352,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It makes a 90° angle at midpoint.",
     },
+    
     
     {
     id: 105,
@@ -1261,6 +1366,7 @@ export const constructionQuestions: Question[] = [
     hint: "This tool does not draw anything.",
     },
     
+    
     {
     id: 106,
     chapter: "Playing with Constructions",
@@ -1272,6 +1378,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Perpendicular means 90°.",
     },
+    
     
     {
     id: 107,
@@ -1285,6 +1392,7 @@ export const constructionQuestions: Question[] = [
     hint: "Their intersection gives the bisector path.",
     },
     
+    
     {
     id: 108,
     chapter: "Playing with Constructions",
@@ -1296,6 +1404,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It cuts a segment exactly in half.",
     },
+    
     
     {
     id: 109,
@@ -1309,6 +1418,7 @@ export const constructionQuestions: Question[] = [
     hint: "It intersects at 90° and midpoint.",
     },
     
+    
     {
     id: 110,
     chapter: "Playing with Constructions",
@@ -1320,6 +1430,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It contains a fixed 90° angle.",
     },
+    
     
     {
     id: 111,
@@ -1333,6 +1444,7 @@ export const constructionQuestions: Question[] = [
     hint: "An arc must meet the line.",
     },
     
+    
     {
     id: 112,
     chapter: "Playing with Constructions",
@@ -1344,6 +1456,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Intersections guide the bisector.",
     },
+    
     
     {
     id: 113,
@@ -1357,6 +1470,7 @@ export const constructionQuestions: Question[] = [
     hint: "It has an inbuilt right angle.",
     },
     
+    
     {
     id: 114,
     chapter: "Playing with Constructions",
@@ -1368,6 +1482,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Small arcs don’t meet above and below.",
     },
+    
     
     {
     id: 115,
@@ -1381,6 +1496,7 @@ export const constructionQuestions: Question[] = [
     hint: "Perpendicular = 90°.",
     },
     
+    
     {
     id: 116,
     chapter: "Playing with Constructions",
@@ -1392,6 +1508,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "This ensures midpoint location.",
     },
+    
     
     {
     id: 117,
@@ -1405,6 +1522,7 @@ export const constructionQuestions: Question[] = [
     hint: "It cuts the line exactly in half at 90°.",
     },
     
+    
     {
     id: 118,
     chapter: "Playing with Constructions",
@@ -1416,6 +1534,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Arcs from both ends use equal radii.",
     },
+    
     
     {
     id: 119,
@@ -1429,6 +1548,7 @@ export const constructionQuestions: Question[] = [
     hint: "Right angle = 90°.",
     },
     
+    
     {
     id: 120,
     chapter: "Playing with Constructions",
@@ -1440,6 +1560,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It always crosses at the midpoint.",
     },
+    
     
     {
     id: 121,
@@ -1453,6 +1574,7 @@ export const constructionQuestions: Question[] = [
     hint: "The arc must cut the line so a perpendicular can be drawn.",
     },
     
+    
     {
     id: 122,
     chapter: "Playing with Constructions",
@@ -1464,6 +1586,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Only arcs with equal radius more than half can intersect.",
     },
+    
     
     {
     id: 123,
@@ -1477,6 +1600,7 @@ export const constructionQuestions: Question[] = [
     hint: "Midpoint location confirms correctness.",
     },
     
+    
     {
     id: 124,
     chapter: "Playing with Constructions",
@@ -1488,6 +1612,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The ruler acts as the guide edge.",
     },
+    
     
     {
     id: 125,
@@ -1501,6 +1626,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two arc intersection points define the line.",
     },
     
+    
     {
     id: 126,
     chapter: "Playing with Constructions",
@@ -1512,6 +1638,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "This tool measures lengths but is not required for bisectors.",
     },
+    
     
     {
     id: 127,
@@ -1525,6 +1652,7 @@ export const constructionQuestions: Question[] = [
     hint: "This tool creates a 90° angle directly.",
     },
     
+    
     {
     id: 128,
     chapter: "Playing with Constructions",
@@ -1536,6 +1664,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The radius must be more than half the segment.",
     },
+    
     
     {
     id: 129,
@@ -1549,6 +1678,7 @@ export const constructionQuestions: Question[] = [
     hint: "All perpendicular bisectors of chords meet at the center.",
     },
     
+    
     {
     id: 130,
     chapter: "Playing with Constructions",
@@ -1560,6 +1690,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "This fact ensures equal arcs intersect symmetrically.",
     },
+    
     
     {
     id: 131,
@@ -1573,6 +1704,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arc intersection with the line is the start point.",
     },
     
+    
     {
     id: 132,
     chapter: "Playing with Constructions",
@@ -1584,6 +1716,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Perpendicular means 90°.",
     },
+    
     
     {
     id: 133,
@@ -1597,6 +1730,7 @@ export const constructionQuestions: Question[] = [
     hint: "Sliding keeps alignment accurate.",
     },
     
+    
     {
     id: 134,
     chapter: "Playing with Constructions",
@@ -1608,6 +1742,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equal radii guarantee balanced arc intersections.",
     },
+    
     
     {
     id: 135,
@@ -1621,6 +1756,7 @@ export const constructionQuestions: Question[] = [
     hint: "Any point on a perpendicular bisector is equidistant from both endpoints.",
     },
     
+    
     {
     id: 136,
     chapter: "Playing with Constructions",
@@ -1632,6 +1768,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Heights of triangles are perpendiculars.",
     },
+    
     
     {
     id: 137,
@@ -1645,6 +1782,7 @@ export const constructionQuestions: Question[] = [
     hint: "It must be perpendicular AND pass through midpoint.",
     },
     
+    
     {
     id: 138,
     chapter: "Playing with Constructions",
@@ -1656,6 +1794,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The two arcs must be identical to meet.",
     },
+    
     
     {
     id: 139,
@@ -1669,6 +1808,7 @@ export const constructionQuestions: Question[] = [
     hint: "Any point on the bisector is equidistant from both endpoints.",
     },
     
+    
     {
     id: 140,
     chapter: "Playing with Constructions",
@@ -1680,6 +1820,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Those two points guide further arcs.",
     },
+    
     
     {
     id: 141,
@@ -1693,6 +1834,7 @@ export const constructionQuestions: Question[] = [
     hint: "It must pass through both arc intersection points.",
     },
     
+    
     {
     id: 142,
     chapter: "Playing with Constructions",
@@ -1704,6 +1846,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Perpendicular bisector gives equal distance from endpoints.",
     },
+    
     
     {
     id: 143,
@@ -1717,6 +1860,7 @@ export const constructionQuestions: Question[] = [
     hint: "Symmetry ensures midpoint location.",
     },
     
+    
     {
     id: 144,
     chapter: "Playing with Constructions",
@@ -1728,6 +1872,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Measure to ensure it is 90°.",
     },
+    
     
     {
     id: 145,
@@ -1741,6 +1886,7 @@ export const constructionQuestions: Question[] = [
     hint: "All radii from endpoints are equal.",
     },
     
+    
     {
     id: 146,
     chapter: "Playing with Constructions",
@@ -1752,6 +1898,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Same radius arcs create congruent triangles.",
     },
+    
     
     {
     id: 147,
@@ -1765,6 +1912,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs must intersect.",
     },
     
+    
     {
     id: 148,
     chapter: "Playing with Constructions",
@@ -1776,6 +1924,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Perpendicular means 90°.",
     },
+    
     
     {
     id: 149,
@@ -1789,6 +1938,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two arc intersections define the bisector line.",
     },
     
+    
     {
     id: 150,
     chapter: "Playing with Constructions",
@@ -1800,6 +1950,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The compass makes arcs and the ruler joins the points.",
     },
+    
     
     {
     id: 151,
@@ -1813,6 +1964,7 @@ export const constructionQuestions: Question[] = [
     hint: "Very large radius moves intersection points farther apart.",
     },
     
+    
     {
     id: 152,
     chapter: "Playing with Constructions",
@@ -1824,6 +1976,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Even slight movement of the set square changes the angle.",
     },
+    
     
     {
     id: 153,
@@ -1837,6 +1990,7 @@ export const constructionQuestions: Question[] = [
     hint: "Small radii make arcs intersect near the line.",
     },
     
+    
     {
     id: 154,
     chapter: "Playing with Constructions",
@@ -1848,6 +2002,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Both arcs must be exactly equal for symmetry.",
     },
+    
     
     {
     id: 155,
@@ -1861,6 +2016,7 @@ export const constructionQuestions: Question[] = [
     hint: "The perpendicular needs two intersection points on AB.",
     },
     
+    
     {
     id: 156,
     chapter: "Playing with Constructions",
@@ -1872,6 +2028,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Even slight misalignment changes the angle from exact 90°.",
     },
+    
     
     {
     id: 157,
@@ -1885,6 +2042,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each arc is drawn with equal radius from endpoints.",
     },
     
+    
     {
     id: 158,
     chapter: "Playing with Constructions",
@@ -1896,6 +2054,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arcs must intersect on both sides for accuracy.",
     },
+    
     
     {
     id: 159,
@@ -1909,6 +2068,7 @@ export const constructionQuestions: Question[] = [
     hint: "Midpoint equality confirms bisector correctness.",
     },
     
+    
     {
     id: 160,
     chapter: "Playing with Constructions",
@@ -1920,6 +2080,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Even slight sliding destroys accuracy.",
     },
+    
     
     {
     id: 161,
@@ -1933,6 +2094,7 @@ export const constructionQuestions: Question[] = [
     hint: "Center must align exactly with the vertex.",
     },
     
+    
     {
     id: 162,
     chapter: "Playing with Constructions",
@@ -1944,6 +2106,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Use compass to check both distances.",
     },
+    
     
     {
     id: 163,
@@ -1957,6 +2120,7 @@ export const constructionQuestions: Question[] = [
     hint: "Tilt changes the effective radius.",
     },
     
+    
     {
     id: 164,
     chapter: "Playing with Constructions",
@@ -1968,6 +2132,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Large radius shifts intersection points.",
     },
+    
     
     {
     id: 165,
@@ -1981,6 +2146,7 @@ export const constructionQuestions: Question[] = [
     hint: "One-side arcs cannot guarantee perpendicularity.",
     },
     
+    
     {
     id: 166,
     chapter: "Playing with Constructions",
@@ -1992,6 +2158,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equal arcs create symmetric intersection points.",
     },
+    
     
     {
     id: 167,
@@ -2005,6 +2172,7 @@ export const constructionQuestions: Question[] = [
     hint: "Small joining errors change angle precision.",
     },
     
+    
     {
     id: 168,
     chapter: "Playing with Constructions",
@@ -2016,6 +2184,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Use compass to check equality.",
     },
+    
     
     {
     id: 169,
@@ -2029,6 +2198,7 @@ export const constructionQuestions: Question[] = [
     hint: "Using an uneven or bent edge distorts straightness.",
     },
     
+    
     {
     id: 170,
     chapter: "Playing with Constructions",
@@ -2040,6 +2210,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Unequal radii produce uneven intersections.",
     },
+    
     
     {
     id: 171,
@@ -2053,6 +2224,7 @@ export const constructionQuestions: Question[] = [
     hint: "Even a small slip ruins alignment.",
     },
     
+    
     {
     id: 172,
     chapter: "Playing with Constructions",
@@ -2064,6 +2236,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Orientation of the set square matters.",
     },
+    
     
     {
     id: 173,
@@ -2077,6 +2250,7 @@ export const constructionQuestions: Question[] = [
     hint: "Center alignment determines accuracy.",
     },
     
+    
     {
     id: 174,
     chapter: "Playing with Constructions",
@@ -2088,6 +2262,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arcs ensure equal distances from endpoints.",
     },
+    
     
     {
     id: 175,
@@ -2101,6 +2276,7 @@ export const constructionQuestions: Question[] = [
     hint: "Try checking with a compass.",
     },
     
+    
     {
     id: 176,
     chapter: "Playing with Constructions",
@@ -2112,6 +2288,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Radius consistency is essential.",
     },
+    
     
     {
     id: 177,
@@ -2125,6 +2302,7 @@ export const constructionQuestions: Question[] = [
     hint: "Several construction mistakes cause this.",
     },
     
+    
     {
     id: 178,
     chapter: "Playing with Constructions",
@@ -2136,6 +2314,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Two-arc intersections determine the perpendicular line.",
     },
+    
     
     {
     id: 179,
@@ -2149,6 +2328,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal radii create congruent triangles.",
     },
     
+    
     {
     id: 180,
     chapter: "Playing with Constructions",
@@ -2160,6 +2340,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Visual judgement is unreliable—construction decides accuracy.",
     },
+    
     
     {
     id: 181,
@@ -2173,6 +2354,7 @@ export const constructionQuestions: Question[] = [
     hint: "This tool helps create an equilateral triangle.",
     },
     
+    
     {
     id: 182,
     chapter: "Playing with Constructions",
@@ -2184,6 +2366,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All angles in this triangle measure 60°.",
     },
+    
     
     {
     id: 183,
@@ -2197,6 +2380,7 @@ export const constructionQuestions: Question[] = [
     hint: "It is half of 90°.",
     },
     
+    
     {
     id: 184,
     chapter: "Playing with Constructions",
@@ -2208,6 +2392,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "One of its corners is always a right angle.",
     },
+    
     
     {
     id: 185,
@@ -2221,6 +2406,7 @@ export const constructionQuestions: Question[] = [
     hint: "It is half of 60°.",
     },
     
+    
     {
     id: 186,
     chapter: "Playing with Constructions",
@@ -2232,6 +2418,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Each can be obtained using bisectors or equilateral triangles.",
     },
+    
     
     {
     id: 187,
@@ -2245,6 +2432,7 @@ export const constructionQuestions: Question[] = [
     hint: "Set squares include 30°, 45°, 60°, 90°.",
     },
     
+    
     {
     id: 188,
     chapter: "Playing with Constructions",
@@ -2256,6 +2444,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Half of a right angle.",
     },
+    
     
     {
     id: 189,
@@ -2269,6 +2458,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides and angles are equal.",
     },
     
+    
     {
     id: 190,
     chapter: "Playing with Constructions",
@@ -2280,6 +2470,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is a right angle.",
     },
+    
     
     {
     id: 191,
@@ -2293,6 +2484,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisect means divide into two equal angles.",
     },
     
+    
     {
     id: 192,
     chapter: "Playing with Constructions",
@@ -2304,6 +2496,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is the angle of a corner in square.",
     },
+    
     
     {
     id: 193,
@@ -2317,6 +2510,7 @@ export const constructionQuestions: Question[] = [
     hint: "It is obtained by bisecting a right angle.",
     },
     
+    
     {
     id: 194,
     chapter: "Playing with Constructions",
@@ -2328,6 +2522,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is half of 60°.",
     },
+    
     
     {
     id: 195,
@@ -2341,6 +2536,7 @@ export const constructionQuestions: Question[] = [
     hint: "This angle must be created using bisectors.",
     },
     
+    
     {
     id: 196,
     chapter: "Playing with Constructions",
@@ -2352,6 +2548,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Half of 60°.",
     },
+    
     
     {
     id: 197,
@@ -2365,6 +2562,7 @@ export const constructionQuestions: Question[] = [
     hint: "From equilateral triangle method.",
     },
     
+    
     {
     id: 198,
     chapter: "Playing with Constructions",
@@ -2376,6 +2574,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "This angle is right angle.",
     },
+    
     
     {
     id: 199,
@@ -2389,6 +2588,7 @@ export const constructionQuestions: Question[] = [
     hint: "Less than 90°.",
     },
     
+    
     {
     id: 200,
     chapter: "Playing with Constructions",
@@ -2400,6 +2600,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Align baseline at 0°.",
     },
+    
     
     {
     id: 201,
@@ -2413,6 +2614,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 45°.",
     },
     
+    
     {
     id: 202,
     chapter: "Playing with Constructions",
@@ -2424,6 +2626,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It is the angle of a corner of a square.",
     },
+    
     
     {
     id: 203,
@@ -2437,6 +2640,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of equilateral angle.",
     },
     
+    
     {
     id: 204,
     chapter: "Playing with Constructions",
@@ -2448,6 +2652,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All angles are equal.",
     },
+    
     
     {
     id: 205,
@@ -2461,6 +2666,7 @@ export const constructionQuestions: Question[] = [
     hint: "Common set square has 30°–60°–90°.",
     },
     
+    
     {
     id: 206,
     chapter: "Playing with Constructions",
@@ -2472,6 +2678,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Perpendicular lines form 90°.",
     },
+    
     
     {
     id: 207,
@@ -2485,6 +2692,7 @@ export const constructionQuestions: Question[] = [
     hint: "Obtuse means more than 90°.",
     },
     
+    
     {
     id: 208,
     chapter: "Playing with Constructions",
@@ -2496,6 +2704,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Bisect again for smaller angles.",
     },
+    
     
     {
     id: 209,
@@ -2509,6 +2718,7 @@ export const constructionQuestions: Question[] = [
     hint: "Used to check triangle angles.",
     },
     
+    
     {
     id: 210,
     chapter: "Playing with Constructions",
@@ -2520,6 +2730,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Both are obtained by halving another angle.",
     },
+    
     
     {
     id: 211,
@@ -2533,6 +2744,7 @@ export const constructionQuestions: Question[] = [
     hint: "Start with an equilateral triangle.",
     },
     
+    
     {
     id: 212,
     chapter: "Playing with Constructions",
@@ -2544,6 +2756,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "You will bisect this angle.",
     },
+    
     
     {
     id: 213,
@@ -2557,6 +2770,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs must meet to form the equilateral triangle.",
     },
     
+    
     {
     id: 214,
     chapter: "Playing with Constructions",
@@ -2568,6 +2782,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "This construction produces right angles.",
     },
+    
     
     {
     id: 215,
@@ -2581,6 +2796,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 30°.",
     },
     
+    
     {
     id: 216,
     chapter: "Playing with Constructions",
@@ -2592,6 +2808,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "One triangle has two equal 45° angles.",
     },
+    
     
     {
     id: 217,
@@ -2605,6 +2822,7 @@ export const constructionQuestions: Question[] = [
     hint: "One of its corners is 30°.",
     },
     
+    
     {
     id: 218,
     chapter: "Playing with Constructions",
@@ -2616,6 +2834,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "45° comes from bisecting 90°.",
     },
+    
     
     {
     id: 219,
@@ -2629,6 +2848,7 @@ export const constructionQuestions: Question[] = [
     hint: "Needed to form an equilateral triangle.",
     },
     
+    
     {
     id: 220,
     chapter: "Playing with Constructions",
@@ -2640,6 +2860,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Half of 90°.",
     },
+    
     
     {
     id: 221,
@@ -2653,6 +2874,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides must be equal to make 60°.",
     },
     
+    
     {
     id: 222,
     chapter: "Playing with Constructions",
@@ -2664,6 +2886,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "A 45° angle is the bisector of 90°.",
     },
+    
     
     {
     id: 223,
@@ -2677,6 +2900,7 @@ export const constructionQuestions: Question[] = [
     hint: "Look at its smallest acute angle.",
     },
     
+    
     {
     id: 224,
     chapter: "Playing with Constructions",
@@ -2688,6 +2912,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Simple addition of two constructible angles.",
     },
+    
     
     {
     id: 225,
@@ -2701,6 +2926,7 @@ export const constructionQuestions: Question[] = [
     hint: "Angle bisectors must keep a fixed radius.",
     },
     
+    
     {
     id: 226,
     chapter: "Playing with Constructions",
@@ -2712,6 +2938,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Perpendicular bisector gives a 90° angle.",
     },
+    
     
     {
     id: 227,
@@ -2725,6 +2952,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisecting produces equal parts.",
     },
     
+    
     {
     id: 228,
     chapter: "Playing with Constructions",
@@ -2736,6 +2964,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arc symmetry is needed for bisectors.",
     },
+    
     
     {
     id: 229,
@@ -2749,6 +2978,7 @@ export const constructionQuestions: Question[] = [
     hint: "Perpendicular bisector defines 90°.",
     },
     
+    
     {
     id: 230,
     chapter: "Playing with Constructions",
@@ -2760,6 +2990,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "One comes directly, the other by bisecting.",
     },
+    
     
     {
     id: 231,
@@ -2773,6 +3004,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each bisector halves the angle.",
     },
     
+    
     {
     id: 232,
     chapter: "Playing with Constructions",
@@ -2784,6 +3016,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equal angles sum to right angle.",
     },
+    
     
     {
     id: 233,
@@ -2797,6 +3030,7 @@ export const constructionQuestions: Question[] = [
     hint: "Intersection of arcs defines it.",
     },
     
+    
     {
     id: 234,
     chapter: "Playing with Constructions",
@@ -2808,6 +3042,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Bisecting 60° uses these arcs.",
     },
+    
     
     {
     id: 235,
@@ -2821,6 +3056,7 @@ export const constructionQuestions: Question[] = [
     hint: "One set square has exactly 45°.",
     },
     
+    
     {
     id: 236,
     chapter: "Playing with Constructions",
@@ -2832,6 +3068,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "This one requires first constructing 60°.",
     },
+    
     
     {
     id: 237,
@@ -2845,6 +3082,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal halves of 90°.",
     },
     
+    
     {
     id: 238,
     chapter: "Playing with Constructions",
@@ -2856,6 +3094,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Only accurate bisection yields 30°.",
     },
+    
     
     {
     id: 239,
@@ -2869,6 +3108,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides must be equal.",
     },
     
+    
     {
     id: 240,
     chapter: "Playing with Constructions",
@@ -2880,6 +3120,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Symmetry ensures accurate angle bisection.",
     },
+    
     
     {
     id: 241,
@@ -2893,6 +3134,7 @@ export const constructionQuestions: Question[] = [
     hint: "Even a slight change in radius affects arc intersection.",
     },
     
+    
     {
     id: 242,
     chapter: "Playing with Constructions",
@@ -2904,6 +3146,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arc symmetry is essential for precise bisection.",
     },
+    
     
     {
     id: 243,
@@ -2917,6 +3160,7 @@ export const constructionQuestions: Question[] = [
     hint: "Any error in 90° affects the bisector.",
     },
     
+    
     {
     id: 244,
     chapter: "Playing with Constructions",
@@ -2928,6 +3172,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arc intersection is required for any angle bisector.",
     },
+    
     
     {
     id: 245,
@@ -2941,6 +3186,7 @@ export const constructionQuestions: Question[] = [
     hint: "It requires an accurate bisection of 60° first.",
     },
     
+    
     {
     id: 246,
     chapter: "Playing with Constructions",
@@ -2952,6 +3198,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Inaccurate line joining shifts the angle.",
     },
+    
     
     {
     id: 247,
@@ -2965,6 +3212,7 @@ export const constructionQuestions: Question[] = [
     hint: "45° relies entirely on perfect right angle bisection.",
     },
     
+    
     {
     id: 248,
     chapter: "Playing with Constructions",
@@ -2976,6 +3224,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arcs must meet to form equilateral triangle.",
     },
+    
     
     {
     id: 249,
@@ -2989,6 +3238,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 30° gives 15°.",
     },
     
+    
     {
     id: 250,
     chapter: "Playing with Constructions",
@@ -3000,6 +3250,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "One bisection of 90°, then bisect 45°.",
     },
+    
     
     {
     id: 251,
@@ -3013,6 +3264,7 @@ export const constructionQuestions: Question[] = [
     hint: "Tilt changes effective radius.",
     },
     
+    
     {
     id: 252,
     chapter: "Playing with Constructions",
@@ -3024,6 +3276,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "All need symmetric arcs or lines.",
     },
+    
     
     {
     id: 253,
@@ -3037,6 +3290,7 @@ export const constructionQuestions: Question[] = [
     hint: "It depends completely on the accuracy of the 60° angle.",
     },
     
+    
     {
     id: 254,
     chapter: "Playing with Constructions",
@@ -3048,6 +3302,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Right angles rely on perpendiculars.",
     },
+    
     
     {
     id: 255,
@@ -3061,6 +3316,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal radius is essential.",
     },
     
+    
     {
     id: 256,
     chapter: "Playing with Constructions",
@@ -3072,6 +3328,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "45° depends directly on 90° accuracy.",
     },
+    
     
     {
     id: 257,
@@ -3085,6 +3342,7 @@ export const constructionQuestions: Question[] = [
     hint: "Intersection points define the perpendicular.",
     },
     
+    
     {
     id: 258,
     chapter: "Playing with Constructions",
@@ -3096,6 +3354,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "45° must be created through bisecting.",
     },
+    
     
     {
     id: 259,
@@ -3109,6 +3368,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arc symmetry is crucial for bisectors.",
     },
     
+    
     {
     id: 260,
     chapter: "Playing with Constructions",
@@ -3120,6 +3380,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Both are easily constructed angles.",
     },
+    
     
     {
     id: 261,
@@ -3133,6 +3394,7 @@ export const constructionQuestions: Question[] = [
     hint: "Worn edges reduce accuracy.",
     },
     
+    
     {
     id: 262,
     chapter: "Playing with Constructions",
@@ -3144,6 +3406,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equal leg spread ensures accurate radius.",
     },
+    
     
     {
     id: 263,
@@ -3157,6 +3420,7 @@ export const constructionQuestions: Question[] = [
     hint: "Angle bisectors must start exactly from the vertex.",
     },
     
+    
     {
     id: 264,
     chapter: "Playing with Constructions",
@@ -3168,6 +3432,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Two successive bisections of 90°.",
     },
+    
     
     {
     id: 265,
@@ -3181,6 +3446,7 @@ export const constructionQuestions: Question[] = [
     hint: "All constructions depend on a straight base.",
     },
     
+    
     {
     id: 266,
     chapter: "Playing with Constructions",
@@ -3192,6 +3458,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Radius change shifts triangle shape.",
     },
+    
     
     {
     id: 267,
@@ -3205,6 +3472,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two arc intersections are needed.",
     },
     
+    
     {
     id: 268,
     chapter: "Playing with Constructions",
@@ -3216,6 +3484,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Bisector must pass through arc intersection and vertex.",
     },
+    
     
     {
     id: 269,
@@ -3229,6 +3498,7 @@ export const constructionQuestions: Question[] = [
     hint: "Even slight wobbling changes arcs.",
     },
     
+    
     {
     id: 270,
     chapter: "Playing with Constructions",
@@ -3240,6 +3510,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Visual judgement alone cannot confirm angle accuracy.",
     },
+    
     
     {
     id: 271,
@@ -3253,6 +3524,7 @@ export const constructionQuestions: Question[] = [
     hint: "It helps draw arcs from the angle arms.",
     },
     
+    
     {
     id: 272,
     chapter: "Playing with Constructions",
@@ -3264,6 +3536,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "A bisector splits it exactly in half.",
     },
+    
     
     {
     id: 273,
@@ -3277,6 +3550,7 @@ export const constructionQuestions: Question[] = [
     hint: "The arc must cut both angle arms.",
     },
     
+    
     {
     id: 274,
     chapter: "Playing with Constructions",
@@ -3288,6 +3562,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Arc intersections are needed for bisector.",
     },
+    
     
     {
     id: 275,
@@ -3301,6 +3576,7 @@ export const constructionQuestions: Question[] = [
     hint: "These points help create equal arcs.",
     },
     
+    
     {
     id: 276,
     chapter: "Playing with Constructions",
@@ -3312,6 +3588,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All angle bisectors originate here.",
     },
+    
     
     {
     id: 277,
@@ -3325,6 +3602,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two arcs from equal radius must meet.",
     },
     
+    
     {
     id: 278,
     chapter: "Playing with Constructions",
@@ -3336,6 +3614,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It makes two equal parts.",
     },
+    
     
     {
     id: 279,
@@ -3349,6 +3628,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of a right angle.",
     },
     
+    
     {
     id: 280,
     chapter: "Playing with Constructions",
@@ -3360,6 +3640,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Bisectors depend on arc intersections.",
     },
+    
     
     {
     id: 281,
@@ -3373,6 +3654,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal radius ensures symmetry.",
     },
     
+    
     {
     id: 282,
     chapter: "Playing with Constructions",
@@ -3384,6 +3666,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It splits the interior region.",
     },
+    
     
     {
     id: 283,
@@ -3397,6 +3680,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 30°.",
     },
     
+    
     {
     id: 284,
     chapter: "Playing with Constructions",
@@ -3408,6 +3692,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Divide into two equal halves.",
     },
+    
     
     {
     id: 285,
@@ -3421,6 +3706,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs mark equal distances on each arm.",
     },
     
+    
     {
     id: 286,
     chapter: "Playing with Constructions",
@@ -3432,6 +3718,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Any angle >90° becomes two smaller (<90°).",
     },
+    
     
     {
     id: 287,
@@ -3445,6 +3732,7 @@ export const constructionQuestions: Question[] = [
     hint: "Only one intersection point is used.",
     },
     
+    
     {
     id: 288,
     chapter: "Playing with Constructions",
@@ -3456,6 +3744,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "To create equal reference points.",
     },
+    
     
     {
     id: 289,
@@ -3469,6 +3758,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisect means divide equally.",
     },
     
+    
     {
     id: 290,
     chapter: "Playing with Constructions",
@@ -3480,6 +3770,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "The arcs meet inside the angle region.",
     },
+    
     
     {
     id: 291,
@@ -3493,6 +3784,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 45°.",
     },
     
+    
     {
     id: 292,
     chapter: "Playing with Constructions",
@@ -3504,6 +3796,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "This line creates equal halves.",
     },
+    
     
     {
     id: 293,
@@ -3517,6 +3810,7 @@ export const constructionQuestions: Question[] = [
     hint: "Both angles must be identical.",
     },
     
+    
     {
     id: 294,
     chapter: "Playing with Constructions",
@@ -3528,6 +3822,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "They must be identical.",
     },
+    
     
     {
     id: 295,
@@ -3541,6 +3836,7 @@ export const constructionQuestions: Question[] = [
     hint: "A change ruins symmetry.",
     },
     
+    
     {
     id: 296,
     chapter: "Playing with Constructions",
@@ -3552,6 +3848,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Divide 120° into two equal parts.",
     },
+    
     
     {
     id: 297,
@@ -3565,6 +3862,7 @@ export const constructionQuestions: Question[] = [
     hint: "This point determines the bisector path.",
     },
     
+    
     {
     id: 298,
     chapter: "Playing with Constructions",
@@ -3576,6 +3874,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Every bisector begins at the vertex.",
     },
+    
     
     {
     id: 299,
@@ -3589,6 +3888,7 @@ export const constructionQuestions: Question[] = [
     hint: "This tool measures angles but is unnecessary.",
     },
     
+    
     {
     id: 300,
     chapter: "Playing with Constructions",
@@ -3600,6 +3900,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Each part becomes smaller than 90°.",
     },
+    
     
     {
     id: 301,
@@ -3613,6 +3914,7 @@ export const constructionQuestions: Question[] = [
     hint: "Both arms must be cut to create equal reference points.",
     },
     
+    
     {
     id: 302,
     chapter: "Playing with Constructions",
@@ -3624,6 +3926,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equal radii guarantee proper intersection.",
     },
+    
     
     {
     id: 303,
@@ -3637,6 +3940,7 @@ export const constructionQuestions: Question[] = [
     hint: "The intersection point is equidistant from both arms.",
     },
     
+    
     {
     id: 304,
     chapter: "Playing with Constructions",
@@ -3648,6 +3952,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Intersection occurs only when the radius is adequate.",
     },
+    
     
     {
     id: 305,
@@ -3661,6 +3966,7 @@ export const constructionQuestions: Question[] = [
     hint: "Divide 75° equally.",
     },
     
+    
     {
     id: 306,
     chapter: "Playing with Constructions",
@@ -3672,6 +3978,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "A wobbling compass shifts arc intersections.",
     },
+    
     
     {
     id: 307,
@@ -3685,6 +3992,7 @@ export const constructionQuestions: Question[] = [
     hint: "The bisector must originate from the vertex.",
     },
     
+    
     {
     id: 308,
     chapter: "Playing with Constructions",
@@ -3696,6 +4004,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equal distances indicate equal angles.",
     },
+    
     
     {
     id: 309,
@@ -3709,6 +4018,7 @@ export const constructionQuestions: Question[] = [
     hint: "Changing radius destroys symmetry.",
     },
     
+    
     {
     id: 310,
     chapter: "Playing with Constructions",
@@ -3720,6 +4030,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Changing radius destroys symmetry.",
     },
+    
     
     {
     id: 311,
@@ -3733,6 +4044,7 @@ export const constructionQuestions: Question[] = [
     hint: "Reflex angle >180°, so the bisector stays inside that region.",
     },
     
+    
     {
     id: 312,
     chapter: "Playing with Constructions",
@@ -3744,6 +4056,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Each part is 70°.",
     },
+    
     
     {
     id: 313,
@@ -3757,6 +4070,7 @@ export const constructionQuestions: Question[] = [
     hint: "Small arcs reduce inaccuracies.",
     },
     
+    
     {
     id: 314,
     chapter: "Playing with Constructions",
@@ -3768,6 +4082,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Long distances amplify small construction errors.",
     },
+    
     
     {
     id: 315,
@@ -3781,6 +4096,7 @@ export const constructionQuestions: Question[] = [
     hint: "A straight angle is 180°.",
     },
     
+    
     {
     id: 316,
     chapter: "Playing with Constructions",
@@ -3792,6 +4108,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Incorrect radius changes all steps.",
     },
+    
     
     {
     id: 317,
@@ -3805,6 +4122,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisector must pass through the vertex.",
     },
     
+    
     {
     id: 318,
     chapter: "Playing with Constructions",
@@ -3816,6 +4134,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Tilting changes the radius.",
     },
+    
     
     {
     id: 319,
@@ -3829,6 +4148,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each bisection halves the previous angle.",
     },
     
+    
     {
     id: 320,
     chapter: "Playing with Constructions",
@@ -3840,6 +4160,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arcs + straight lines are needed.",
     },
+    
     
     {
     id: 321,
@@ -3853,6 +4174,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 30° gives 15°.",
     },
     
+    
     {
     id: 322,
     chapter: "Playing with Constructions",
@@ -3864,6 +4186,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Different radii shift symmetry.",
     },
+    
     
     {
     id: 323,
@@ -3877,6 +4200,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each becomes 85°.",
     },
     
+    
     {
     id: 324,
     chapter: "Playing with Constructions",
@@ -3888,6 +4212,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Clear intersections help accuracy.",
     },
+    
     
     {
     id: 325,
@@ -3901,6 +4226,7 @@ export const constructionQuestions: Question[] = [
     hint: "Consistency is key.",
     },
     
+    
     {
     id: 326,
     chapter: "Playing with Constructions",
@@ -3912,6 +4238,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Greater than 90°, less than 180°.",
     },
+    
     
     {
     id: 327,
@@ -3925,6 +4252,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal arcs guarantee equal distances.",
     },
     
+    
     {
     id: 328,
     chapter: "Playing with Constructions",
@@ -3936,6 +4264,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Arc symmetry defines the bisector.",
     },
+    
     
     {
     id: 329,
@@ -3949,6 +4278,7 @@ export const constructionQuestions: Question[] = [
     hint: "Very small distances magnify pencil errors.",
     },
     
+    
     {
     id: 330,
     chapter: "Playing with Constructions",
@@ -3960,6 +4290,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Equal distances imply equal angles.",
     },
+    
     
     {
     id: 331,
@@ -3973,6 +4304,7 @@ export const constructionQuestions: Question[] = [
     hint: "A bisector must always start at the vertex.",
     },
     
+    
     {
     id: 332,
     chapter: "Playing with Constructions",
@@ -3984,6 +4316,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Unequal radii create asymmetric intersections.",
     },
+    
     
     {
     id: 333,
@@ -3997,6 +4330,7 @@ export const constructionQuestions: Question[] = [
     hint: "Even tiny radius changes alter arc intersection.",
     },
     
+    
     {
     id: 334,
     chapter: "Playing with Constructions",
@@ -4008,6 +4342,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Obtuse angle region is wider than 90°.",
     },
+    
     
     {
     id: 335,
@@ -4021,6 +4356,7 @@ export const constructionQuestions: Question[] = [
     hint: "Divide 160° equally.",
     },
     
+    
     {
     id: 336,
     chapter: "Playing with Constructions",
@@ -4032,6 +4368,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Small angles require larger radius for intersection.",
     },
+    
     
     {
     id: 337,
@@ -4045,6 +4382,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arc-based triangles reflect symmetry.",
     },
     
+    
     {
     id: 338,
     chapter: "Playing with Constructions",
@@ -4056,6 +4394,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arc must reach both arms.",
     },
+    
     
     {
     id: 339,
@@ -4069,6 +4408,7 @@ export const constructionQuestions: Question[] = [
     hint: "Reflex angles >180° split into reflex + acute.",
     },
     
+    
     {
     id: 340,
     chapter: "Playing with Constructions",
@@ -4080,6 +4420,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Symmetry depends on constant radius.",
     },
+    
     
     {
     id: 341,
@@ -4093,6 +4434,7 @@ export const constructionQuestions: Question[] = [
     hint: "More distance magnifies construction errors.",
     },
     
+    
     {
     id: 342,
     chapter: "Playing with Constructions",
@@ -4104,6 +4446,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Two rays must form an angle.",
     },
+    
     
     {
     id: 343,
@@ -4117,6 +4460,7 @@ export const constructionQuestions: Question[] = [
     hint: "Reflex angles open beyond 180°.",
     },
     
+    
     {
     id: 344,
     chapter: "Playing with Constructions",
@@ -4129,17 +4473,20 @@ export const constructionQuestions: Question[] = [
     hint: "Bisection must use stable radius.",
     },
     
+    
     {
     id: 345,
     chapter: "Playing with Constructions",
     topic: "Angle Bisector constructions",
     question: "A 15° angle is constructed incorrectly, resulting in 18°. What likely happened?",
+
     options: ["Acute + obtuse", "Obtuse + obtuse", "Reflex + acute", "Two reflex"],
     correctAnswer: 2,
     difficulty: "difficult",
     reward: 8,
     hint: "Reflex angles >180° split this way.",
     },
+    
     
     {
     id: 346,
@@ -4153,6 +4500,7 @@ export const constructionQuestions: Question[] = [
     hint: "Larger arcs reach each other.",
     },
     
+    
     {
     id: 347,
     chapter: "Playing with Constructions",
@@ -4164,6 +4512,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equal arcs from arms form mirror triangles.",
     },
+    
     
     {
     id: 348,
@@ -4177,6 +4526,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 45°.",
     },
     
+    
     {
     id: 349,
     chapter: "Playing with Constructions",
@@ -4188,6 +4538,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Symmetry relies on constant radius.",
     },
+    
     
     {
     id: 350,
@@ -4201,6 +4552,7 @@ export const constructionQuestions: Question[] = [
     hint: "60° → 30° → 15° → 7.5°.",
     },
     
+    
     {
     id: 351,
     chapter: "Playing with Constructions",
@@ -4212,6 +4564,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Short arc cut creates no intersection.",
     },
+    
     
     {
     id: 352,
@@ -4225,6 +4578,7 @@ export const constructionQuestions: Question[] = [
     hint: "Small distances magnify tiny errors.",
     },
     
+    
     {
     id: 353,
     chapter: "Playing with Constructions",
@@ -4236,6 +4590,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Unequal arcs cause unequal halves.",
     },
+    
     
     {
     id: 354,
@@ -4249,6 +4604,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal distances prove equal angles.",
     },
     
+    
     {
     id: 355,
     chapter: "Playing with Constructions",
@@ -4260,6 +4616,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Reflex region >180° requires drawing arcs behind vertex.",
     },
+    
     
     {
     id: 356,
@@ -4273,6 +4630,7 @@ export const constructionQuestions: Question[] = [
     hint: "Half of 10°.",
     },
     
+    
     {
     id: 357,
     chapter: "Playing with Constructions",
@@ -4284,6 +4642,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "It measures perpendicularity, not equality of angles.",
     },
+    
     
     {
     id: 358,
@@ -4297,6 +4656,7 @@ export const constructionQuestions: Question[] = [
     hint: "Only the one inside the angle is valid.",
     },
     
+    
     {
     id: 359,
     chapter: "Playing with Constructions",
@@ -4308,6 +4668,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Incorrect arcs shift the bisector.",
     },
+    
     
     {
     id: 360,
@@ -4321,6 +4682,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal arcs provide true accuracy, not appearance.",
     },
     
+    
     {
     id: 361,
     chapter: "Playing with Constructions",
@@ -4332,6 +4694,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It helps draw arcs to mark lengths.",
     },
+    
     
     {
     id: 362,
@@ -4345,6 +4708,7 @@ export const constructionQuestions: Question[] = [
     hint: "Start with the base for stability.",
     },
     
+    
     {
     id: 363,
     chapter: "Playing with Constructions",
@@ -4356,6 +4720,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Used to draw arc for another side.",
     },
+    
     
     {
     id: 364,
@@ -4369,6 +4734,7 @@ export const constructionQuestions: Question[] = [
     hint: "Side lengths must satisfy triangle inequality.",
     },
     
+    
     {
     id: 365,
     chapter: "Playing with Constructions",
@@ -4380,6 +4746,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Equal sides require arc intersections.",
     },
+    
     
     {
     id: 366,
@@ -4393,6 +4760,7 @@ export const constructionQuestions: Question[] = [
     hint: "Three non-collinear points form a triangle.",
     },
     
+    
     {
     id: 367,
     chapter: "Playing with Constructions",
@@ -4404,6 +4772,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All angles are 60°.",
     },
+    
     
     {
     id: 368,
@@ -4417,6 +4786,7 @@ export const constructionQuestions: Question[] = [
     hint: "Three measurements are necessary.",
     },
     
+    
     {
     id: 369,
     chapter: "Playing with Constructions",
@@ -4428,6 +4798,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "This gives the third vertex.",
     },
+    
     
     {
     id: 370,
@@ -4441,6 +4812,7 @@ export const constructionQuestions: Question[] = [
     hint: "Triangle inequality rule.",
     },
     
+    
     {
     id: 371,
     chapter: "Playing with Constructions",
@@ -4452,6 +4824,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All sides equal.",
     },
+    
     
     {
     id: 372,
@@ -4465,6 +4838,7 @@ export const constructionQuestions: Question[] = [
     hint: "Each arc marks a side length.",
     },
     
+    
     {
     id: 373,
     chapter: "Playing with Constructions",
@@ -4476,6 +4850,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Two equal sides mean two equal angles.",
     },
+    
     
     {
     id: 374,
@@ -4489,6 +4864,7 @@ export const constructionQuestions: Question[] = [
     hint: "One intersection gives one triangle.",
     },
     
+    
     {
     id: 375,
     chapter: "Playing with Constructions",
@@ -4500,6 +4876,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "The base supports equal-side arcs.",
     },
+    
     
     {
     id: 376,
@@ -4513,6 +4890,7 @@ export const constructionQuestions: Question[] = [
     hint: "Need two measurements.",
     },
     
+    
     {
     id: 377,
     chapter: "Playing with Constructions",
@@ -4524,6 +4902,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "This point completes the triangle.",
     },
+    
     
     {
     id: 378,
@@ -4537,6 +4916,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two possible positions for vertex.",
     },
     
+    
     {
     id: 379,
     chapter: "Playing with Constructions",
@@ -4548,6 +4928,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "All sides different.",
     },
+    
     
     {
     id: 380,
@@ -4561,6 +4942,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two sides and included angle.",
     },
     
+    
     {
     id: 381,
     chapter: "Playing with Constructions",
@@ -4572,6 +4954,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Accuracy begins with the base.",
     },
+    
     
     {
     id: 382,
@@ -4585,6 +4968,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two equal sides.",
     },
     
+    
     {
     id: 383,
     chapter: "Playing with Constructions",
@@ -4596,6 +4980,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Join vertex to base.",
     },
+    
     
     {
     id: 384,
@@ -4609,6 +4994,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arc intersections matter.",
     },
     
+    
     {
     id: 385,
     chapter: "Playing with Constructions",
@@ -4620,6 +5006,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Need at least two measurements.",
     },
+    
     
     {
     id: 386,
@@ -4633,6 +5020,7 @@ export const constructionQuestions: Question[] = [
     hint: "All sides different → two arcs needed.",
     },
     
+    
     {
     id: 387,
     chapter: "Playing with Constructions",
@@ -4644,6 +5032,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Triangle inequality rule.",
     },
+    
     
     {
     id: 388,
@@ -4657,6 +5046,7 @@ export const constructionQuestions: Question[] = [
     hint: "Angle must be measured.",
     },
     
+    
     {
     id: 389,
     chapter: "Playing with Constructions",
@@ -4668,6 +5058,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Start at vertex with known measurements.",
     },
+    
     
     {
     id: 390,
@@ -4681,6 +5072,7 @@ export const constructionQuestions: Question[] = [
     hint: "SSS gives a unique triangle.",
     },
     
+    
     {
     id: 391,
     chapter: "Playing with Constructions",
@@ -4692,6 +5084,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Check the triangle inequality rule.",
     },
+    
     
     {
     id: 392,
@@ -4705,6 +5098,7 @@ export const constructionQuestions: Question[] = [
     hint: "Two possible positions for the vertex exist.",
     },
     
+    
     {
     id: 393,
     chapter: "Playing with Constructions",
@@ -4716,6 +5110,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Sum of any two sides must be greater than the third.",
     },
+    
     
     {
     id: 394,
@@ -4729,6 +5124,7 @@ export const constructionQuestions: Question[] = [
     hint: "Side–Angle–Side.",
     },
     
+    
     {
     id: 395,
     chapter: "Playing with Constructions",
@@ -4740,6 +5136,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Longer base stabilizes arc intersection.",
     },
+    
     
     {
     id: 396,
@@ -4753,6 +5150,7 @@ export const constructionQuestions: Question[] = [
     hint: "Both satisfy given measurements.",
     },
     
+    
     {
     id: 397,
     chapter: "Playing with Constructions",
@@ -4764,6 +5162,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Triangle inequality.",
     },
+    
     
     {
     id: 398,
@@ -4777,6 +5176,7 @@ export const constructionQuestions: Question[] = [
     hint: "SSS always gives a unique triangle.",
     },
     
+    
     {
     id: 399,
     chapter: "Playing with Constructions",
@@ -4788,6 +5188,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "The arcs create equal-length segments.",
     },
+    
     
     {
     id: 400,
@@ -4801,6 +5202,7 @@ export const constructionQuestions: Question[] = [
     hint: "ASA uses angles before sides.",
     },
     
+    
     {
     id: 401,
     chapter: "Playing with Constructions",
@@ -4812,6 +5214,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "It measures angles.",
     },
+    
     
     {
     id: 402,
@@ -4825,6 +5228,7 @@ export const constructionQuestions: Question[] = [
     hint: "It locates the third vertex.",
     },
     
+    
     {
     id: 403,
     chapter: "Playing with Constructions",
@@ -4836,6 +5240,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "ASA still requires a side.",
     },
+    
     
     {
     id: 404,
@@ -4849,6 +5254,7 @@ export const constructionQuestions: Question[] = [
     hint: "Strict inequality is required.",
     },
     
+    
     {
     id: 405,
     chapter: "Playing with Constructions",
@@ -4860,6 +5266,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Joining creates two sides.",
     },
+    
     
     {
     id: 406,
@@ -4873,6 +5280,7 @@ export const constructionQuestions: Question[] = [
     hint: "A very narrow triangle results.",
     },
     
+    
     {
     id: 407,
     chapter: "Playing with Constructions",
@@ -4884,6 +5292,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Angle-Side-Angle fixes all values.",
     },
+    
     
     {
     id: 408,
@@ -4897,6 +5306,7 @@ export const constructionQuestions: Question[] = [
     hint: "Radius determines side lengths.",
     },
     
+    
     {
     id: 409,
     chapter: "Playing with Constructions",
@@ -4908,6 +5318,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "SSA sometimes gives 0, 1, or 2 triangles.",
     },
+    
     
     {
     id: 410,
@@ -4921,6 +5332,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs locate the opposite vertex.",
     },
     
+    
     {
     id: 411,
     chapter: "Playing with Constructions",
@@ -4932,6 +5344,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Difference of two sides < third side.",
     },
+    
     
     {
     id: 412,
@@ -4945,6 +5358,7 @@ export const constructionQuestions: Question[] = [
     hint: "Angles are placed on the known side.",
     },
     
+    
     {
     id: 413,
     chapter: "Playing with Constructions",
@@ -4956,6 +5370,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "One intersection → one solution.",
     },
+    
     
     {
     id: 414,
@@ -4969,6 +5384,7 @@ export const constructionQuestions: Question[] = [
     hint: "A chosen vertex defines the right angle.",
     },
     
+    
     {
     id: 415,
     chapter: "Playing with Constructions",
@@ -4980,6 +5396,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Sum of two sides must be greater.",
     },
+    
     
     {
     id: 416,
@@ -4993,6 +5410,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arc radius represents length.",
     },
     
+    
     {
     id: 417,
     chapter: "Playing with Constructions",
@@ -5004,6 +5422,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Sum of angles is always 180°.",
     },
+    
     
     {
     id: 418,
@@ -5017,6 +5436,7 @@ export const constructionQuestions: Question[] = [
     hint: "Check 8 + 9 vs 17.",
     },
     
+    
     {
     id: 419,
     chapter: "Playing with Constructions",
@@ -5028,6 +5448,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Vertex location changes height.",
     },
+    
     
     {
     id: 420,
@@ -5041,6 +5462,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal side lengths form isosceles.",
     },
     
+    
     {
     id: 421,
     chapter: "Playing with Constructions",
@@ -5053,6 +5475,7 @@ export const constructionQuestions: Question[] = [
     hint: "An obtuse triangle forms when the vertex lies far from the base.",
     },
     
+    
     {
     id: 422,
     chapter: "Playing with Constructions",
@@ -5063,7 +5486,9 @@ export const constructionQuestions: Question[] = [
     difficulty: "difficult",
     reward: 8,
     hint: "An obtuse triangle forms when the vertex lies far from the base.",
+
     },
+    
     
     {
     id: 423,
@@ -5077,6 +5502,7 @@ export const constructionQuestions: Question[] = [
     hint: "Lengths fall exactly in a straight line.",
     },
     
+    
     {
     id: 424,
     chapter: "Playing with Constructions",
@@ -5088,6 +5514,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "No triangle is possible if inequality fails.",
     },
+    
     
     {
     id: 425,
@@ -5101,6 +5528,7 @@ export const constructionQuestions: Question[] = [
     hint: "An angle error affects entire shape.",
     },
     
+    
     {
     id: 426,
     chapter: "Playing with Constructions",
@@ -5112,6 +5540,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Too short → cannot reach base.",
     },
+    
     
     {
     id: 427,
@@ -5125,6 +5554,7 @@ export const constructionQuestions: Question[] = [
     hint: "The bisector of the base forms symmetry axis.",
     },
     
+    
     {
     id: 428,
     chapter: "Playing with Constructions",
@@ -5137,17 +5567,20 @@ export const constructionQuestions: Question[] = [
     hint: "Even small radius errors change the vertex location.",
     },
     
+    
     {
     id: 429,
     chapter: "Playing with Constructions",
     topic: "Drawing triangles with Given measurements",
     question: "A 15° angle is constructed incorrectly, resulting in 18°. What likely happened?",
+
     options: ["Scalene", "Isosceles", "Right", "Reflex"],
     correctAnswer: 1,
     difficulty: "difficult",
     reward: 8,
     hint: "Equal distance from both endpoints.",
     },
+    
     
     {
     id: 430,
@@ -5161,6 +5594,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equality collapses into a straight line.",
     },
     
+    
     {
     id: 431,
     chapter: "Playing with Constructions",
@@ -5172,6 +5606,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Side opposite larger angle increases.",
     },
+    
     
     {
     id: 432,
@@ -5185,6 +5620,7 @@ export const constructionQuestions: Question[] = [
     hint: "This forms a right angle.",
     },
     
+    
     {
     id: 433,
     chapter: "Playing with Constructions",
@@ -5196,6 +5632,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Small height → nearly straight shape.",
     },
+    
     
     {
     id: 434,
@@ -5209,6 +5646,7 @@ export const constructionQuestions: Question[] = [
     hint: "The included angle defines entire structure.",
     },
     
+    
     {
     id: 435,
     chapter: "Playing with Constructions",
@@ -5220,6 +5658,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "This is the ambiguous SSA case.",
     },
+    
     
     {
     id: 436,
@@ -5233,6 +5672,7 @@ export const constructionQuestions: Question[] = [
     hint: "Acute triangles have smaller heights.",
     },
     
+    
     {
     id: 437,
     chapter: "Playing with Constructions",
@@ -5244,6 +5684,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "One intersection = one triangle.",
     },
+    
     
     {
     id: 438,
@@ -5257,6 +5698,7 @@ export const constructionQuestions: Question[] = [
     hint: "Radius must match the given side lengths.",
     },
     
+    
     {
     id: 439,
     chapter: "Playing with Constructions",
@@ -5268,6 +5710,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Short side reduces height significantly.",
     },
+    
     
     {
     id: 440,
@@ -5281,6 +5724,7 @@ export const constructionQuestions: Question[] = [
     hint: "3-4-5 satisfies Pythagoras.",
     },
     
+    
     {
     id: 441,
     chapter: "Playing with Constructions",
@@ -5292,6 +5736,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Apply triangle inequality on each side.",
     },
+    
     
     {
     id: 442,
@@ -5305,6 +5750,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal sides → closer arc intersections.",
     },
     
+    
     {
     id: 443,
     chapter: "Playing with Constructions",
@@ -5316,6 +5762,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Intersection point depends entirely on correct radii.",
     },
+    
     
     {
     id: 444,
@@ -5329,6 +5776,7 @@ export const constructionQuestions: Question[] = [
     hint: "Check 5 + 6 vs 12.",
     },
     
+    
     {
     id: 445,
     chapter: "Playing with Constructions",
@@ -5340,6 +5788,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Incorrect base ruins arc intersection accuracy.",
     },
+    
     
     {
     id: 446,
@@ -5353,6 +5802,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal radii place vertex on bisector.",
     },
     
+    
     {
     id: 447,
     chapter: "Playing with Constructions",
@@ -5364,6 +5814,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Small angles → long, thin triangle.",
     },
+    
     
     {
     id: 448,
@@ -5377,6 +5828,7 @@ export const constructionQuestions: Question[] = [
     hint: "Small deviations cause large side errors.",
     },
     
+    
     {
     id: 449,
     chapter: "Playing with Constructions",
@@ -5388,6 +5840,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Isosceles symmetry breaks with arc errors.",
     },
+    
     
     {
     id: 450,
@@ -5401,6 +5854,7 @@ export const constructionQuestions: Question[] = [
     hint: "Only arcs and exact lengths ensure correctness.",
     },
     
+    
     {
     id: 451,
     chapter: "Playing with Constructions",
@@ -5412,6 +5866,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It divides a segment into two equal parts.",
     },
+    
     
     {
     id: 452,
@@ -5425,6 +5880,7 @@ export const constructionQuestions: Question[] = [
     hint: "Shortest distance is perpendicular.",
     },
     
+    
     {
     id: 453,
     chapter: "Playing with Constructions",
@@ -5436,6 +5892,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "They must stay equidistant.",
     },
+    
     
     {
     id: 454,
@@ -5449,6 +5906,7 @@ export const constructionQuestions: Question[] = [
     hint: "It ensures right angles and straight edges.",
     },
     
+    
     {
     id: 455,
     chapter: "Playing with Constructions",
@@ -5460,6 +5918,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Used to draw arcs.",
     },
+    
     
     {
     id: 456,
@@ -5473,6 +5932,7 @@ export const constructionQuestions: Question[] = [
     hint: "Intersection of bisectors gives center.",
     },
     
+    
     {
     id: 457,
     chapter: "Playing with Constructions",
@@ -5484,6 +5944,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Door frames must be right-angled.",
     },
+    
     
     {
     id: 458,
@@ -5497,6 +5958,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisectors ensure symmetry.",
     },
     
+    
     {
     id: 459,
     chapter: "Playing with Constructions",
@@ -5508,6 +5970,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It divides into two equal lengths.",
     },
+    
     
     {
     id: 460,
@@ -5521,6 +5984,7 @@ export const constructionQuestions: Question[] = [
     hint: "Circular shapes involve arcs.",
     },
     
+    
     {
     id: 461,
     chapter: "Playing with Constructions",
@@ -5532,6 +5996,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Roads and boundaries often use parallels.",
     },
+    
     
     {
     id: 462,
@@ -5545,6 +6010,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal distance is key.",
     },
     
+    
     {
     id: 463,
     chapter: "Playing with Constructions",
@@ -5556,6 +6022,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Alignment uses 90° corners.",
     },
+    
     
     {
     id: 464,
@@ -5569,6 +6036,7 @@ export const constructionQuestions: Question[] = [
     hint: "Compass rotates around a point.",
     },
     
+    
     {
     id: 465,
     chapter: "Playing with Constructions",
@@ -5580,6 +6048,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Used to divide shapes into equal halves.",
     },
+    
     
     {
     id: 466,
@@ -5593,6 +6062,7 @@ export const constructionQuestions: Question[] = [
     hint: "This method finds midpoints.",
     },
     
+    
     {
     id: 467,
     chapter: "Playing with Constructions",
@@ -5604,6 +6074,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Grids are formed this way.",
     },
+    
     
     {
     id: 468,
@@ -5617,6 +6088,7 @@ export const constructionQuestions: Question[] = [
     hint: "Used to make touching curves.",
     },
     
+    
     {
     id: 469,
     chapter: "Playing with Constructions",
@@ -5628,6 +6100,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "It helps find equidistant points.",
     },
+    
     
     {
     id: 470,
@@ -5641,6 +6114,7 @@ export const constructionQuestions: Question[] = [
     hint: "They must remain evenly spaced.",
     },
     
+    
     {
     id: 471,
     chapter: "Playing with Constructions",
@@ -5652,6 +6126,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Vertical means perpendicular to ground.",
     },
+    
     
     {
     id: 472,
@@ -5665,6 +6140,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal spacing uses parallels.",
     },
     
+    
     {
     id: 473,
     chapter: "Playing with Constructions",
@@ -5676,6 +6152,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Land mapping uses grid methods.",
     },
+    
     
     {
     id: 474,
@@ -5689,6 +6166,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal angles make equal slices.",
     },
     
+    
     {
     id: 475,
     chapter: "Playing with Constructions",
@@ -5700,6 +6178,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Tracks must stay equidistant.",
     },
+    
     
     {
     id: 476,
@@ -5713,6 +6192,7 @@ export const constructionQuestions: Question[] = [
     hint: "Intersection gives midpoint.",
     },
     
+    
     {
     id: 477,
     chapter: "Playing with Constructions",
@@ -5724,6 +6204,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Roundabouts are circular.",
     },
+    
     
     {
     id: 478,
@@ -5737,6 +6218,7 @@ export const constructionQuestions: Question[] = [
     hint: "Shortest path is perpendicular.",
     },
     
+    
     {
     id: 479,
     chapter: "Playing with Constructions",
@@ -5748,6 +6230,7 @@ export const constructionQuestions: Question[] = [
     reward: 3,
     hint: "Grid-like structure is made.",
     },
+    
     
     {
     id: 480,
@@ -5761,6 +6244,7 @@ export const constructionQuestions: Question[] = [
     hint: "Hexagon arises from 6 equal arcs in a circle.",
     },
     
+    
     {
     id: 481,
     chapter: "Playing with Constructions",
@@ -5772,6 +6256,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Center location is essential for domes and arches.",
     },
+    
     
     {
     id: 482,
@@ -5785,6 +6270,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal angle division helps in symmetrical lane design.",
     },
     
+    
     {
     id: 483,
     chapter: "Playing with Constructions",
@@ -5796,6 +6282,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Maps use coordinate grids formed by parallels.",
     },
+    
     
     {
     id: 484,
@@ -5809,6 +6296,7 @@ export const constructionQuestions: Question[] = [
     hint: "Circle requires a constant radius.",
     },
     
+    
     {
     id: 485,
     chapter: "Playing with Constructions",
@@ -5820,6 +6308,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Symmetry around a point matters in design.",
     },
+    
     
     {
     id: 486,
@@ -5833,6 +6322,7 @@ export const constructionQuestions: Question[] = [
     hint: "Supports must be exactly vertical.",
     },
     
+    
     {
     id: 487,
     chapter: "Playing with Constructions",
@@ -5844,6 +6334,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Tangents create smooth transitions.",
     },
+    
     
     {
     id: 488,
@@ -5857,6 +6348,7 @@ export const constructionQuestions: Question[] = [
     hint: "Opposite walls must stay equidistant.",
     },
     
+    
     {
     id: 489,
     chapter: "Playing with Constructions",
@@ -5868,6 +6360,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Sprinklers must be centered to cover uniformly.",
     },
+    
     
     {
     id: 490,
@@ -5881,6 +6374,7 @@ export const constructionQuestions: Question[] = [
     hint: "Triangles help determine exact boundaries.",
     },
     
+    
     {
     id: 491,
     chapter: "Playing with Constructions",
@@ -5892,6 +6386,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Wires must run parallel for neat installation.",
     },
+    
     
     {
     id: 492,
@@ -5905,6 +6400,7 @@ export const constructionQuestions: Question[] = [
     hint: "Tracks must be equidistant everywhere.",
     },
     
+    
     {
     id: 493,
     chapter: "Playing with Constructions",
@@ -5916,6 +6412,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "City blocks follow perpendicular grids.",
     },
+    
     
     {
     id: 494,
@@ -5929,6 +6426,7 @@ export const constructionQuestions: Question[] = [
     hint: "Circles are core to many symmetric designs.",
     },
     
+    
     {
     id: 495,
     chapter: "Playing with Constructions",
@@ -5940,6 +6438,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Tangents touch circles at one point.",
     },
+    
     
     {
     id: 496,
@@ -5953,6 +6452,7 @@ export const constructionQuestions: Question[] = [
     hint: "Channels must stay equidistant.",
     },
     
+    
     {
     id: 497,
     chapter: "Playing with Constructions",
@@ -5964,6 +6464,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Vertical lines must be perpendicular to the ground.",
     },
+    
     
     {
     id: 498,
@@ -5977,6 +6478,7 @@ export const constructionQuestions: Question[] = [
     hint: "Arcs help shape curves.",
     },
     
+    
     {
     id: 499,
     chapter: "Playing with Constructions",
@@ -5988,6 +6490,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Circumcenter relies on bisectors.",
     },
+    
     
     {
     id: 500,
@@ -6001,6 +6504,7 @@ export const constructionQuestions: Question[] = [
     hint: "Star symmetry depends on equal angular spacing.",
     },
     
+    
     {
     id: 501,
     chapter: "Playing with Constructions",
@@ -6012,6 +6516,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Walls must remain parallel.",
     },
+    
     
     {
     id: 502,
@@ -6025,6 +6530,7 @@ export const constructionQuestions: Question[] = [
     hint: "Turns are smoothed using tangents.",
     },
     
+    
     {
     id: 503,
     chapter: "Playing with Constructions",
@@ -6036,6 +6542,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Parallel lines ensure uniform distance.",
     },
+    
     
     {
     id: 504,
@@ -6049,6 +6556,7 @@ export const constructionQuestions: Question[] = [
     hint: "Circles’ centers lie on bisectors of chords.",
     },
     
+    
     {
     id: 505,
     chapter: "Playing with Constructions",
@@ -6060,6 +6568,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Used in artistic symmetry.",
     },
+    
     
     {
     id: 506,
@@ -6073,6 +6582,7 @@ export const constructionQuestions: Question[] = [
     hint: "Curved surfaces rely on arcs.",
     },
     
+    
     {
     id: 507,
     chapter: "Playing with Constructions",
@@ -6084,6 +6594,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Triangulation is key.",
     },
+    
     
     {
     id: 508,
@@ -6097,6 +6608,7 @@ export const constructionQuestions: Question[] = [
     hint: "Steps follow parallel alignment.",
     },
     
+    
     {
     id: 509,
     chapter: "Playing with Constructions",
@@ -6108,6 +6620,7 @@ export const constructionQuestions: Question[] = [
     reward: 5,
     hint: "Level surfaces are parallel to the horizon.",
     },
+    
     
     {
     id: 510,
@@ -6121,6 +6634,7 @@ export const constructionQuestions: Question[] = [
     hint: "Compass helps create perfect circles.",
     },
     
+    
     {
     id: 511,
     chapter: "Playing with Constructions",
@@ -6132,6 +6646,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equidistant points lie on perpendicular bisectors.",
     },
+    
     
     {
     id: 512,
@@ -6145,6 +6660,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal spacing requires parallels.",
     },
     
+    
     {
     id: 513,
     chapter: "Playing with Constructions",
@@ -6156,6 +6672,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Tangent ensures smooth touchpoints.",
     },
+    
     
     {
     id: 514,
@@ -6169,6 +6686,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisectors of any chords intersect at center.",
     },
     
+    
     {
     id: 515,
     chapter: "Playing with Constructions",
@@ -6180,6 +6698,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Proportionality helps measure far distances.",
     },
+    
     
     {
     id: 516,
@@ -6193,6 +6712,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal spacing → parallels.",
     },
     
+    
     {
     id: 517,
     chapter: "Playing with Constructions",
@@ -6204,6 +6724,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Spirals come from growing radii.",
     },
+    
     
     {
     id: 518,
@@ -6217,6 +6738,7 @@ export const constructionQuestions: Question[] = [
     hint: "Advanced parallel checking tools maintain uniform width.",
     },
     
+    
     {
     id: 519,
     chapter: "Playing with Constructions",
@@ -6228,6 +6750,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Tangents allow touching restricted zones safely.",
     },
+    
     
     {
     id: 520,
@@ -6241,6 +6764,7 @@ export const constructionQuestions: Question[] = [
     hint: "Finding the center is essential for circular domes.",
     },
     
+    
     {
     id: 521,
     chapter: "Playing with Constructions",
@@ -6252,6 +6776,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Most city grids use 90° intersections.",
     },
+    
     
     {
     id: 522,
@@ -6265,6 +6790,7 @@ export const constructionQuestions: Question[] = [
     hint: "Shortest distance ↠ perpendicular.",
     },
     
+    
     {
     id: 523,
     chapter: "Playing with Constructions",
@@ -6276,6 +6802,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Parallel spacing creates uniform shadows.",
     },
+    
     
     {
     id: 524,
@@ -6289,6 +6816,7 @@ export const constructionQuestions: Question[] = [
     hint: "Center placement ensures equal water reach.",
     },
     
+    
     {
     id: 525,
     chapter: "Playing with Constructions",
@@ -6300,6 +6828,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Diagonals of rectangles meet at center.",
     },
+    
     
     {
     id: 526,
@@ -6313,6 +6842,7 @@ export const constructionQuestions: Question[] = [
     hint: "Smooth turns require tangent transitions.",
     },
     
+    
     {
     id: 527,
     chapter: "Playing with Constructions",
@@ -6324,6 +6854,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Equal angles help symmetry.",
     },
+    
     
     {
     id: 528,
@@ -6337,6 +6868,7 @@ export const constructionQuestions: Question[] = [
     hint: "Rails must be held parallel along the track.",
     },
     
+    
     {
     id: 529,
     chapter: "Playing with Constructions",
@@ -6348,6 +6880,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Arches depend on perfect circular arcs.",
     },
+    
     
     {
     id: 530,
@@ -6361,6 +6894,7 @@ export const constructionQuestions: Question[] = [
     hint: "Equal division uses right angles.",
     },
     
+    
     {
     id: 531,
     chapter: "Playing with Constructions",
@@ -6372,6 +6906,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Even spacing ensures movement accuracy.",
     },
+    
     
     {
     id: 532,
@@ -6385,6 +6920,7 @@ export const constructionQuestions: Question[] = [
     hint: "Circular boundaries require arcs.",
     },
     
+    
     {
     id: 533,
     chapter: "Playing with Constructions",
@@ -6396,6 +6932,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Touching wheels use tangential contact.",
     },
+    
     
     {
     id: 534,
@@ -6409,6 +6946,7 @@ export const constructionQuestions: Question[] = [
     hint: "Vertical alignment = perpendicular to base.",
     },
     
+    
     {
     id: 535,
     chapter: "Playing with Constructions",
@@ -6420,6 +6958,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Machine diagrams require uniform line spacing.",
     },
+    
     
     {
     id: 536,
@@ -6433,6 +6972,7 @@ export const constructionQuestions: Question[] = [
     hint: "Tangents create smooth joining.",
     },
     
+    
     {
     id: 537,
     chapter: "Playing with Constructions",
@@ -6444,6 +6984,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "Coordinates rely on perpendicular axes.",
     },
+    
     
     {
     id: 538,
@@ -6457,6 +6998,7 @@ export const constructionQuestions: Question[] = [
     hint: "Bisectors divide angles symmetrically.",
     },
     
+    
     {
     id: 539,
     chapter: "Playing with Constructions",
@@ -6468,6 +7010,7 @@ export const constructionQuestions: Question[] = [
     reward: 8,
     hint: "All chord bisectors intersect at center.",
     },
+    
     
     {
     id: 540,

@@ -93,7 +93,7 @@ const TeacherReports = () => {
             <CardContent className="text-2xl font-bold">{kpis.totalTasks}</CardContent>
           </Card>
           <Card className="col-span-1">
-            <CardHeader><CardTitle className="text-sm">Participants</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm">Activity count</CardTitle></CardHeader>
             <CardContent className="text-2xl font-bold">{kpis.participants}</CardContent>
           </Card>
           <Card className="col-span-1">
