@@ -258,6 +258,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
   // Practice mode: limit how many times AI Solve can be used per session
   const [practiceSolveUses, setPracticeSolveUses] = useState(0);
+  const practiceSolveUsesRef = useRef(0);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
   const [speedRewards, setSpeedRewards] = useState<{ coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null>(null);
   // Mobile only: inline scribble panel under the question
@@ -1585,10 +1586,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // No limit outside practice
       return true;
     }
-    if (practiceSolveUses >= 3) {
+    if (practiceSolveUsesRef.current >= 3) {
       return false;
     }
-    setPracticeSolveUses(prev => prev + 1);
+    practiceSolveUsesRef.current += 1;
+    setPracticeSolveUses(practiceSolveUsesRef.current);
     return true;
   };
 
@@ -1615,6 +1617,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setPracticeRewards(null);
     setSpeedRewards(null);
     setPracticeSolveUses(0);
+    practiceSolveUsesRef.current = 0;
     questionStartAtRef.current = Date.now();
     // Reset battle state
     setStudentCorrectList([]);
@@ -1967,7 +1970,23 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                         <button
                           key={idx}
                           onClick={() => handleAnswerSelect(idx)}
-                          className={`px-3 py-1.5 rounded-xl border text-sm shadow-sm ${selectedAnswer === idx ? 'bg-primary/10 border-primary/40 font-semibold' : 'bg-gray-50 border-gray-200'}`}
+                          className={(function () {
+                            const isSelected = selectedAnswer === idx;
+                            const isCorrectAnswer = question && idx === question.correctAnswer;
+                            let base = 'px-3 py-1.5 rounded-xl border text-sm shadow-sm ';
+                            if (!showResult) {
+                              return base + (isSelected
+                                ? 'bg-primary/10 border-primary/40 font-semibold'
+                                : 'bg-gray-50 border-gray-200');
+                            }
+                            if (isCorrectAnswer) {
+                              return base + 'bg-emerald-50 border-emerald-400 font-semibold';
+                            }
+                            if (isSelected && !isCorrect) {
+                              return base + 'bg-rose-50 border-rose-400 font-semibold';
+                            }
+                            return base + 'bg-gray-50 border-gray-200';
+                          })()}
                         >
                           {String.fromCharCode(65 + idx)}. {opt}
                         </button>

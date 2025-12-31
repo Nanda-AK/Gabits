@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
@@ -55,6 +55,7 @@ const Treasure = () => {
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
+  const weekProgressLoadingRef = useRef(false);
 
   // Build current week (Mon-Sun) dates using LOCAL dates (not UTC) to match daily_progress.date
   useEffect(() => {
@@ -74,6 +75,8 @@ const Treasure = () => {
   // Fetch completions for current week from daily_streak_awards (claimed streak days only)
   const fetchWeekProgress = useCallback(async () => {
     if (!user || guest || weekDays.length === 0) return;
+    if (weekProgressLoadingRef.current) return;
+    weekProgressLoadingRef.current = true;
     const start = weekDays[0].date;
     const end = weekDays[6].date;
     const { data, error } = await supabase
@@ -82,9 +85,13 @@ const Treasure = () => {
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end);
-    if (error || !data) return;
+    if (error || !data) {
+      weekProgressLoadingRef.current = false;
+      return;
+    }
     const setDates = new Set((data as Array<{ date: string }>).map(r => r.date));
     setWeekDays(prev => prev.map(w => ({ ...w, done: setDates.has(w.date) })));
+    weekProgressLoadingRef.current = false;
   }, [user?.id, guest, weekDays]);
 
   useEffect(() => {
@@ -130,7 +137,7 @@ const Treasure = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, guest, weekDays, fetchWeekProgress]);
+  }, [user?.id, guest, weekDays[0]?.date, weekDays[6]?.date, fetchWeekProgress]);
 
   // Removed: Today's Completed Task is now shown via dashboard modal
 

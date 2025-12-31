@@ -381,7 +381,7 @@ export const ScribbleBoard = React.forwardRef<ScribbleBoardHandle, Props>(({ onC
       )}
       <div
         ref={drawWrapRef}
-        className={`relative mb-3 overflow-auto rounded-lg border bg-white select-none ${fullHeight ? 'flex-1 min-h-[216px]' : 'min-h-[200px] h-[45vh] max-h-[70vh] sm:min-h-[216px] sm:h-[312px]'}`}
+        className={`relative mb-3 overflow-auto rounded-lg border bg-white select-none ${fullHeight ? 'flex-1 min-h-[216px]' : 'min-h-[180px] h-[38vh] max-h-[50vh] sm:min-h-[216px] sm:h-[312px]'}`}
       >
         <canvas
           ref={canvasRef}
