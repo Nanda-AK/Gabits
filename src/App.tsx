@@ -101,13 +101,13 @@ const App = () => {
           </BrowserRouter>
           <OnboardingGate />
           {updateAvailable && (
-            <div className="fixed bottom-4 left-1/2 z-[9999] -translate-x-1/2 px-4 py-2 rounded-full bg-slate-900 text-white shadow-lg flex items-center gap-3 text-xs sm:text-sm">
-              <span>New update is available. Refresh to get the latest features.</span>
+            <div className="fixed bottom-4 left-1/2 z-[9999] -translate-x-1/2 px-4 py-2 rounded-md bg-neutral-900 text-white shadow-lg flex items-center justify-between min-w-[260px] max-w-sm text-xs sm:text-sm">
+              <span className="mr-4">A new version is available!</span>
               <button
-                className="px-3 py-1 rounded-full bg-white text-slate-900 font-semibold text-xs"
+                className="text-[11px] sm:text-xs font-semibold tracking-wide uppercase text-white/80 hover:text-white"
                 onClick={() => window.location.reload()}
               >
-                Refresh
+                RELOAD
               </button>
             </div>
           )}
