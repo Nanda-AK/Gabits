@@ -1,5 +1,5 @@
-// Minimal service worker for offline caching of shell
-const CACHE_NAME = 'gabits-cache-v2';
+// Minimal service worker for online-first behavior with offline fallback
+const CACHE_NAME = 'gabits-cache-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -21,11 +21,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  // Online-first: always try network, fall back to cache if offline
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).then((resp) => {
-      const copy = resp.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
-      return resp;
-    }).catch(() => cached))
+    fetch(req)
+      .then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        return resp;
+      })
+      .catch(() => caches.match(req))
   );
 });

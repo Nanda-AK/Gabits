@@ -527,55 +527,17 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const question = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / total) * 100;
 
-  // When daily set loads or refreshes, try restore session; else shuffle fresh
+  // When daily set loads or refreshes, always start a fresh game run
+  // (we no longer auto-resume abandoned sessions from localStorage).
   useEffect(() => {
-    // In friends battle, we already built a deterministic set in dailyQuestions; don't restore from local
+    // In friends battle, we already built a deterministic set in dailyQuestions; don't clear or reshuffle here
     if (mode === 'battle-friends') {
       setShuffledQuestions(dailyQuestions);
       setCurrentQuestion(0);
       return;
     }
-    const raw = (() => { try { return localStorage.getItem(storageKey); } catch { return null; } })();
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
-          // If an older snapshot had < 10 questions, discard it to avoid the 6-questions issue
-          if ((saved.shuffledQuestions as any[]).length < 10) {
-            try { localStorage.removeItem(storageKey); } catch { }
-            setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
-            setCurrentQuestion(0);
-            return;
-          }
-          if (saved.completed) {
-            try { localStorage.removeItem(storageKey); } catch { }
-            setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
-            setCurrentQuestion(0);
-            return;
-          }
-          setShuffledQuestions(saved.shuffledQuestions as Question[]);
-          setCurrentQuestion(Math.max(0, Math.min(saved.currentQuestion ?? 0, (saved.shuffledQuestions as any[]).length - 1)));
-          setHearts(typeof saved.hearts === 'number' ? saved.hearts : 5);
-          setCoins(typeof saved.coins === 'number' ? saved.coins : 0);
-          setCorrectAnswers(typeof saved.correctAnswers === 'number' ? saved.correctAnswers : 0);
-          setAnswerCorrectList(Array.isArray(saved.answerCorrectList) ? saved.answerCorrectList : []);
-          setWithinTimeList(Array.isArray(saved.withinTimeList) ? saved.withinTimeList : []);
-          setOverallTime(typeof saved.overallTime === 'number' ? saved.overallTime : 0);
-          if (saved.milestones) {
-            const loaded = {
-              m10: !!saved.milestones.m10,
-              m25: !!saved.milestones.m25,
-              m50: !!saved.milestones.m50,
-              m75: !!saved.milestones.m75,
-              m100: !!saved.milestones.m100,
-            };
-            setMilestonesState(loaded);
-            milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
-          }
-          return;
-        }
-      } catch { }
-    }
+    // Clear any stale snapshot for this key so starting a new game never resumes mid-way
+    try { localStorage.removeItem(storageKey); } catch { }
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
   }, [dailyQuestions, storageKey, mode]);
@@ -1854,7 +1816,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </div>
           {/* Center: Question */}
           <div className="lg:col-span-7 min-w-0">
-            <div className="flex flex-col min-h-0" style={{ height: 'calc(100dvh - (env(safe-area-inset-top, 0px) + 56px))' }}>
+            <div
+              className="flex flex-col min-h-0 overflow-y-auto lg:overflow-visible"
+              style={{ height: 'calc(100dvh - (env(safe-area-inset-top, 0px) + 56px))' }}
+            >
               <div className="mobile-qcard">
                 <QuestionCard
                   question={question}
