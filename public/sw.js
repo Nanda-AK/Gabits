@@ -1,4 +1,5 @@
 // Minimal service worker for online-first behavior with offline fallback
+const APP_VERSION = '2026-01-01-1';
 const CACHE_NAME = 'gabits-cache-v3';
 const APP_SHELL = [
   '/',
@@ -12,11 +13,26 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
-  );
-  // Take control of all clients without reload
-  self.clients && self.clients.claim && self.clients.claim();
+  event.waitUntil((async () => {
+    // Remove old caches
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+
+    // Take control of all clients
+    try {
+      if (self.clients && self.clients.claim) {
+        await self.clients.claim();
+      }
+    } catch {}
+
+    // Notify all controlled windows about the current app version
+    try {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      clientList.forEach((client) => {
+        client.postMessage({ type: 'APP_VERSION', version: APP_VERSION });
+      });
+    } catch {}
+  })());
 });
 self.addEventListener('fetch', (event) => {
   const req = event.request;

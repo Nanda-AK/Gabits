@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,56 +33,88 @@ import ClassOverview from "./pages/ClassOverview";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <GlobalLogo />
-          <AccountMenu />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            {/* Auth required beyond this point (guest allowed) */}
-            <Route element={<ProtectedRoute />}> 
-              <Route path="/modes" element={<Modes />} />
-              <Route path="/modes/solo" element={<SoloMode />} />
-              {/* Teacher-only: setup and free-play routes */}
-              <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
-                <Route path="/modes/solo/practice" element={<PracticeSetup />} />
-                <Route path="/modes/solo/speed" element={<SpeedDriveSetup />} />
-                <Route path="/modes/compete" element={<CompeteMode />} />
-                <Route path="/modes/compete/ai" element={<BattleAI />} />
-                <Route path="/modes/compete/friends" element={<BattleFriends />} />
+const App = () => {
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const data = event.data as any;
+      if (!data || data.type !== "APP_VERSION" || !data.version) return;
+      const key = "app:version";
+      try {
+        const last = localStorage.getItem(key);
+        if (last === String(data.version)) return;
+        localStorage.setItem(key, String(data.version));
+      } catch {}
+      setUpdateAvailable(true);
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <GlobalLogo />
+            <AccountMenu />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              {/* Auth required beyond this point (guest allowed) */}
+              <Route element={<ProtectedRoute />}> 
+                <Route path="/modes" element={<Modes />} />
+                <Route path="/modes/solo" element={<SoloMode />} />
+                {/* Teacher-only: setup and free-play routes */}
+                <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
+                  <Route path="/modes/solo/practice" element={<PracticeSetup />} />
+                  <Route path="/modes/solo/speed" element={<SpeedDriveSetup />} />
+                  <Route path="/modes/compete" element={<CompeteMode />} />
+                  <Route path="/modes/compete/ai" element={<BattleAI />} />
+                  <Route path="/modes/compete/friends" element={<BattleFriends />} />
+                </Route>
+                <Route path="/play" element={<Play />} />
+                <Route path="/lobby/:code" element={<Lobby />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                {/* Student/Parent/Principal only pages */}
+                <Route element={<ProtectedRoleRoute roles={["student","parent","principal"]} />}>
+                  <Route path="/treasure" element={<Treasure />} />
+                  {/* Student Dashboard should show the same landing dashboard as "/" */}
+                  <Route path="/dashboard" element={<Index />} />
+                </Route>
+                <Route path="/tasks" element={<TasksHub />} />
+                {/* Role-gated routes */}
+                <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
+                  <Route path="/portal/teacher" element={<TeacherPortal />} />
+                  <Route path="/portal/class" element={<ClassOverview />} />
+                  <Route path="/portal/reports" element={<TeacherReports />} />
+                  <Route path="/portal/reports/tasks/:taskId" element={<TaskDetail />} />
+                  <Route path="/portal/reports/students/:studentId" element={<StudentInspect />} />
+                </Route>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
               </Route>
-              <Route path="/play" element={<Play />} />
-              <Route path="/lobby/:code" element={<Lobby />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              {/* Student/Parent/Principal only pages */}
-              <Route element={<ProtectedRoleRoute roles={["student","parent","principal"]} />}>
-                <Route path="/treasure" element={<Treasure />} />
-                {/* Student Dashboard should show the same landing dashboard as "/" */}
-                <Route path="/dashboard" element={<Index />} />
-              </Route>
-              <Route path="/tasks" element={<TasksHub />} />
-              {/* Role-gated routes */}
-              <Route element={<ProtectedRoleRoute roles={["teacher"]} />}>
-                <Route path="/portal/teacher" element={<TeacherPortal />} />
-                <Route path="/portal/class" element={<ClassOverview />} />
-                <Route path="/portal/reports" element={<TeacherReports />} />
-                <Route path="/portal/reports/tasks/:taskId" element={<TaskDetail />} />
-                <Route path="/portal/reports/students/:studentId" element={<StudentInspect />} />
-              </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-        <OnboardingGate />
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+            </Routes>
+          </BrowserRouter>
+          <OnboardingGate />
+          {updateAvailable && (
+            <div className="fixed bottom-4 left-1/2 z-[9999] -translate-x-1/2 px-4 py-2 rounded-full bg-slate-900 text-white shadow-lg flex items-center gap-3 text-xs sm:text-sm">
+              <span>New update is available. Refresh to get the latest features.</span>
+              <button
+                className="px-3 py-1 rounded-full bg-white text-slate-900 font-semibold text-xs"
+                onClick={() => window.location.reload()}
+              >
+                Refresh
+              </button>
+            </div>
+          )}
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
