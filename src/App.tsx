@@ -30,6 +30,7 @@ import TeacherReports from "./pages/TeacherReports";
 import TaskDetail from "./pages/TaskDetail";
 import StudentInspect from "./pages/StudentInspect";
 import ClassOverview from "./pages/ClassOverview";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => {
                 <Route path="/play" element={<Play />} />
                 <Route path="/lobby/:code" element={<Lobby />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/settings" element={<Settings />} />
                 {/* Student/Parent/Principal only pages */}
                 <Route element={<ProtectedRoleRoute roles={["student","parent","principal"]} />}>
                   <Route path="/treasure" element={<Treasure />} />

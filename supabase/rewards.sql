@@ -74,17 +74,17 @@ create or replace function public.add_balance_and_event(
 language plpgsql security definer set search_path = public as $$
 begin
   insert into public.user_balances as b (user_id, coins, gems, xp)
-  values (p_user_id, greatest(0, p_coins), greatest(0, p_gems), greatest(0, p_coins + 5*p_gems + 10*p_badges_delta))
+  values (p_user_id, greatest(0, p_coins), greatest(0, p_gems), greatest(0, (p_coins / 50) + 2*p_gems + p_badges_delta))
   on conflict (user_id) do update set
     coins = greatest(0, b.coins + p_coins),
     gems = greatest(0, b.gems + p_gems),
-    xp = greatest(0, b.xp + (p_coins + 5*p_gems + 10*p_badges_delta)),
+    xp = greatest(0, b.xp + ((p_coins / 50) + 2*p_gems + p_badges_delta)),
     updated_at = now();
 
   insert into public.reward_events(user_id, date, source, coins_delta, gems_delta, badges_delta, meta)
   values (p_user_id, p_date, p_source, p_coins, p_gems, p_badges_delta, coalesce(p_meta, '{}'::jsonb));
 
-  return query select p_coins, p_gems, p_badges_delta, (p_coins + 5*p_gems + 10*p_badges_delta);
+  return query select p_coins, p_gems, p_badges_delta, ((p_coins / 50) + 2*p_gems + p_badges_delta);
 end; $$;
 
 -- Any-mode streak tracking (applies to Practice, Speed, and Compete)
@@ -139,17 +139,16 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_last_date date;
   v_any int;
-  v_any_after int;
   v_is_consecutive boolean;
 begin
   select last_date, any_streak into v_last_date, v_any from public.activity_streaks where user_id = p_user_id;
   if v_last_date is null then v_any := 0; end if;
   v_is_consecutive := (v_last_date is not null and p_date = v_last_date + 1);
-  if v_is_consecutive then v_any_after := v_any + 1; else v_any_after := 1; end if;
+  if v_is_consecutive then v_any := v_any + 1; else v_any := 1; end if;
   insert into public.activity_streaks(user_id, last_date, any_streak)
-  values (p_user_id, p_date, v_any_after)
+  values (p_user_id, p_date, v_any)
   on conflict (user_id) do update set last_date = excluded.last_date, any_streak = excluded.any_streak, updated_at = now();
-  return v_any_after;
+  return v_any;
 end; $$;
 
 -- PRACTICE -----------------------------------------------------------------
@@ -225,11 +224,6 @@ declare
   v_coins int := 0;
   v_gems int := 0;
   v_badges text[] := '{}';
-  v_any_after int;
-  v_topic_after int;
-  v_sessions_today int;
-  v_seconds_today int;
-  v_grants jsonb := '{}'::jsonb;
   v_badges_delta int := 0;
   v_mult numeric := 1.0;
   v_capped boolean := false;
@@ -256,30 +250,30 @@ begin
   v_is_consecutive := (v_last_date is not null and p_date = v_last_date + 1);
 
   if v_is_consecutive then
-    v_any_after := v_any + 1;
+    v_any := v_any + 1;
     if v_topic = p_topic then
-      v_topic_after := v_topic_streak + 1;
+      v_topic_streak := v_topic_streak + 1;
     else
-      v_topic_after := 1;
+      v_topic_streak := 1;
     end if;
   else
-    v_any_after := 1;
-    v_topic_after := 1;
+    v_any := 1;
+    v_topic_streak := 1;
   end if;
 
   -- Any-mode streak base coins (only grant once per day across all modes); weekend multiplier applies in Practice
-  v_any_after := public.update_any_streak(p_user_id, p_date);
+  v_any := public.update_any_streak(p_user_id, p_date);
   if not exists (select 1 from public.daily_streak_awards where user_id = p_user_id and date = p_date) then
-    if v_any_after = 1 then v_coins := v_coins + 3; v_grants := v_grants || jsonb_build_object('streak','1-day'); end if;
-    if v_any_after = 2 then v_coins := v_coins + 5; v_grants := v_grants || jsonb_build_object('streak','2-day'); end if;
-    if v_any_after = 3 then v_coins := v_coins + 8; v_grants := v_grants || jsonb_build_object('streak','3-day');
+    if v_any = 1 then v_coins := v_coins + 3; v_grants := v_grants || jsonb_build_object('streak','1-day'); end if;
+    if v_any = 2 then v_coins := v_coins + 5; v_grants := v_grants || jsonb_build_object('streak','2-day'); end if;
+    if v_any = 3 then v_coins := v_coins + 8; v_grants := v_grants || jsonb_build_object('streak','3-day');
       perform public.increment_badge_count(p_user_id, 'focused_learner');
       v_badges := array_append(v_badges, 'focused_learner'); v_badges_delta := v_badges_delta + 1;
     end if;
   end if;
-  if v_any_after >= 4 and v_topic_after >= 4 then v_coins := v_coins + 10; v_grants := v_grants || jsonb_build_object('streak','4-day-same-topic'); end if;
-  if v_any_after >= 5 and v_topic_after >= 5 then v_coins := v_coins + 15; v_grants := v_grants || jsonb_build_object('streak','5-day-same-topic');
-    if v_topic_after = 5 then
+  if v_any >= 4 and v_topic_streak >= 4 then v_coins := v_coins + 10; v_grants := v_grants || jsonb_build_object('streak','4-day-same-topic'); end if;
+  if v_any >= 5 and v_topic_streak >= 5 then v_coins := v_coins + 15; v_grants := v_grants || jsonb_build_object('streak','5-day-same-topic');
+    if v_topic_streak = 5 then
       perform public.increment_badge_count(p_user_id, 'math_explorer');
       v_badges := array_append(v_badges, 'math_explorer'); v_badges_delta := v_badges_delta + 1;
     end if;
@@ -301,11 +295,11 @@ begin
 
   -- persist session
   insert into public.practice_sessions(user_id, date, topic, used_seconds, coins_awarded, gems_awarded, streak_after, is_weekend_bonus, grants)
-  values (p_user_id, p_date, p_topic, p_used_seconds, v_coins, v_gems, v_any_after, v_is_weekend, v_grants);
+  values (p_user_id, p_date, p_topic, p_used_seconds, v_coins, v_gems, v_any, v_is_weekend, v_grants);
 
   -- update streaks state
   insert into public.practice_streaks as s (user_id, last_date, any_streak, topic, topic_streak)
-  values (p_user_id, p_date, v_any_after, p_topic, v_topic_after)
+  values (p_user_id, p_date, v_any, p_topic, v_topic_streak)
   on conflict (user_id) do update set
     last_date = excluded.last_date,
     any_streak = excluded.any_streak,
@@ -316,7 +310,7 @@ begin
   -- update balances and xp, record event
   perform * from public.add_balance_and_event(p_user_id, p_date, v_coins, v_gems, v_badges_delta, 'practice', v_grants);
 
-  return query select v_coins, v_gems, v_any_after, v_badges;
+  return query select v_coins, v_gems, v_any, v_badges;
 end; $$;
 
 -- SPEED per-run table and daily view/RPC (complements speed.sql leaderboards) ----
@@ -619,7 +613,7 @@ create or replace function public.get_xp_leaderboard(
            sum(coins_delta)::int as coins_sum,
            sum(gems_delta)::int as gems_sum,
            sum(badges_delta)::int as badges_sum,
-           (sum(coins_delta) + 5*sum(gems_delta) + 10*sum(badges_delta))::int as xp
+           ((sum(coins_delta) / 50) + 2*sum(gems_delta) + sum(badges_delta))::int as xp
     from public.reward_events
     where date between p_from and p_to
     group by user_id
@@ -635,6 +629,29 @@ create or replace function public.get_xp_leaderboard(
   left join public.profiles p on p.id = a.user_id
   order by xp desc, coins_sum desc, gems_sum desc
   limit coalesce(limit_n,50);
+$$;
+
+-- ALL-TIME XP LEADERBOARD (based on user_balances.xp)
+create or replace function public.get_all_time_xp_leaderboard(
+  limit_n int default 50
+) returns table (
+  user_id uuid,
+  display_name text,
+  avatar_style text,
+  xp int,
+  rank int
+) language sql security definer set search_path = public as $$
+  select
+    b.user_id,
+    coalesce(p.full_name, 'Player') as display_name,
+    p.avatar_style,
+    coalesce(b.xp, 0)::int as xp,
+    dense_rank() over (order by coalesce(b.xp, 0) desc) as rank
+  from public.user_balances b
+  left join public.profiles p on p.id = b.user_id
+  where coalesce(b.xp, 0) > 0
+  order by xp desc
+  limit coalesce(limit_n, 50);
 $$;
 
 -- GLOBAL COINS LEADERBOARD (restored)

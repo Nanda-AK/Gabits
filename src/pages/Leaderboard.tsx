@@ -5,15 +5,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getXpLeaderboard, type XpRow, getUserBalances } from "@/services/rewards";
+import { getAllTimeXpLeaderboard, type AllTimeXpRow, getUserXpAndAvatar } from "@/services/rewards";
 
 const Leaderboard = () => {
   const navigate = useNavigate();
   const { user, guest } = useAuth();
-  const [rows, setRows] = useState<XpRow[]>([]);
+  const [rows, setRows] = useState<AllTimeXpRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [me, setMe] = useState<{ xp: number } | null>(null);
+  const [me, setMe] = useState<{ xp: number; avatar_style: string | null } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,20 +21,15 @@ const Leaderboard = () => {
       if (!user || guest) { setLoading(false); return; }
       setLoading(true);
       try {
-        const now = new Date();
-        const from = new Date(now.getFullYear(), now.getMonth(), 1);
-        const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        const fromStr = `${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}`;
-        const toStr = `${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}-${String(to.getDate()).padStart(2,'0')}`;
-        const top = await getXpLeaderboard(fromStr, toStr, 50);
+        const top = await getAllTimeXpLeaderboard(50);
         if (cancelled) return;
         setRows(top ?? []);
         const myRow = (top ?? []).find(r => r.user_id === user.id);
         if (myRow) {
-          setMe({ xp: myRow.xp });
+          setMe({ xp: myRow.xp, avatar_style: myRow.avatar_style ?? null });
         } else {
-          const bal = await getUserBalances(user.id);
-          if (!cancelled) setMe(bal ? { xp: bal.xp ?? 0 } : { xp: 0 });
+          const info = await getUserXpAndAvatar(user.id);
+          if (!cancelled) setMe(info ? { xp: info.xp ?? 0, avatar_style: info.avatar_style } : { xp: 0, avatar_style: null });
         }
       } catch (e: any) {
         if (cancelled) return;
@@ -57,6 +52,19 @@ const Leaderboard = () => {
     || "You";
   const seed = user?.id ?? displayName;
 
+  const getAvatarUrl = (userId: string, avatarStyle: string | null | undefined) => {
+    if (
+      avatarStyle &&
+      (avatarStyle.startsWith("http://") ||
+        avatarStyle.startsWith("https://") ||
+        avatarStyle.startsWith("/"))
+    ) {
+      return avatarStyle;
+    }
+    const style = avatarStyle || "thumbs";
+    return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(userId)}`;
+  };
+
   return (
     <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <div className="container mx-auto px-4 pt-16 sm:pt-10 pb-10 max-w-3xl">
@@ -73,14 +81,14 @@ const Leaderboard = () => {
               <CardTitle className="text-lg">Sign in to view the XP leaderboard</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Monthly XP leaderboard ranks are based on your activity stored in Supabase. Continue with email to join the board.</p>
+              <p className="text-sm text-muted-foreground">XP leaderboard ranks are based on your all-time activity stored in Supabase. Continue with email to join the board.</p>
             </CardContent>
           </Card>
         ) : (
           <>
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg">Top 50 by XP (This Month)</CardTitle>
+                <CardTitle className="text-lg">Top 50 by XP (All Time)</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -94,7 +102,7 @@ const Leaderboard = () => {
                         <div className="flex items-center gap-3">
                           <span className="w-8 text-center font-extrabold text-gray-600">{p.rank}</span>
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(p.user_id)}`} alt={p.display_name}/>
+                            <AvatarImage src={getAvatarUrl(p.user_id, p.avatar_style)} alt={p.display_name}/>
                             <AvatarFallback>{p.display_name?.slice(0,1)?.toUpperCase() || "U"}</AvatarFallback>
                           </Avatar>
                           <span className="font-semibold">{p.display_name}</span>
@@ -122,7 +130,7 @@ const Leaderboard = () => {
                   <div className="flex items-center gap-3">
                     <span className="w-8 text-center font-extrabold text-indigo-600">{myRank ?? "—"}</span>
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`} alt={displayName}/>
+                      <AvatarImage src={getAvatarUrl(seed, me?.avatar_style)} alt={displayName}/>
                       <AvatarFallback>{displayName.slice(0,1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="font-semibold">{displayName}</span>

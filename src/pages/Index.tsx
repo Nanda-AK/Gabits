@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
 import { getActiveTasks, type LiveTask, getStudentTaskStatuses, getTasksByIds, type StudentTaskStatus } from "@/services/tasks";
-import { getUserBalances, getXpLeaderboard } from "@/services/rewards";
+import { getUserBalances, getAllTimeXpLeaderboard } from "@/services/rewards";
 import { getRecentRunsForStudent, type TaskRunWithTask } from "@/services/taskRuns";
 import { supabase } from "@/lib/supabase";
 // Removed modals in favor of navigating to Tasks tabs
@@ -14,7 +14,7 @@ import { getLocalYMD } from "@/lib/date";
 import { CalendarDays, BadgeCheck, ClipboardList, Hourglass, CheckCircle2, Gift, Trophy, Gamepad2, Eye } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 
-type XpRow = Awaited<ReturnType<typeof getXpLeaderboard>>[number];
+type XpRow = Awaited<ReturnType<typeof getAllTimeXpLeaderboard>>[number];
 
 function useDisplayName(user: any) {
   const [fullName, setFullName] = useState<string>("");
@@ -152,10 +152,7 @@ const Index = () => {
   const [leaders, setLeaders] = useState<XpRow[]>([]);
   useEffect(() => {
     (async () => {
-      const now = new Date();
-      const from = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-      const to = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()).padStart(2,'0')}`;
-      setLeaders(await getXpLeaderboard(from, to, 5));
+      setLeaders(await getAllTimeXpLeaderboard(5));
     })();
   }, []);
 

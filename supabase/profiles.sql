@@ -5,9 +5,13 @@ create table if not exists public.profiles (
   age int check (age >= 5 and age <= 120),
   gender text check (gender in ('male','female','other')),
   standard text,
+  avatar_style text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists avatar_style text;
 
 -- RLS
 alter table public.profiles enable row level security;

@@ -13,6 +13,7 @@ export const AccountMenu = () => {
   const location = useLocation();
   const [fullName, setFullName] = useState<string>("");
   const [role, setRole] = useState<string>("");
+  const [avatarStyle, setAvatarStyle] = useState<string | null>(null);
 
   // Load profile name when authenticated or guest profile exists
   useEffect(() => {
@@ -23,6 +24,7 @@ export const AccountMenu = () => {
         const p = await getProfile(uid);
         if (p?.full_name) setFullName(p.full_name);
         if ((p as any)?.role) setRole((p as any).role);
+        if ((p as any)?.avatar_style) setAvatarStyle((p as any).avatar_style);
       } catch {}
     };
     run();
@@ -34,7 +36,19 @@ export const AccountMenu = () => {
   }, [fullName, user]);
 
   const seed = useMemo(() => (user?.id || displayName || "user"), [user, displayName]);
-  const avatarUrl = `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
+
+  const avatarUrl = useMemo(() => {
+    if (
+      avatarStyle &&
+      (avatarStyle.startsWith("http://") ||
+        avatarStyle.startsWith("https://") ||
+        avatarStyle.startsWith("/"))
+    ) {
+      return avatarStyle;
+    }
+    const style = avatarStyle || "thumbs";
+    return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+  }, [avatarStyle, seed]);
 
   // Determine if we should replace the history entry when leaving a completed game
   const shouldReplace = useMemo(() => {
@@ -83,6 +97,7 @@ export const AccountMenu = () => {
               </>
             )}
             <DropdownMenuItem onClick={() => navigate("/leaderboard", { replace: shouldReplace })}>Leaderboard</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings", { replace: shouldReplace })}>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
           </DropdownMenuContent>
