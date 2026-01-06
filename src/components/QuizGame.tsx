@@ -40,20 +40,6 @@ interface QuizGameProps {
   chapter?: string;
 }
 
-// Stable guest ID for realtime presence when unauthenticated
-function getGuestIdStable(): string {
-  try {
-    let id = localStorage.getItem('guestId');
-    if (!id) {
-      id = 'guest-' + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem('guestId', id);
-    }
-    return id;
-  } catch {
-    return 'guest-' + Math.random().toString(36).slice(2, 10);
-  }
-}
-
 // Utility: Fisher-Yates shuffle
 function shuffleArray<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -192,8 +178,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const location = useLocation();
   const navigate = useNavigate();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
-  const { user, guest } = useAuth();
-  const userId = user?.id ?? getGuestIdStable();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const today = useMemo(() => getLocalYMD(), []);
   const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const taskId = query.get('task');
@@ -388,7 +374,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
   const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
 
-  // Load daily set from Supabase for authenticated users; fallback to local for guests
+  // Load daily set from Supabase for authenticated users; fallback to local when no user
   const [dailyQuestions, setDailyQuestions] = useState<Question[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
   useEffect(() => {
@@ -442,7 +428,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // Topics-aware local set or chapter path
       if (chapter && chapter.trim()) {
         // Authenticated: use DB to avoid repeats within the same day
-        if (userId && !guest) {
+        if (userId) {
           try {
             const seen = await getSeenQuestionIds(userId, today, chapterName, difficulty);
             const unseen = pool.filter(q => !seen.has(q.id));
@@ -473,7 +459,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
             return;
           }
         } else {
-          // Guests: local fallback
           const arr = fallbackLocal(pool, difficulty, topicsKey, byChapter);
           if (!cancelled) {
             setDailyQuestions(arr);
@@ -483,14 +468,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }
       }
 
-      // No topics filter: use server daily set for authenticated users; fallback to local for guests
+      // No topics filter: use server daily set for authenticated users; fallback to local when no user
       // Ensure at least 10 by backfilling within chapter when applicable
       if (pool.length < 10) {
         const scope = (chapter && chapter.trim()) ? byChapter : all;
         const backfill = scope.filter(q => !pool.includes(q));
         pool = pool.concat(backfill).slice(0, Math.max(10, pool.length));
       }
-      if (userId && !guest) {
+      if (userId) {
         try {
           const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
           if (cancelled) return;
@@ -520,7 +505,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
     load();
     return () => { cancelled = true; };
-  }, [difficulty, userId, guest, today, selectedTopics, selectedSubtopics, chapter, topicsKey, mode, lobbyCode, rematchNonce]);
+  }, [difficulty, userId, today, selectedTopics, selectedSubtopics, chapter, topicsKey, mode, lobbyCode, rematchNonce]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const total = shuffledQuestions.length || dailyQuestions.length;
@@ -617,7 +602,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!userId || guest) return;
+      if (!userId) return;
       try {
         const p = await getDailyProgress(userId, today, difficulty);
         if (cancelled || !p) return;
@@ -635,16 +620,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       } catch { }
     })();
     return () => { cancelled = true; };
-  }, [userId, guest, today, difficulty]);
+  }, [userId, today, difficulty]);
 
-  // Resolve display name (prefer profile.full_name) and role; avoid emails; fallback Player/Guest
+  // Resolve display name (prefer profile.full_name) and role; avoid emails; fallback Player
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const metaName = (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || (user?.user_metadata?.user_name as string) || (user?.user_metadata?.username as string) || null;
-      if (!userId || guest) {
+      if (!userId) {
         if (!cancelled) {
-          setDisplayName(metaName || 'Guest');
+          setDisplayName(metaName || 'Player');
           setRole('student');
         }
         return;
@@ -664,7 +649,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     };
     load();
     return () => { cancelled = true; };
-  }, [userId, guest, user]);
+  }, [userId, user]);
 
   // Removed lifetime achievements modal usage; /treasure shows wallet and achievements
 
@@ -676,16 +661,17 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       if (!role) return; // wait until role resolves
       if (role === 'teacher') return; // do not log teacher previews
       if (runIdRef.current) return; // already created
+      if (!user?.id) return; // require authenticated user
       const topicsCsv = (Array.isArray(topics) && topics.length) ? topics.join(',') : (topicsCsvParam || null);
       const created = await createRun({
         task_id: taskId,
-        user_id: guest ? null : (user?.id || null),
-        guest_id: guest ? userId : null,
+        user_id: user.id,
+        guest_id: null,
         mode: mode,
         difficulty: (difficulty as any) ?? null,
         topics_csv: topicsCsv,
         chapter: chapter || null,
-        display_name: (displayName && displayName.trim()) ? displayName : (guest ? 'Guest' : 'Player'),
+        display_name: (displayName && displayName.trim()) ? displayName : 'Player',
       });
       if (!cancelled && created) {
         runIdRef.current = created.id;
@@ -724,7 +710,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   useEffect(() => {
     if (!gameCompleted) return;
     if (mode !== 'practice') return;
-    if (!userId || guest) return;
+    if (!userId) return;
     const totalQ = (shuffledQuestions.length || dailyQuestions.length);
     if (totalQ <= 0) return;
     const correctCount = answerCorrectList.filter(Boolean).length;
@@ -910,7 +896,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
     ch.subscribe(async (status) => {
       if (status !== 'SUBSCRIBED') return;
-      await ch.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
+      await ch.track({ id: userId, name: displayName || 'Player' });
     });
 
     return () => {
@@ -927,7 +913,6 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setRematchInviteFrom(null);
     setBattleDone(false);
     setFriendsDone(false);
-    setOpponentDone(false);
     setGameCompleted(false);
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -954,7 +939,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const seed = (Math.floor(Math.random() * 2147483647) ^ stringToSeed(`${Date.now()}:${userId}:${lobbyCode}`)) >>> 0;
     rematchSeedRef.current = seed;
     setRematchWaiting(true);
-    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
+    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || 'Player' } }); } catch { }
   };
 
   const acceptRematch = () => {
@@ -972,7 +957,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
   const handleLeaveFriends = () => {
     const ch = matchChannelRef.current;
-    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
+    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || 'Player' } }); } catch { }
     try { ch?.unsubscribe(); } catch { }
     // Navigate away with replace so Back doesn't return to finished game
     try { localStorage.removeItem('play:completed'); } catch { }
@@ -985,9 +970,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (!matchChannelRef.current) return;
     if (!userId) return;
     try {
-      matchChannelRef.current.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
+      matchChannelRef.current.track({ id: userId, name: displayName || 'Player' });
     } catch { }
-  }, [displayName, mode, userId, guest]);
+  }, [displayName, mode, userId]);
 
   // Compute points and winners for friends battle
   const computeFriendsResults = () => {
@@ -1022,7 +1007,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   useEffect(() => {
     if (mode !== 'practice') return;
     if (!gameCompleted) return;
-    if (!userId || guest) return;
+    if (!userId) return;
     if (practiceGrantRef.current) return;
     practiceGrantRef.current = true;
     const localDate = getLocalYMD();
@@ -1042,21 +1027,21 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           setCoins(prev => prev + awarded);
           addToWallet(awarded);
           try {
-            if (userId && !guest) {
+            if (userId) {
               incrementTotals(userId, awarded, 0).catch(() => { });
             }
           } catch { }
         }
       }
     }).catch(() => { });
-  }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
+  }, [mode, gameCompleted, userId, shuffledQuestions, overallTime]);
 
   // Compete (AI): after battle resolved and marked done, grant rewards once
   const competeGrantRef = useRef<boolean>(false);
   useEffect(() => {
     if (mode !== 'battle-ai') return;
     if (!battleDone) return;
-    if (!userId || guest) return;
+    if (!userId) return;
     if (competeGrantRef.current) return;
     competeGrantRef.current = true;
     const localDate = getLocalYMD();
@@ -1090,14 +1075,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // Check if Friends should unlock (AI avg >= 80% over last 3 sessions)
       try { ensureChapterModeUnlock(userId, chAI, 'battle-friends', 0.8, 3); } catch { }
     }
-  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty, shuffledQuestions, studentCorrectList, chapter]);
+  }, [mode, battleDone, userId, playerPoints, aiScore, difficulty, shuffledQuestions, studentCorrectList, chapter]);
 
   // Compete (Friends): grant rewards once when computed
   const friendsGrantRef = useRef<boolean>(false);
   useEffect(() => {
     if (mode !== 'battle-friends') return;
     if (!battleDone) return;
-    if (!userId || guest) return;
+    if (!userId) return;
     if (friendsGrantRef.current) return;
     friendsGrantRef.current = true;
     const localDate = getLocalYMD();
@@ -1123,14 +1108,14 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (chFR) {
       try { ensureChapterModeUnlock(userId, chFR, 'battle-friends', 0.8, 3); } catch { }
     }
-  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
+  }, [mode, battleDone, userId, playerPoints, aiScore, difficulty]);
 
   // Speed: after completion, log run and capture rewards (coins, gems, badges)
   const speedGrantRef = useRef<boolean>(false);
   useEffect(() => {
     if (mode !== 'speed') return;
     if (!gameCompleted) return;
-    if (!userId || guest) return;
+    if (!userId) return;
     if (speedGrantRef.current) return;
     speedGrantRef.current = true;
     const localDate = getLocalYMD();
@@ -1171,7 +1156,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'speed', 0.8, 3).catch(() => { }); } } catch { }
     // Check if AI should unlock (Speed avg >= 80% over last 3 sessions)
     try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'battle-ai', 0.8, 3).catch(() => { }); } } catch { }
-  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions, chapter, overallTime]);
+  }, [mode, gameCompleted, userId, correctAnswers, coins, difficulty, shuffledQuestions, chapter, overallTime]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -1302,7 +1287,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         setTimeout(() => {
           setCoinGain(prev => prev?.id === gainId ? null : prev);
         }, 2000);
-        if (userId && !guest && mode !== 'speed') {
+        if (userId && mode !== 'speed') {
           // Persist only for non-speed here. Speed session is logged at completion.
           incrementTotals(userId, earned, 0).catch(() => { });
         }
@@ -1311,7 +1296,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       setCorrectAnswers(prev => {
         const newCount = prev + 1;
         const ratio = newCount / total; // 0..1 for the daily set of 10
-        if (userId && !guest && mode !== 'speed') {
+        if (userId && mode !== 'speed') {
           incrementTotals(userId, 0, 1).catch(() => { });
         }
         // 10% milestone: internal flag only for speed logging
@@ -1435,7 +1420,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       setPlayerPoints(res.studentPoints);
       setAiScore(res.aiPoints);
       // Save to Supabase (non-blocking)
-      if (userId && !guest) {
+      if (userId) {
         saveBattleMatch({
           user_id: userId,
           date: today,
@@ -1493,7 +1478,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       setWinnersList(res.winners);
       setPlayerPoints(res.studentPoints);
       setAiScore(res.aiPoints);
-      if (userId && !guest) {
+      if (userId) {
         saveBattleMatch({
           user_id: userId,
           date: today,
@@ -1597,7 +1582,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
   // Persist progress snapshot for authenticated users
   useEffect(() => {
-    if (!userId || guest) return;
+    if (!userId) return;
     const snapshot = {
       correct_count: correctAnswers,
       coins_earned: coins,
@@ -1605,7 +1590,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       completed: gameCompleted,
     };
     saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => { });
-  }, [userId, guest, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
+  }, [userId, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
 
   // Persist last seen progress snapshot for Treasure page (local)
   useEffect(() => {
@@ -1619,7 +1604,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   useEffect(() => {
     if (mode !== 'speed') return;
     if (!gameCompleted) return;
-    if (!userId || guest) return;
+    if (!userId) return;
     const localDate = getLocalYMD();
     const ff = (correctAnswers === total) && withinTimeList.slice(0, total).every(Boolean);
     const m = milestonesState;
@@ -1636,7 +1621,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       m100: m.m100,
       fast_flawless: ff,
     }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => { });
-  }, [mode, gameCompleted, userId, guest, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
+  }, [mode, gameCompleted, userId, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
 
   if (loadingDaily) {
     return <div className="min-h-[100svh] md:min-h-screen flex items-center justify-center">Loading daily set...</div>;
@@ -1655,7 +1640,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
-              <p className="text-muted-foreground">{aiTypeLabel} Vs {displayName || (guest ? 'Guest' : 'Player')}</p>
+              <p className="text-muted-foreground">{aiTypeLabel} Vs {displayName || 'Player'}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl mx-auto">
               <div className="lg:col-span-2 flex justify-center">
@@ -1717,7 +1702,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       <BattleSummary
         title="Battle Friends"
         aiTypeLabel={opponentName || 'Friend'}
-        studentName={displayName || (guest ? 'Guest' : 'Player')}
+        studentName={displayName || 'Player'}
         studentPoints={playerPoints}
         aiPoints={aiScore}
         rows={rows}
@@ -1791,7 +1776,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
               {(difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI'))} Vs {displayName || 'You'}
             </p>
           ) : (
-            <p className="text-muted-foreground">{(displayName || (guest ? 'Guest' : 'Player'))} Vs {(opponentName || 'Friend')}</p>
+            <p className="text-muted-foreground">{(displayName || 'Player')} Vs {(opponentName || 'Friend')}</p>
           )}
         </div>
       )}

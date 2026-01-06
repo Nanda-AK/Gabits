@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/services/profile";
 import { getUserBalances } from "@/services/rewards";
-import { unlockAvatarPack, selectAvatar, getUnlockedAvatarPacks } from "@/services/avatars";
+import { unlockAvatarPack, selectAvatar, getUnlockedAvatarPacks, ensureDefaultAvatar } from "@/services/avatars";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,10 +41,16 @@ const Settings = () => {
           getUserBalances(user.id),
           getUnlockedAvatarPacks(user.id),
         ]);
+
+        let avatarPath = (p as any)?.avatar_style as string | null | undefined;
+        if (!avatarPath) {
+          avatarPath = await ensureDefaultAvatar(user.id);
+        }
+
         setProfile(p);
         setBalances(b ? { coins: b.coins, gems: b.gems, xp: b.xp } : { coins: 0, gems: 0, xp: 0 });
         setUnlockedPacks(packs);
-        setSelectedAvatar(p?.selected_avatar || null);
+        setSelectedAvatar(avatarPath || null);
       } catch (error) {
         console.error("Failed to load data:", error);
       } finally {
@@ -170,16 +176,18 @@ const Settings = () => {
   }
 
   // Local avatar images for the shop
-  const generateAvatarGrid = (count: number, pack: "silver" | "gold") => {
+  const generateAvatarGrid = (count: number, pack: "default" | "silver" | "gold") => {
     return Array.from({ length: count }, (_, i) => 
       `/assets/avatars/${pack}/avatar-${i + 1}.png`
     );
   };
 
+  const defaultAvatars = generateAvatarGrid(9, "default");
   const silverAvatars = generateAvatarGrid(9, "silver");
   const goldAvatars = generateAvatarGrid(9, "gold");
 
   const currentXp = balances?.xp ?? 0;
+  const canChangeDefault = currentXp >= 15;
   const canUnlockSilver = currentXp >= 100;
   const canUnlockGold = currentXp >= 200;
   const isSilverUnlocked = unlockedPacks.includes("silver");
@@ -295,6 +303,56 @@ const Settings = () => {
               <CardDescription>Browse and purchase new avatars to customize your profile.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Default Avatars */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">Default Avatars</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Starter avatars available for everyone. Earn 15 XP to switch between them.</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {defaultAvatars.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 bg-gray-50 cursor-pointer transition-all relative ${
+                        selectedAvatar === url
+                          ? "border-purple-600 ring-2 ring-purple-300"
+                          : "border-gray-200 hover:border-purple-400 hover:scale-105"
+                      }`}
+                      onClick={() => {
+                        if (!canChangeDefault) {
+                          toast({
+                            title: "Need 15 XP",
+                            description: "Earn at least 15 XP to change your default avatar.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        handleSelectAvatar(url);
+                      }}
+                    >
+                      <img
+                        src={url}
+                        alt={`Default avatar ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-1">
+                    <span className={`text-sm font-semibold ${canChangeDefault ? "text-purple-700" : "text-gray-400"}`}>
+                      15 XP
+                    </span>
+                    <Sparkles className={`w-4 h-4 ${canChangeDefault ? "text-purple-600" : "text-gray-400"}`} />
+                  </div>
+                </div>
+              </div>
+
               {/* Silver Avatar Pack */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

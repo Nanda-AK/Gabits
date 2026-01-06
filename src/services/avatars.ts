@@ -8,6 +8,8 @@ const PACK_XP_REQUIREMENTS: Record<AvatarPack, number> = {
   gold: 200,
 };
 
+const DEFAULT_AVATAR_COUNT = 9;
+
 const localKey = (userId: string) => `avatars:${userId}:packs`;
 
 export async function getUnlockedAvatarPacks(userId: string): Promise<AvatarPack[]> {
@@ -82,4 +84,32 @@ export async function selectAvatar(
   }
 
   return { ok: true };
+}
+
+export async function ensureDefaultAvatar(userId: string): Promise<string | null> {
+  if (!userId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("avatar_style")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) return null;
+
+    const current = (data as any)?.avatar_style as string | null | undefined;
+    if (current) return current;
+
+    const index = Math.floor(Math.random() * DEFAULT_AVATAR_COUNT) + 1;
+    const avatarPath = `/assets/avatars/default/avatar-${index}.png`;
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ avatar_style: avatarPath, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+
+    if (updateError) return null;
+    return avatarPath;
+  } catch {
+    return null;
+  }
 }

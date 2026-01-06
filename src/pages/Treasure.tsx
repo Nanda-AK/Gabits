@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { getUserBalances, getAnyStreak, getDailyStreakAward } from "@/services/rewards";
 import { getSpeedDaily } from "@/services/speed";
 import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
-import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
+// Removed unused seasonal imports (getMyTokens, getSeasonalWinners)
 import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles, Gem, Star } from "lucide-react";
 import { getLocalYMD } from "@/lib/date";
 
@@ -46,8 +46,7 @@ const Treasure = () => {
   const [balances, setBalances] = useState<{ coins: number; gems: number; xp: number } | null>(null);
   const [speedDaily, setSpeedDaily] = useState<Array<{ date: string; run_count: number; m100_count: number }>>([]);
   const [badges, setBadges] = useState<Achievement[]>([]);
-  const [boostTokens, setBoostTokens] = useState<{ available: number; used: number } | null>(null);
-  const [seasonWinners, setSeasonWinners] = useState<SeasonalWinner[]>([]);
+  // Removed: boostTokens and seasonWinners (unused seasonal features)
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
@@ -73,30 +72,53 @@ const Treasure = () => {
   }, [weekLabels.join('|')]);
 
   // Fetch completions for current week from daily_streak_awards (claimed streak days only)
+  // Store week boundaries in refs to avoid dependency loops
+  const weekStartRef = useRef<string>('');
+  const weekEndRef = useRef<string>('');
+  
+  // Update refs when weekDays changes
+  useEffect(() => {
+    if (weekDays.length === 7) {
+      weekStartRef.current = weekDays[0].date;
+      weekEndRef.current = weekDays[6].date;
+    }
+  }, [weekDays[0]?.date, weekDays[6]?.date]);
+
   const fetchWeekProgress = useCallback(async () => {
-    if (!user || guest || weekDays.length === 0) return;
+    if (!user || guest) return;
+    const start = weekStartRef.current;
+    const end = weekEndRef.current;
+    if (!start || !end) return;
     if (weekProgressLoadingRef.current) return;
     weekProgressLoadingRef.current = true;
-    const start = weekDays[0].date;
-    const end = weekDays[6].date;
+    
     const { data, error } = await supabase
       .from('daily_streak_awards')
       .select('date')
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end);
-    if (error || !data) {
-      weekProgressLoadingRef.current = false;
-      return;
-    }
-    const setDates = new Set((data as Array<{ date: string }>).map(r => r.date));
-    setWeekDays(prev => prev.map(w => ({ ...w, done: setDates.has(w.date) })));
+    
     weekProgressLoadingRef.current = false;
-  }, [user?.id, guest, weekDays]);
+    if (error || !data) return;
+    
+    const doneDates = new Set((data as Array<{ date: string }>).map(r => r.date));
+    setWeekDays(prev => {
+      // Only update if there's an actual change to prevent re-renders
+      const needsUpdate = prev.some(w => w.done !== doneDates.has(w.date));
+      if (!needsUpdate) return prev;
+      return prev.map(w => ({ ...w, done: doneDates.has(w.date) }));
+    });
+  }, [user?.id, guest]);
 
+  // Fetch week progress once when user/week changes (not on every render)
+  const lastFetchKey = useRef<string>('');
   useEffect(() => {
+    const key = `${user?.id}-${weekStartRef.current}`;
+    if (key === lastFetchKey.current) return;
+    lastFetchKey.current = key;
     fetchWeekProgress();
-  }, [fetchWeekProgress, user?.id, guest, weekDays[0]?.date, weekDays[6]?.date]);
+  }, [fetchWeekProgress, user?.id, weekDays[0]?.date]);
 
   // Also refetch when the tab gains focus or visibility returns (handles race after finishing a game)
   useEffect(() => {
@@ -111,10 +133,9 @@ const Treasure = () => {
   }, [fetchWeekProgress]);
 
   // Realtime subscription to daily_streak_awards for current week (claimed streak days)
+  // Use refs to avoid re-subscribing on every render
   useEffect(() => {
-    if (!user || guest || weekDays.length === 0) return;
-    const start = weekDays[0].date;
-    const end = weekDays[6].date;
+    if (!user || guest) return;
     const channel = supabase
       .channel('daily_streak_awards_changes')
       .on(
@@ -128,7 +149,9 @@ const Treasure = () => {
         (payload) => {
           // Refetch week progress when any daily_progress row changes for this user
           const date = (payload.new as any)?.date || (payload.old as any)?.date;
-          if (date && date >= start && date <= end) {
+          const start = weekStartRef.current;
+          const end = weekEndRef.current;
+          if (date && start && end && date >= start && date <= end) {
             fetchWeekProgress();
           }
         }
@@ -137,7 +160,7 @@ const Treasure = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, guest, weekDays[0]?.date, weekDays[6]?.date, fetchWeekProgress]);
+  }, [user?.id, guest, fetchWeekProgress]);
 
   // Removed: Today's Completed Task is now shown via dashboard modal
 
@@ -222,29 +245,8 @@ const Treasure = () => {
     return () => { cancelled = true; };
   }, [user, guest]);
 
-  // Load boost tokens
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user || guest) { setBoostTokens(null); return; }
-      const data = await getMyTokens(user.id);
-      if (!cancelled) setBoostTokens(data ? { available: data.tokens_available, used: data.tokens_used } : { available: 0, used: 0 });
-    })();
-    return () => { cancelled = true; };
-  }, [user, guest]);
-
-  // Load seasonal winners for last month (if new month just started)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const now = new Date();
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const season = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-      const data = await getSeasonalWinners(season);
-      if (!cancelled) setSeasonWinners(data);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Removed: Load boost tokens (unused seasonal feature)
+  // Removed: Load seasonal winners (unused seasonal feature)
 
   // Note: Weekly progress data not yet tracked server-side; showing required UI only
 
@@ -390,71 +392,12 @@ const Treasure = () => {
             </CardContent>
           </Card>
 
-          {/* Stage Boost Tokens */}
-          {!guest && user && boostTokens && boostTokens.available > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-500" />
-                  Stage Boost Tokens
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-3">
-                <div className="text-4xl">🎫</div>
-                <div>
-                  <div className="text-2xl font-black text-purple-700">{boostTokens.available}</div>
-                  <div className="text-xs text-muted-foreground">Available to use</div>
-                  <div className="text-[10px] text-gray-500 mt-1">Used: {boostTokens.used}</div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Removed: Stage Boost Tokens (unused seasonal feature) */}
         </div>
 
         {/* Removed: Today's Completed Task card (handled by Dashboard modal) */}
 
-        {/* Seasonal Winners (Last Month) */}
-        {seasonWinners.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-500" />
-                Last Month's Top 3 Winners
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {seasonWinners.map((winner) => (
-                  <div
-                    key={winner.rank}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      winner.rank === 1
-                        ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-amber-300'
-                        : winner.rank === 2
-                        ? 'bg-gradient-to-r from-gray-50 to-slate-100 border-gray-300'
-                        : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {winner.rank === 1 ? '🥇' : winner.rank === 2 ? '🥈' : '🥉'}
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-800">{winner.display_name}</div>
-                        <div className="text-xs text-muted-foreground">{winner.xp_earned} XP earned</div>
-                      </div>
-                    </div>
-                    <div className="text-right text-xs">
-                      <div className="font-semibold text-amber-700">+{winner.reward_coins} coins</div>
-                      <div className="font-semibold text-fuchsia-700">+{winner.reward_gems} gems</div>
-                      <div className="font-semibold text-purple-700">+{winner.reward_boost_tokens} 🎫</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Removed: Seasonal Winners (unused seasonal feature) */}
 
         {/* Speed Daily Activity (current month) */}
         {!guest && user && speedDaily.length > 0 && (

@@ -6,9 +6,6 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  guest: boolean; // permanently disabled; always false
-  continueAsGuest: () => void; // no-op
-  clearGuest: () => void; // no-op
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string } | void>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error?: string } | void>;
   signOut: () => Promise<void>;
@@ -20,7 +17,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [guest] = useState<boolean>(false);
 
   // Initialize session and subscribe to auth changes
   useEffect(() => {
@@ -54,14 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const continueAsGuest = useCallback(() => {
-    // guest mode disabled
-  }, []);
-
-  const clearGuest = useCallback(() => {
-    // guest mode disabled
-  }, []);
-
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
@@ -82,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const value = useMemo(
-    () => ({ session, user, loading, guest, continueAsGuest, clearGuest, signInWithPassword, signUpWithPassword, signOut }),
-    [session, user, loading, guest, continueAsGuest, clearGuest, signInWithPassword, signUpWithPassword, signOut]
+    () => ({ session, user, loading, signInWithPassword, signUpWithPassword, signOut }),
+    [session, user, loading, signInWithPassword, signUpWithPassword, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

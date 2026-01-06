@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getProfile } from "@/services/profile";
+import { ensureDefaultAvatar } from "@/services/avatars";
 
 export const AccountMenu = () => {
   const { user, signOut } = useAuth();
@@ -24,7 +25,12 @@ export const AccountMenu = () => {
         const p = await getProfile(uid);
         if (p?.full_name) setFullName(p.full_name);
         if ((p as any)?.role) setRole((p as any).role);
-        if ((p as any)?.avatar_style) setAvatarStyle((p as any).avatar_style);
+
+        let avatar = (p as any)?.avatar_style as string | null | undefined;
+        if (!avatar) {
+          avatar = await ensureDefaultAvatar(uid);
+        }
+        if (avatar) setAvatarStyle(avatar);
       } catch {}
     };
     run();

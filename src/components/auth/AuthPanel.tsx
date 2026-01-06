@@ -86,8 +86,6 @@ export const AuthPanel = ({ modeLocked, showSignupToggle = true, hideGuest = tru
             <img src="/gabits-logo.png" alt="Gabits" className="w-8 h-8" />
             <span className="text-sm font-bold text-[#2563EB]">Gabits Auth</span>
           </div>
-          <CardTitle className="text-center text-2xl font-extrabold">Continue to your account</CardTitle>
-          <div className="text-xs text-gray-500">Log in to access your student or teacher portal.</div>
         </div>
       </CardHeader>
       <CardContent>
