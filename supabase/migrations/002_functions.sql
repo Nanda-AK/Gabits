@@ -40,11 +40,17 @@ BEGIN
   SELECT last_date, any_streak INTO v_last_date, v_any
   FROM public.activity_streaks WHERE user_id = p_user_id;
 
-  IF v_last_date IS NULL THEN v_any := 0; END IF;
-
-  IF v_last_date IS NOT NULL AND p_date = v_last_date + 1 THEN
-    v_any_after := v_any + 1;
+  IF v_last_date IS NULL THEN
+    -- First ever streak day
+    v_any_after := 1;
+  ELSIF p_date = v_last_date THEN
+    -- Multiple sessions on the same day: keep the existing streak
+    v_any_after := COALESCE(v_any, 0);
+  ELSIF p_date = v_last_date + 1 THEN
+    -- Consecutive day: increment streak
+    v_any_after := COALESCE(v_any, 0) + 1;
   ELSE
+    -- Gap in days: reset streak
     v_any_after := 1;
   END IF;
 
@@ -114,7 +120,7 @@ CREATE OR REPLACE FUNCTION public.increment_user_totals(
   p_coin_delta BIGINT,
   p_correct_delta BIGINT
 ) RETURNS VOID
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   INSERT INTO public.user_totals (user_id, total_coins, total_correct, updated_at)
   VALUES (p_user_id, GREATEST(p_coin_delta,0), GREATEST(p_correct_delta,0), NOW())
@@ -169,19 +175,25 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Load current streak state
+  -- Load current streak state for per-topic streaks
   SELECT last_date, any_streak, topic, topic_streak 
   INTO v_last_date, v_any, v_topic, v_topic_streak
   FROM public.practice_streaks WHERE user_id = p_user_id;
 
   IF v_last_date IS NULL THEN
-    v_any := 0; v_topic_streak := 0; v_topic := NULL;
-  END IF;
-
-  IF v_last_date IS NOT NULL AND p_date = v_last_date + 1 THEN
-    v_any_after := v_any + 1;
-    v_topic_after := CASE WHEN v_topic = p_topic THEN v_topic_streak + 1 ELSE 1 END;
+    -- First ever practice streak day
+    v_any_after := 1;
+    v_topic_after := 1;
+  ELSIF p_date = v_last_date THEN
+    -- Multiple sessions on the same day: keep existing streak lengths
+    v_any_after := COALESCE(v_any, 0);
+    v_topic_after := COALESCE(v_topic_streak, 0);
+  ELSIF p_date = v_last_date + 1 THEN
+    -- Consecutive day: increment any-mode streak and optionally topic streak
+    v_any_after := COALESCE(v_any, 0) + 1;
+    v_topic_after := CASE WHEN v_topic = p_topic THEN COALESCE(v_topic_streak, 0) + 1 ELSE 1 END;
   ELSE
+    -- Gap in days: reset practice streaks
     v_any_after := 1;
     v_topic_after := 1;
   END IF;

@@ -450,11 +450,11 @@ ALTER TABLE public.task_runs ENABLE ROW LEVEL SECURITY;
 
 -- Students can see their own runs
 CREATE POLICY "task_runs_select_own" ON public.task_runs
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
 -- Teachers can see runs on their tasks
 CREATE POLICY "task_runs_select_teacher" ON public.task_runs
-  FOR SELECT USING (
+  FOR SELECT TO authenticated USING (
     EXISTS (
       SELECT 1 FROM public.live_tasks lt
       WHERE lt.id = task_runs.task_id AND lt.created_by = auth.uid()
@@ -463,11 +463,11 @@ CREATE POLICY "task_runs_select_teacher" ON public.task_runs
 
 -- Anyone can insert (guests allowed)
 CREATE POLICY "task_runs_insert_any" ON public.task_runs
-  FOR INSERT WITH CHECK (TRUE);
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own runs
 CREATE POLICY "task_runs_update_own" ON public.task_runs
-  FOR UPDATE USING (auth.uid() = user_id OR user_id IS NULL);
+  FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE INDEX task_runs_user_task_idx ON public.task_runs(user_id, task_id, status);
 CREATE INDEX task_runs_user_chapter_mode_idx ON public.task_runs(user_id, chapter, mode, completed_at DESC);

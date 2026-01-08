@@ -16,7 +16,7 @@ export const AccountMenu = () => {
   const [role, setRole] = useState<string>("");
   const [avatarStyle, setAvatarStyle] = useState<string | null>(null);
 
-  // Load profile name when authenticated or guest profile exists
+  // Load profile + avatar whenever the authenticated user or location changes
   useEffect(() => {
     const run = async () => {
       try {
@@ -34,7 +34,7 @@ export const AccountMenu = () => {
       } catch {}
     };
     run();
-  }, [user]);
+  }, [user, location.pathname]);
 
   const displayName = useMemo(() => {
     const localName = localStorage.getItem("player:name") || "";
