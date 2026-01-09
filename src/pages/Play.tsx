@@ -11,7 +11,7 @@ function useQuery() {
 }
 
 const Play = () => {
-  const { user, guest } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const q = useQuery();
   const qsMode = (q.get("mode") as 'practice' | 'speed' | 'battle-ai' | 'battle-friends') ?? 'practice';
@@ -31,12 +31,27 @@ const Play = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setRole('student'); } else {
-        const p = await getProfile(user.id);
-        if (!cancelled) setRole((p?.role as string) || 'student');
+      const isBattleMode = qsMode === 'battle-ai' || qsMode === 'battle-friends';
+      if (isBattleMode) {
+        // For AI / Friends battles, do not require a teacher live task or chapter
+        if (!cancelled) {
+          setRole('student');
+          setTask(null);
+          setReady(true);
+        }
+        return;
       }
-      // If not teacher, either require a valid active task OR allow chapter-only launch
-      const isTeacher = (role === 'teacher');
+
+      // Resolve current role from profile (default student)
+      let nextRole: string = 'student';
+      if (user) {
+        const p = await getProfile(user.id);
+        nextRole = (p?.role as string) || 'student';
+      }
+      if (!cancelled) setRole(nextRole);
+
+      // If not teacher, either require a valid active task OR allow chapter-only launch.
+      const isTeacher = nextRole === 'teacher';
       if (!isTeacher) {
         if (!taskId) {
           // Allow direct chapter launch (from Chapters Progress / modal)
@@ -55,7 +70,7 @@ const Play = () => {
     })();
     return () => { cancelled = true; };
   // include taskId so navigating to different task works
-  }, [user?.id, guest, taskId, role, qsChapter]);
+  }, [user?.id, taskId, qsChapter, qsMode]);
 
   // Final settings: allow query ?mode to override task.mode (needed to start Speed for a Practice task)
   const mode = (q.get('mode') as any) ? qsMode : (task?.mode || qsMode);

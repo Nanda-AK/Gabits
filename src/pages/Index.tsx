@@ -54,7 +54,7 @@ function timeAgo(dateISO: string): string {
 }
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const displayName = useDisplayName(user);
 
@@ -187,6 +187,10 @@ const Index = () => {
       setRecentRuns(runs);
     })();
   }, [user?.id]);
+
+  if (loading) {
+    return null;
+  }
 
   return (
     // Gate: if not authenticated, show sign-in screen first
