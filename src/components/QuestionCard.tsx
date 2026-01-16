@@ -138,7 +138,7 @@ export const QuestionCard = ({
         )}
       </div>
 
-      {/* Question Text with Character */}
+      {/* Question Text with optional diagram image */}
       <div className="mb-3 sm:mb-4 lg:mb-6">
         <div className="flex gap-2 sm:gap-3 items-start">
           <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-secondary via-secondary to-secondary/80 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 shadow-lg border-2 border-secondary/30">
@@ -148,6 +148,15 @@ export const QuestionCard = ({
             <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground leading-snug">
               {question.question}
             </p>
+            {question.imageUrl && (
+              <div className="mt-3 flex justify-center">
+                <img
+                  src={question.imageUrl}
+                  alt="Question diagram"
+                  className="max-h-48 w-auto max-w-full rounded-lg border border-muted bg-white object-contain"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

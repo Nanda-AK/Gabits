@@ -411,6 +411,24 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       // When a chapter is specified, NEVER fall back to global pool
       let pool = (chapter && chapter.trim()) ? filtered : (filtered.length ? filtered : all);
 
+      // Fallback: if a chapter is specified but there are no questions for this
+      // difficulty, retry using any difficulty within the SAME chapter only.
+      if (chapter && chapter.trim() && pool.length === 0) {
+        const byChapterAllRaw = questions.filter(q => (q.chapter || '').trim().toLowerCase() === chapterName.trim().toLowerCase());
+        let byChapterAll = uniqueBy(byChapterAllRaw, q => (q.question || '').trim().toLowerCase());
+        let filteredAll: Question[];
+        if (selectedSubtopics.size > 0) {
+          filteredAll = byChapterAll.filter(q => selectedSubtopics.has(((q.topic || '')).trim().toLowerCase()));
+          filteredAll = uniqueBy(filteredAll, q => (q.question || '').trim().toLowerCase());
+          if (filteredAll.length === 0) {
+            filteredAll = byChapterAll;
+          }
+        } else {
+          filteredAll = byChapterAll;
+        }
+        pool = filteredAll;
+      }
+
       // battle-friends: build deterministic set locally and skip server daily logic
       if (mode === 'battle-friends') {
         const seedBaseSet = (chapter && chapter.trim()) ? selectedSubtopics : selectedTopics;

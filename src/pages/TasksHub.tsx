@@ -8,14 +8,14 @@ import { getChapterSpeedUnlock } from "@/services/practice";
 import { supabase } from "@/lib/supabase";
 
 const TasksHub = () => {
-  const { user, guest } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<LiveTask[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     const applyFilter = async (items: LiveTask[]) => {
-      if (!user || guest) return [] as LiveTask[];
+      if (!user) return [] as LiveTask[];
       // For each task decide: keep in "new tasks" or hide if in_progress/completed
       const checks = await Promise.all((items || []).map(async (t) => {
         if (!t.chapter) return { keep: true, t } as const;
@@ -41,7 +41,7 @@ const TasksHub = () => {
     };
 
     (async () => {
-      if (!user || guest) {
+      if (!user) {
         setTasks([]);
         return;
       }
@@ -53,7 +53,7 @@ const TasksHub = () => {
     })();
 
     const unsub = subscribeActiveTasks(async (items) => {
-      if (cancelled || !user || guest) return;
+      if (cancelled || !user) return;
       const filtered = await applyFilter(items);
       if (!cancelled) setTasks(filtered);
     });
@@ -62,7 +62,7 @@ const TasksHub = () => {
       cancelled = true;
       unsub();
     };
-  }, [user?.id, guest]);
+  }, [user?.id]);
 
   const join = (t: LiveTask) => {
     try {
@@ -81,6 +81,7 @@ const TasksHub = () => {
   // Chapter visuals mapping and card renderer
   const guessKey = (chapter?: string | null): string => {
     const s = (chapter || '').toLowerCase();
+    if (s.includes('geometry')) return 'basicsgeometry';
     if (s.includes('line') || s.includes('angle')) return 'linesandangle';
     if (s.includes('fraction')) return 'fraction';
     if (s.includes('pattern')) return 'patternsinmathematics';
@@ -90,6 +91,11 @@ const TasksHub = () => {
     return 'fraction';
   };
   const chapterMeta: Record<string, { title: string; desc: string; img: string }> = {
+    basicsgeometry: {
+      title: 'Basics of Geometry',
+      desc: 'Points, lines, rays, line segments, angles, symmetry, perimeter and simple mensuration.',
+      img: '/chaptersimg/linesandangle.jpeg',
+    },
     linesandangle: {
       title: 'Lines and Angles',
       desc: 'Line, point, ray, line segments, geometric shapes and their properties.',
@@ -118,7 +124,7 @@ const TasksHub = () => {
     playingwithconstruciton: {
       title: 'Playing with Constructions',
       desc: 'Addition, subtraction, multiplication, division, and geometric constructions.',
-      img: '/chaptersimg/playingwithconstruciton.jpeg',
+      img: '/chaptersimg/playingwithconstruction.jpeg',
     },
   };
   const renderCard = (t: LiveTask) => {
@@ -144,7 +150,7 @@ const TasksHub = () => {
     <div className="min-h-[100svh] md:min-h-screen bg-white">
       <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-10" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <h1 className="text-2xl sm:text-3xl font-black mb-6">Assignments</h1>
-        {(!user || guest) && (
+        {!user && (
           <div className="text-sm text-muted-foreground">Sign in to view assignments.</div>
         )}
         {user && tasks.length === 0 && (

@@ -1,5 +1,6 @@
 export const CHAPTERS: Record<string, string> = {
   'the-other-side-of-zero': 'The Other Side of Zero',
+  'basics-of-geometry': 'Basics of Geometry',
   'lines-and-angles': 'Lines and Angles',
   'number-play': 'Number Play',
   'patterns-in-mathematics': 'Patterns in Mathematics',

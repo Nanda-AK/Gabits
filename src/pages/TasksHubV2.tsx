@@ -9,7 +9,7 @@ import { getChapterSpeedUnlock } from "@/services/practice";
 import { supabase } from "@/lib/supabase";
 
 const TasksHubV2 = () => {
-  const { user, guest } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = (searchParams.get('tab') || 'new') as 'new' | 'in_progress' | 'completed';
@@ -36,6 +36,7 @@ const TasksHubV2 = () => {
   // Visuals for chapters
   const guessKey = (chapter?: string | null): string => {
     const s = (chapter || '').toLowerCase();
+    if (s.includes('geometry')) return 'basicsgeometry';
     if (s.includes('line') || s.includes('angle')) return 'linesandangle';
     if (s.includes('fraction')) return 'fraction';
     if (s.includes('pattern')) return 'patternsinmathematics';
@@ -45,6 +46,11 @@ const TasksHubV2 = () => {
     return 'fraction';
   };
   const chapterMeta: Record<string, { title: string; desc: string; img: string }> = {
+    basicsgeometry: {
+      title: 'Basics of Geometry',
+      desc: 'Points, lines, rays, line segments, angles, symmetry, perimeter and simple mensuration.',
+      img: '/chaptersimg/linesandangle.jpeg',
+    },
     linesandangle: {
       title: 'Lines and Angles',
       desc: 'Line, point, ray, line segments, geometric shapes and their properties.',
@@ -73,7 +79,7 @@ const TasksHubV2 = () => {
     playingwithconstruciton: {
       title: 'Playing with Constructions',
       desc: 'Addition, subtraction, multiplication, division, and geometric constructions.',
-      img: '/chaptersimg/playingwithconstruciton.jpeg',
+      img: '/chaptersimg/playingwithconstruction.jpeg',
     },
   };
   const renderCard = (t: LiveTask, cta: 'Join' | 'Open' = 'Join') => {
@@ -100,7 +106,7 @@ const TasksHubV2 = () => {
     let cancelled = false;
 
     const buildLists = async (items: LiveTask[]) => {
-      if (!user || guest) return { new: [] as LiveTask[], progress: [] as LiveTask[], completed: [] as LiveTask[] };
+      if (!user) return { new: [] as LiveTask[], progress: [] as LiveTask[], completed: [] as LiveTask[] };
 
       // Try server-side statuses first
       let statusList: StudentTaskStatus[] = [];
@@ -144,7 +150,7 @@ const TasksHubV2 = () => {
     };
 
     (async () => {
-      if (!user || guest) { setNewTasks([]); setInProgressTasks([]); setCompletedTasks([]); setLoading(false); return; }
+      if (!user) { setNewTasks([]); setInProgressTasks([]); setCompletedTasks([]); setLoading(false); return; }
       setLoading(true);
       const items = await getActiveTasks();
       const lists = await buildLists(items);
@@ -157,7 +163,7 @@ const TasksHubV2 = () => {
     })();
 
     const unsub = subscribeActiveTasks(async (items) => {
-      if (cancelled || !user || guest) return;
+      if (cancelled || !user) return;
       setLoading(true);
       const lists = await buildLists(items);
       if (!cancelled) {
@@ -169,13 +175,13 @@ const TasksHubV2 = () => {
     });
 
     return () => { cancelled = true; try { unsub(); } catch { } };
-  }, [user?.id, guest]);
+  }, [user?.id]);
 
   return (
     <div className="min-h-[100svh] md:min-h-screen bg-white">
       <div className="container mx-auto max-w-6xl px-4 pt-14 sm:pt-16 pb-10" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <h1 className="text-2xl sm:text-3xl font-black mb-6">Assignments</h1>
-        {(!user || guest) && (
+        {!user && (
           <div className="text-sm text-muted-foreground">Sign in to view assignments.</div>
         )}
         {user && (
