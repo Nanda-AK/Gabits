@@ -28,3 +28,14 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# IDE specific files
+.windsurf/
+
+# Temp folders
+temp/
+**/temp/
+
+# Supabase temp files
+supabase/.temp/
+supabase/migrations/20260107055520_OoavZkuBhP8Ho127.sql

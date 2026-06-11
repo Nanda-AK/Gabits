@@ -2,15 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Quiz Master - Gamified Learning Platform</title>
     <meta name="description" content="Test your knowledge with our engaging quiz game featuring 10 challenging questions, coin rewards, and progress tracking. Climb to the top and unlock treasure!" />
     <meta name="author" content="Quiz Master" />
-
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#6C5CE7" />
+    <link rel="apple-touch-icon" href="/gabits-logo.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

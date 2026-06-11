@@ -6,6 +6,8 @@ export interface Profile {
   age: number;
   gender: Gender;
   standard: string; // e.g., "Grade 6" / "Class 8"
+  role?: 'student' | 'parent' | 'teacher' | 'principal';
+  avatar_style?: string;
   created_at?: string;
   updated_at?: string;
 }

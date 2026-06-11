@@ -1,0 +1,14 @@
+{
+  "name": "Gabits",
+  "short_name": "Gabits",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6C5CE7",
+  "description": "Gamified math learning with Practice, Speed, and Battles.",
+  "icons": [
+    { "src": "/gabits-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/gabits-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

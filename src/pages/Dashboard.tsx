@@ -5,11 +5,14 @@ import { supabase } from "@/lib/supabase";
 import { getLocalYMD } from "@/lib/date";
 import { getUserBalances, getAnyStreak } from "@/services/rewards";
 import { getBadgeCounts, getAllAchievements } from "@/services/achievements";
+import { getActiveTasks, subscribeActiveTasks, type LiveTask } from "@/services/tasks";
 import { getSpeedDaily } from "@/services/speed";
 import { getProfile } from "@/services/profile";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Bot, Calculator, Gem, Medal, Sparkles, Timer, Trophy, Users, Coins } from "lucide-react";
+import { getTaskById } from "@/services/tasks";
+import { ChaptersInProgressModal } from "@/components/ChaptersInProgressModal";
 
 // Mode keys we support for per-mode streaks
 type ModeKey = 'practice' | 'speed' | 'compete-ai' | 'compete-friends';
@@ -34,6 +37,8 @@ function computeStreakForMode(modeDates: Set<string>): number {
 const Dashboard = () => {
   const { user, guest } = useAuth();
   const navigate = useNavigate();
+  // Chapters In Progress modal state
+  const [chaptersOpen, setChaptersOpen] = useState<boolean>(false);
 
   // Profile display name (never show email)
   const [fullName, setFullName] = useState<string>("");
@@ -47,6 +52,46 @@ const Dashboard = () => {
       } catch {}
     })();
   }, [user, guest]);
+
+  // (no-op) We compute chapters inside the modal itself
+
+  // Live class tasks (teacher started) visible to all authenticated users
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || guest) { setLiveTasks([]); return; }
+      const items = await getActiveTasks();
+      if (!cancelled) setLiveTasks(items);
+    })();
+    const unsub = subscribeActiveTasks((items) => { if (!cancelled) setLiveTasks(items); });
+    return () => { cancelled = true; unsub(); };
+  }, [user?.id, guest]);
+
+  const joinTask = (t: LiveTask) => {
+    const qs = new URLSearchParams();
+    qs.set('task', t.id);
+    qs.set('mode', t.mode);
+    if (t.difficulty) qs.set('difficulty', t.difficulty);
+    if (t.topics_csv) qs.set('topics', t.topics_csv);
+    navigate(`/play?${qs.toString()}`, { replace: false });
+  };
+
+  // Revisit a task from Live Class list: restore pending task and go to Modes
+  const revisitTask = async (taskId: string) => {
+    try {
+      const t = await getTaskById(taskId);
+      if (!t) return;
+      const payload = {
+        id: t.id,
+        mode: t.mode,
+        difficulty: t.difficulty,
+        topics_csv: t.topics_csv,
+        chapter: t.chapter,
+      } as const;
+      localStorage.setItem('play:pending_task', JSON.stringify(payload));
+      navigate('/modes');
+    } catch {}
+  };
 
   // Lifetime battle counts to show progress toward AI/Friends badges (10 battles)
   const [aiLifetime, setAiLifetime] = useState<number>(0);
@@ -173,6 +218,7 @@ const Dashboard = () => {
   // Badges
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [achievements, setAchievements] = useState<Array<{ key: string; unlocked_at: string }>>([]);
+  const [liveTasks, setLiveTasks] = useState<LiveTask[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -188,14 +234,39 @@ const Dashboard = () => {
   }, [user, guest]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50">
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-sky-50 via-indigo-50 to-emerald-50">
+      <div className="container mx-auto px-4 pt-14 sm:pt-16 pb-10 max-w-4xl" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-indigo-700 to-emerald-700 bg-clip-text text-transparent flex items-center gap-3">
             <BarChart3 className="w-7 h-7" /> Dashboard
           </h1>
-          <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setChaptersOpen(true)}>Chapters In Progress</Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+          </div>
         </div>
+
+        {/* Live class tasks (if any) */}
+        {!guest && user && liveTasks.length > 0 && (
+          <Card className="mb-6 border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Live Class Task</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {liveTasks.map(t => (
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border bg-white/70">
+                    <div>
+                      <div className="text-sm font-bold">{t.title}</div>
+                      <div className="text-xs text-muted-foreground">{t.mode} • {t.difficulty || 'moderate'} • {t.topics_csv || 'mixed'}</div>
+                    </div>
+                    <Button className="rounded-full" onClick={() => joinTask(t)}>Join Now</Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile summary */}
         <Card className="mb-6">
@@ -376,6 +447,8 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        <ChaptersInProgressModal open={chaptersOpen} onOpenChange={setChaptersOpen} />
       </div>
     </div>
   );

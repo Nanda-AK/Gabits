@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { getUserBalances, getAnyStreak, getDailyStreakAward } from "@/services/rewards";
 import { getSpeedDaily } from "@/services/speed";
 import { getAllAchievements, getBadgeCounts, type Achievement } from "@/services/achievements";
-import { getMyTokens, getSeasonalWinners, type SeasonalWinner } from "@/services/seasonal";
+// Removed unused seasonal imports (getMyTokens, getSeasonalWinners)
 import { Zap, Trophy, Target, Calculator, Bot, Users, Sparkles, Gem, Star } from "lucide-react";
 import { getLocalYMD } from "@/lib/date";
 
@@ -42,19 +42,38 @@ function getBadgeInfo(key: string): { name: string; img: string; desc: string } 
 const Treasure = () => {
   const navigate = useNavigate();
   const { coins } = useSnapshot();
-  const { user, guest } = useAuth();
+  const { user } = useAuth();
   const [balances, setBalances] = useState<{ coins: number; gems: number; xp: number } | null>(null);
   const [speedDaily, setSpeedDaily] = useState<Array<{ date: string; run_count: number; m100_count: number }>>([]);
   const [badges, setBadges] = useState<Achievement[]>([]);
-  const [boostTokens, setBoostTokens] = useState<{ available: number; used: number } | null>(null);
-  const [seasonWinners, setSeasonWinners] = useState<SeasonalWinner[]>([]);
+  // Removed: boostTokens and seasonWinners (unused seasonal features)
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
+  const [streakLastDate, setStreakLastDate] = useState<string | null>(null);
   const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
-  const [todayEvents, setTodayEvents] = useState<Array<{ source: string; coins_delta: number; gems_delta: number; badges_delta: number; meta: any }>>([]);
+  const [todayEvents, setTodayEvents] = useState<Array<{ created_at: string; source: string; coins_delta: number; gems_delta: number; badges_delta: number; meta: any }>>([]);
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
+  const weekProgressLoadingRef = useRef(false);
+
+  // Only treat the streak as "active" if the last streak day was today or yesterday.
+  const activeStreak = useMemo(() => {
+    if (!anyStreak || !streakLastDate) return null;
+    try {
+      const today = getLocalYMD();
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = getLocalYMD(yesterdayDate);
+      if (streakLastDate === today || streakLastDate === yesterday) {
+        return anyStreak;
+      }
+      return null;
+    } catch {
+      // In case of any parsing issues, fall back to showing the raw streak
+      return anyStreak;
+    }
+  }, [anyStreak, streakLastDate]);
 
   // Build current week (Mon-Sun) dates using LOCAL dates (not UTC) to match daily_progress.date
   useEffect(() => {
@@ -72,24 +91,53 @@ const Treasure = () => {
   }, [weekLabels.join('|')]);
 
   // Fetch completions for current week from daily_streak_awards (claimed streak days only)
+  // Store week boundaries in refs to avoid dependency loops
+  const weekStartRef = useRef<string>('');
+  const weekEndRef = useRef<string>('');
+  
+  // Update refs when weekDays changes
+  useEffect(() => {
+    if (weekDays.length === 7) {
+      weekStartRef.current = weekDays[0].date;
+      weekEndRef.current = weekDays[6].date;
+    }
+  }, [weekDays]);
+
   const fetchWeekProgress = useCallback(async () => {
-    if (!user || guest || weekDays.length === 0) return;
-    const start = weekDays[0].date;
-    const end = weekDays[6].date;
+    if (!user) return;
+    const start = weekStartRef.current;
+    const end = weekEndRef.current;
+    if (!start || !end) return;
+    if (weekProgressLoadingRef.current) return;
+    weekProgressLoadingRef.current = true;
+    
     const { data, error } = await supabase
       .from('daily_streak_awards')
       .select('date')
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end);
+    
+    weekProgressLoadingRef.current = false;
     if (error || !data) return;
-    const setDates = new Set((data as Array<{ date: string }>).map(r => r.date));
-    setWeekDays(prev => prev.map(w => ({ ...w, done: setDates.has(w.date) })));
-  }, [user?.id, guest, weekDays]);
+    
+    const doneDates = new Set((data as Array<{ date: string }>).map(r => r.date));
+    setWeekDays(prev => {
+      // Only update if there's an actual change to prevent re-renders
+      const needsUpdate = prev.some(w => w.done !== doneDates.has(w.date));
+      if (!needsUpdate) return prev;
+      return prev.map(w => ({ ...w, done: doneDates.has(w.date) }));
+    });
+  }, [user?.id]);
 
+  // Fetch week progress once when user/week changes (not on every render)
+  const lastFetchKey = useRef<string>('');
   useEffect(() => {
+    const key = `${user?.id}-${weekStartRef.current}`;
+    if (key === lastFetchKey.current) return;
+    lastFetchKey.current = key;
     fetchWeekProgress();
-  }, [fetchWeekProgress, user?.id, guest, weekDays[0]?.date, weekDays[6]?.date]);
+  }, [fetchWeekProgress, user?.id, weekDays[0]?.date]);
 
   // Also refetch when the tab gains focus or visibility returns (handles race after finishing a game)
   useEffect(() => {
@@ -104,10 +152,9 @@ const Treasure = () => {
   }, [fetchWeekProgress]);
 
   // Realtime subscription to daily_streak_awards for current week (claimed streak days)
+  // Use refs to avoid re-subscribing on every render
   useEffect(() => {
-    if (!user || guest || weekDays.length === 0) return;
-    const start = weekDays[0].date;
-    const end = weekDays[6].date;
+    if (!user) return;
     const channel = supabase
       .channel('daily_streak_awards_changes')
       .on(
@@ -121,7 +168,9 @@ const Treasure = () => {
         (payload) => {
           // Refetch week progress when any daily_progress row changes for this user
           const date = (payload.new as any)?.date || (payload.old as any)?.date;
-          if (date && date >= start && date <= end) {
+          const start = weekStartRef.current;
+          const end = weekEndRef.current;
+          if (date && start && end && date >= start && date <= end) {
             fetchWeekProgress();
           }
         }
@@ -130,89 +179,63 @@ const Treasure = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, guest, weekDays, fetchWeekProgress]);
+  }, [user?.id, fetchWeekProgress]);
 
-  // Load today's reward events (dynamic breakdown)
+  // Removed: Today's Completed Task is now shown via dashboard modal
+
+  // Removed realtime: no Today breakdown in Treasure page anymore
+
+  // Load today's reward events (for the Today Reward Breakdown section)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setTodayEvents([]); return; }
+      if (!user) { setTodayEvents([]); return; }
       const today = getLocalYMD();
       const { data } = await supabase
         .from('reward_events')
-        .select('source, coins_delta, gems_delta, badges_delta, meta')
+        .select('created_at, source, coins_delta, gems_delta, badges_delta, meta')
         .eq('user_id', user.id)
         .eq('date', today)
+        .order('created_at', { ascending: true })
         .order('id', { ascending: true });
       if (!cancelled) setTodayEvents((data as any[]) ?? []);
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
-
-  // Realtime subscription for today's reward_events
-  useEffect(() => {
-    if (!user || guest) return;
-    const today = getLocalYMD();
-    const channel = supabase
-      .channel('reward_events_today')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reward_events',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const date = (payload.new as any)?.date || (payload.old as any)?.date;
-          if (date === today) {
-            // Re-fetch today's breakdown
-            (async () => {
-              const { data } = await supabase
-                .from('reward_events')
-                .select('source, coins_delta, gems_delta, badges_delta, meta')
-                .eq('user_id', user.id)
-                .eq('date', today)
-                .order('id', { ascending: true });
-              setTodayEvents((data as any[]) ?? []);
-            })();
-          }
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id, guest]);
+  }, [user]);
 
   // Load current streak and today's daily streak award (who claimed base coins)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setAnyStreak(null); setTodayAward(null); return; }
+      if (!user) { setAnyStreak(null); setStreakLastDate(null); setTodayAward(null); return; }
       const s = await getAnyStreak(user.id);
-      if (!cancelled) setAnyStreak(s?.any_streak ?? 0);
+      if (!cancelled) {
+        setAnyStreak(s?.any_streak ?? null);
+        setStreakLastDate(s?.last_date ?? null);
+      }
       const today = getLocalYMD();
       const a = await getDailyStreakAward(user.id, today);
       if (!cancelled) setTodayAward(a ?? null);
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
+  }, [user]);
 
-  // Load server wallet balances (coins, gems, XP). Guest falls back to local snapshot for coins only.
+  // Load server wallet balances (coins, gems, XP). 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setBalances(null); return; }
+      if (!user) { setBalances(null); return; }
       const b = await getUserBalances(user.id);
       if (!cancelled) setBalances(b ? { coins: b.coins, gems: b.gems, xp: b.xp } : { coins: 0, gems: 0, xp: 0 });
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
+  }, [user]);
 
   // Load Speed daily stats for current month
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setSpeedDaily([]); return; }
+      if (!user) { setSpeedDaily([]); return; }
       const now = new Date();
       const from = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
       const to = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()).padStart(2,'0')}`;
@@ -220,59 +243,38 @@ const Treasure = () => {
       if (!cancelled) setSpeedDaily(data);
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
+  }, [user]);
 
   // Load all earned badges
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setBadges([]); return; }
+      if (!user) { setBadges([]); return; }
       const data = await getAllAchievements(user.id);
       if (!cancelled) setBadges(data);
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
+  }, [user]);
 
   // Load badge counts across all modes (Focused Learner, Math Explorer, Speed Master, AI Challenger, Social Legend)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || guest) { setBadgeCounts({}); return; }
+      if (!user) { setBadgeCounts({}); return; }
       const c = await getBadgeCounts(user.id);
       if (!cancelled) setBadgeCounts(c);
     })();
     return () => { cancelled = true; };
-  }, [user, guest]);
+  }, [user]);
 
-  // Load boost tokens
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user || guest) { setBoostTokens(null); return; }
-      const data = await getMyTokens(user.id);
-      if (!cancelled) setBoostTokens(data ? { available: data.tokens_available, used: data.tokens_used } : { available: 0, used: 0 });
-    })();
-    return () => { cancelled = true; };
-  }, [user, guest]);
-
-  // Load seasonal winners for last month (if new month just started)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const now = new Date();
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const season = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-      const data = await getSeasonalWinners(season);
-      if (!cancelled) setSeasonWinners(data);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Removed: Load boost tokens (unused seasonal feature)
+  // Removed: Load seasonal winners (unused seasonal feature)
 
   // Note: Weekly progress data not yet tracked server-side; showing required UI only
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
-      <div className="container mx-auto px-4 py-10 max-w-3xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
+      <div className="container mx-auto px-4 pt-16 sm:pt-10 pb-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2">
             <img src={todayAward ? "/treasure_open.png" : "/treasure_close.png"} className="w-8 h-8"/> My Treasure
@@ -281,7 +283,7 @@ const Treasure = () => {
         </div>
 
         {/* Streak Hero */}
-        {!guest && user && (
+        {user && (
           <div className="mb-6">
             <Card className="overflow-hidden border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
               <CardContent className="flex items-center gap-4 py-4">
@@ -292,11 +294,13 @@ const Treasure = () => {
                       ? <>Daily streak coins for today were claimed by <span className="font-semibold">{todayAward.claimed_by}</span>.</>
                       : <>No daily streak reward claimed yet today. Complete any mode to claim it.</>}
                   </div>
-                  <div className="text-xs text-amber-800 mt-1">
-                    Current streak: <span className="font-bold">{anyStreak ?? 0}</span> day(s)
-                    {todayAward && <> • Coins: <span className="font-bold">+{todayAward.coins_awarded}</span></>}
-                    {todayAward && todayAward.badges_awarded?.length > 0 && <> • Badges: {todayAward.badges_awarded.join(', ')}</>}
-                  </div>
+                  {activeStreak !== null && (
+                    <div className="text-xs text-amber-800 mt-1">
+                      Current streak: <span className="font-bold">{activeStreak}</span> day(s)
+                      {todayAward && <> • Coins: <span className="font-bold">+{todayAward.coins_awarded}</span></>}
+                      {todayAward && todayAward.badges_awarded?.length > 0 && <> • Badges: {todayAward.badges_awarded.join(', ')}</>}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -304,7 +308,7 @@ const Treasure = () => {
         )}
 
         {/* Today Reward Breakdown */}
-        {!guest && user && (
+        {user && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg">Today Reward Breakdown</CardTitle>
@@ -376,12 +380,12 @@ const Treasure = () => {
               <CardTitle className="text-lg">My Wallet</CardTitle>
             </CardHeader>
             <CardContent>
-              {guest || !user ? (
+              {!user ? (
                 <div className="flex items-center gap-3">
                   <Coins className="w-8 h-8 text-amber-600" />
                   <div>
                     <div className="text-2xl font-black text-amber-900">{coins}</div>
-                    <div className="text-xs text-muted-foreground">Guest wallet (local only)</div>
+                    <div className="text-xs text-muted-foreground">Local wallet (offline only)</div>
                   </div>
                 </div>
               ) : (
@@ -410,74 +414,17 @@ const Treasure = () => {
                 </div>
               )}
             </CardContent>
-          </Card>/
+          </Card>
 
-          {/* Stage Boost Tokens */}
-          {!guest && user && boostTokens && boostTokens.available > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-500" />
-                  Stage Boost Tokens
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-3">
-                <div className="text-4xl">🎫</div>
-                <div>
-                  <div className="text-2xl font-black text-purple-700">{boostTokens.available}</div>
-                  <div className="text-xs text-muted-foreground">Available to use</div>
-                  <div className="text-[10px] text-gray-500 mt-1">Used: {boostTokens.used}</div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Removed: Stage Boost Tokens (unused seasonal feature) */}
         </div>
 
-        {/* Seasonal Winners (Last Month) */}
-        {seasonWinners.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-500" />
-                Last Month's Top 3 Winners
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {seasonWinners.map((winner) => (
-                  <div
-                    key={winner.rank}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      winner.rank === 1
-                        ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-amber-300'
-                        : winner.rank === 2
-                        ? 'bg-gradient-to-r from-gray-50 to-slate-100 border-gray-300'
-                        : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {winner.rank === 1 ? '🥇' : winner.rank === 2 ? '🥈' : '🥉'}
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-800">{winner.display_name}</div>
-                        <div className="text-xs text-muted-foreground">{winner.xp_earned} XP earned</div>
-                      </div>
-                    </div>
-                    <div className="text-right text-xs">
-                      <div className="font-semibold text-amber-700">+{winner.reward_coins} coins</div>
-                      <div className="font-semibold text-fuchsia-700">+{winner.reward_gems} gems</div>
-                      <div className="font-semibold text-purple-700">+{winner.reward_boost_tokens} 🎫</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Removed: Today's Completed Task card (handled by Dashboard modal) */}
+
+        {/* Removed: Seasonal Winners (unused seasonal feature) */}
 
         {/* Speed Daily Activity (current month) */}
-        {!guest && user && speedDaily.length > 0 && (
+        {user && speedDaily.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -510,7 +457,7 @@ const Treasure = () => {
         )}
 
         
-        {!guest && user && (
+        {user && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">

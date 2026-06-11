@@ -180,13 +180,13 @@ export const HomePage = ({ onStartGame }: HomePageProps) => {
       ))}
 
       {/* Main Content */}
-      <div className={`relative z-10 flex flex-col items-center px-4 sm:px-6 lg:px-8 ${showForm ? 'justify-start py-12' : 'justify-center min-h-screen'}`}>
+      <div className={`relative z-10 flex flex-col items-center px-4 sm:px-6 lg:px-8 ${showForm ? 'justify-start py-12' : 'justify-center min-h-[100svh] md:min-h-screen'}`}>
         <div className="text-center max-w-4xl mx-auto space-y-8 animate-slide-up">
           {/* Logo/Title */}
           <div className="space-y-4">
             <div className="inline-block">
               <div className="relative">
-                <h1 className="text-6xl sm:text-7xl md:text-8xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient drop-shadow-2xl">
+                <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight break-words max-w-[90vw] mx-auto bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient drop-shadow-2xl">
                   Let’s Mine
                 </h1>
                 <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 blur-2xl -z-10 animate-pulse shadow-2xl" />

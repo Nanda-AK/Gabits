@@ -22,7 +22,14 @@ interface ResultScreenProps {
 }
 
 export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiScore, opponentName = "AI Bot", mode, practiceRewards, speedRewards, questions, results }: ResultScreenProps) => {
-  const isPerfectScore = correctAnswers === 10;
+  const totalQuestions = questions?.length ?? 10;
+  const computedCorrect = (() => {
+    // For Battle AI, the prop carries playerPoints; keep it
+    if (mode === 'battle-ai' && typeof aiScore === 'number') return Math.min(totalQuestions, Math.max(0, correctAnswers));
+    if (Array.isArray(results)) return Math.min(totalQuestions, results.filter(Boolean).length);
+    return Math.min(totalQuestions, Math.max(0, correctAnswers));
+  })();
+  const isPerfectScore = computedCorrect >= totalQuestions;
   const { user, guest } = useAuth();
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAwardMode, setTodayAwardMode] = useState<string | null>(null);
@@ -84,7 +91,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
         {(mode === 'practice' || mode === 'speed') ? (
           <div className="mb-8">
             <div className="bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl p-6 border-2 border-primary/30 shadow-lg mb-4">
-              <div className="text-6xl font-black text-primary mb-2">{correctAnswers}</div>
+              <div className="text-6xl font-black text-primary mb-2">{computedCorrect}</div>
               <div className="text-sm font-semibold text-foreground">Correct Answers</div>
             </div>
             {/* Rewards Summary styled like Practice */}
@@ -172,7 +179,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             <div className="rounded-2xl border overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
                 <div className="font-semibold">You</div>
-                <div className="font-extrabold">{correctAnswers}</div>
+                <div className="font-extrabold">{computedCorrect}</div>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="font-semibold text-muted-foreground">{opponentName}</div>
@@ -191,7 +198,7 @@ export const ResultScreen = ({ coins, correctAnswers, onRestart, gameOver, aiSco
             </h3>
             <div className="max-h-64 overflow-y-auto space-y-2 rounded-xl border-2 border-muted p-3">
               {questions.map((q, idx) => {
-                const userCorrect = !!(results && typeof results[idx] !== 'undefined' ? results[idx] : (idx < correctAnswers));
+                const userCorrect = !!(results && typeof results[idx] !== 'undefined' ? results[idx] : false);
                 return (
                   <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg ${userCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
                     {userCorrect ? (
