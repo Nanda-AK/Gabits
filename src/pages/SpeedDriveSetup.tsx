@@ -24,7 +24,7 @@ const SpeedDriveSetup = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
+    <div className="relative min-h-[100svh] md:min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-sky-400/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl" />
       <div className="container mx-auto px-4 py-10 max-w-xl pl-16 sm:pl-20">
@@ -50,7 +50,7 @@ const SpeedDriveSetup = () => {
           {/* Topic Selection (Checkboxes) */}
           <div className="mt-6 text-left">
             <h3 className="text-sm font-semibold text-muted-foreground mb-2">Select Topics</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: 'addition', label: 'Addition' },
                 { key: 'subtraction', label: 'Subtraction' },
@@ -59,8 +59,8 @@ const SpeedDriveSetup = () => {
                 { key: 'fractions', label: 'Fractions' },
                 { key: 'algebra', label: 'Algebra' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
-                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                <label key={key} className="flex items-center gap-3.5 p-3.5 rounded-lg border border-gray-200 bg-white/70 hover:bg-gray-50 transition shadow-sm">
+                  <Checkbox className="h-5 w-5" checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
                   <span className="text-sm font-medium">{label}</span>
                 </label>
               ))}

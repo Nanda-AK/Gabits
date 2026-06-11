@@ -58,6 +58,22 @@ export async function getXpLeaderboard(from: string, to: string, limit = 50): Pr
   return (data as XpRow[]) ?? [];
 }
 
+export type AllTimeXpRow = {
+  user_id: string;
+  display_name: string;
+  avatar_style: string | null;
+  xp: number;
+  rank: number;
+};
+
+export async function getAllTimeXpLeaderboard(limit = 50): Promise<AllTimeXpRow[]> {
+  const { data, error } = await supabase.rpc('get_all_time_xp_leaderboard', {
+    limit_n: limit,
+  });
+  if (error) return [];
+  return (data as AllTimeXpRow[]) ?? [];
+}
+
 export async function getUserBalances(userId: string): Promise<{ user_id: string; coins: number; gems: number; xp: number } | null> {
   const { data, error } = await supabase
     .from('user_balances')
@@ -91,4 +107,57 @@ export async function getDailyStreakAward(userId: string, dateYMD: string): Prom
     .maybeSingle();
   if (error) return null;
   return (data as any) ?? null;
+}
+
+export async function getUserXpAndAvatar(
+  userId: string
+): Promise<{ xp: number; avatar_style: string | null } | null> {
+  if (!userId) return null;
+
+  const { data: balance, error: balError } = await supabase
+    .from('user_balances')
+    .select('xp')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (balError) return null;
+
+  const { data: profile, error: profError } = await supabase
+    .from('profiles')
+    .select('avatar_style')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const xp = (balance as any)?.xp ?? 0;
+  const avatar_style = profError ? null : ((profile as any)?.avatar_style ?? null);
+
+  return { xp, avatar_style };
+}
+
+export async function updateAvatarStyle(
+  userId: string,
+  style: string,
+  requiredXp: number
+): Promise<boolean> {
+  if (!userId) return false;
+
+  const { data: balance, error: balError } = await supabase
+    .from('user_balances')
+    .select('xp')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (balError) return false;
+
+  const xp = (balance as any)?.xp ?? 0;
+  if (xp < requiredXp) {
+    return false;
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_style: style, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  return !error;
 }

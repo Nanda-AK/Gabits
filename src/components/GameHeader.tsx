@@ -28,7 +28,7 @@ export const GameHeader = ({ hearts, coins, blinkHeart, coinGain, onTreasureClic
   const timeRemaining = overallTimeLimit - overallTime;
   const isOverallTimeCritical = timeRemaining <= 60; // Last minute warning
   return (
-    <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-md border-b-2 border-primary/20 z-50 shadow-xl">
+    <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-card via-card/95 to-card backdrop-blur-md border-b-2 border-primary/20 z-50 shadow-xl" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="container mx-auto px-2 sm:px-3 py-1.5 sm:py-2 lg:py-3">
         <div className="flex items-center justify-between gap-2 sm:gap-4 max-w-5xl xl:max-w-6xl mx-auto">
           {/* Back Button */}

@@ -6,9 +6,9 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  guest: boolean;
-  continueAsGuest: () => void;
-  clearGuest: () => void;
+  guest: boolean; // permanently disabled; always false
+  continueAsGuest: () => void; // no-op
+  clearGuest: () => void; // no-op
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string } | void>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error?: string } | void>;
   signOut: () => Promise<void>;
@@ -20,13 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [guest, setGuest] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("guest") === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [guest] = useState<boolean>(false);
 
   // Initialize session and subscribe to auth changes
   useEffect(() => {
@@ -45,9 +39,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession) {
-        // If the user logs in, disable guest mode automatically
-        try { localStorage.removeItem("guest"); } catch {}
-        setGuest(false);
         // Mark that onboarding may be needed (checked by OnboardingGate)
         try {
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
@@ -64,13 +55,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const continueAsGuest = useCallback(() => {
-    try { localStorage.setItem("guest", "1"); } catch {}
-    setGuest(true);
+    // guest mode disabled
   }, []);
 
   const clearGuest = useCallback(() => {
-    try { localStorage.removeItem("guest"); } catch {}
-    setGuest(false);
+    // guest mode disabled
   }, []);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {

@@ -26,11 +26,21 @@ const PracticeSetup = () => {
 
   const start = () => {
     const csv = topics.join(',');
-    navigate(`/play?mode=practice&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}`);
+    // Rotate between 3 variants using a counter in localStorage for the day
+    let pv = 0;
+    try {
+      const today = new Date().toISOString().slice(0,10);
+      const key = `practice:pv:${today}`;
+      const raw = localStorage.getItem(key);
+      const n = raw ? parseInt(raw) : 0;
+      pv = Number.isFinite(n) ? (n % 3) : 0;
+      localStorage.setItem(key, String((pv + 1) % 3));
+    } catch {}
+    navigate(`/play?mode=practice&difficulty=${difficulty}&topics=${encodeURIComponent(csv)}&pv=${pv}`);
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
+    <div className="relative min-h-[100svh] md:min-h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50">
       <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl" />
       <div className="container mx-auto px-4 py-10 max-w-xl pl-16 sm:pl-20">
@@ -59,7 +69,7 @@ const PracticeSetup = () => {
           {/* Topic Selection (Checkboxes) */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-muted-foreground mb-3">Select Topics</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: 'addition', label: 'Addition' },
                 { key: 'subtraction', label: 'Subtraction' },
@@ -68,8 +78,8 @@ const PracticeSetup = () => {
                 { key: 'fractions', label: 'Fractions' },
                 { key: 'algebra', label: 'Algebra' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
-                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                <label key={key} className="flex items-center gap-3.5 p-3.5 rounded-lg border border-gray-200 bg-white/70 hover:bg-gray-50 transition shadow-sm">
+                  <Checkbox className="h-5 w-5" checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
                   <span className="text-sm font-medium">{label}</span>
                 </label>
               ))}

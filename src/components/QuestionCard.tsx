@@ -32,6 +32,8 @@ interface QuestionCardProps {
   disableSkipHint?: boolean;
   // When true, Next/Finish requires an answer selection; set false for friends mode
   requireSelectionForNext?: boolean;
+  // When true, hides the answer options list (used when mobile scribble shows chips below the canvas)
+  hideOptions?: boolean;
 }
 
 export const QuestionCard = ({
@@ -61,6 +63,7 @@ export const QuestionCard = ({
   showDifficultyBadge = true,
   disableSkipHint = false,
   requireSelectionForNext = true,
+  hideOptions = false,
 }: QuestionCardProps) => {
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -68,7 +71,7 @@ export const QuestionCard = ({
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   const timeRemaining = questionTimeLimit - questionTime;
   const isTimeCritical = timeRemaining <= 10;
   const progressPercentage = (questionTime / questionTimeLimit) * 100;
@@ -86,7 +89,7 @@ export const QuestionCard = ({
       {/* Subtle corner accents */}
       <div className="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-tl-xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-secondary/5 to-transparent rounded-br-xl pointer-events-none" />
-      
+
       {/* Question Number & Difficulty Badge */}
       <div className="relative flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
         <div className="flex flex-col gap-1">
@@ -95,18 +98,15 @@ export const QuestionCard = ({
           </div>
           {/* Per-Question Timer with Countdown (hidden in practice mode) */}
           {showTimer && !battleMode && (
-            <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${
-              isTimeCritical 
-                ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse' 
+            <div className={`relative flex items-center gap-1.5 rounded-md px-2 py-1.5 border-2 shadow-sm w-fit transition-all duration-300 ${isTimeCritical
+                ? 'bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/40 animate-pulse'
                 : 'bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20'
-            }`}>
-              <Timer className={`w-3.5 h-3.5 transition-colors ${
-                isTimeCritical ? 'text-destructive' : 'text-secondary'
-              }`} />
+              }`}>
+              <Timer className={`w-3.5 h-3.5 transition-colors ${isTimeCritical ? 'text-destructive' : 'text-secondary'
+                }`} />
               <div className="flex flex-col items-start">
-                <span className={`text-[10px] sm:text-xs font-extrabold tabular-nums transition-colors ${
-                  isTimeCritical ? 'text-destructive' : 'text-secondary'
-                }`}>
+                <span className={`text-[10px] sm:text-xs font-extrabold tabular-nums transition-colors ${isTimeCritical ? 'text-destructive' : 'text-secondary'
+                  }`}>
                   {timeRemaining}s
                 </span>
                 {isTimeCritical && (
@@ -115,10 +115,9 @@ export const QuestionCard = ({
               </div>
               {/* Progress bar showing time used */}
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 ${
-                    isTimeCritical ? 'bg-destructive' : 'bg-secondary'
-                  }`}
+                <div
+                  className={`h-full transition-all duration-1000 ${isTimeCritical ? 'bg-destructive' : 'bg-secondary'
+                    }`}
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -154,48 +153,50 @@ export const QuestionCard = ({
       </div>
 
       {/* Answer Options */}
-      <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
-        {question.options.map((option, index) => {
-          const isSelected = selectedAnswer === index;
-          const isCorrectAnswer = index === question.correctAnswer;
-          const isLockedWrong = !!secondChance && lockedWrongIndex === index;
-          
-          let buttonClass = "w-full justify-start text-left h-auto py-1.5 sm:py-2 lg:py-3 px-2.5 sm:px-3 lg:px-4 text-xs sm:text-sm lg:text-base font-medium transition-all duration-200 rounded-lg sm:rounded-xl border-2 ";
-          
-          if (!showResult) {
-            if (isLockedWrong) {
-              buttonClass += "bg-destructive/20 border-destructive text-destructive-foreground cursor-not-allowed";
-            } else {
-              buttonClass += isSelected
-                ? "bg-secondary/20 border-secondary text-secondary-foreground shadow-md scale-[1.02]"
-                : "bg-card border-border hover:border-secondary/50 hover:bg-muted/50 hover:scale-[1.01]";
-            }
-          } else {
-            if (isCorrectAnswer) {
-              buttonClass += "bg-primary/20 border-primary text-primary-foreground animate-pulse-success";
-            } else if (isSelected && !isCorrect) {
-              buttonClass += "bg-destructive/20 border-destructive text-destructive-foreground animate-shake";
-            } else {
-              buttonClass += "bg-card border-border opacity-50";
-            }
-          }
+      {!hideOptions && (
+        <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
+          {question.options.map((option, index) => {
+            const isSelected = selectedAnswer === index;
+            const isCorrectAnswer = index === question.correctAnswer;
+            const isLockedWrong = !!secondChance && lockedWrongIndex === index;
 
-          return (
-            <Button
-              key={index}
-              onClick={() => onAnswerSelect(index)}
-              disabled={showResult || isLockedWrong}
-              className={buttonClass}
-              variant="outline"
-            >
-              <span className="mr-3 font-bold text-muted-foreground">
-                {String.fromCharCode(65 + index)}.
-              </span>
-              {option}
-            </Button>
-          );
-        })}
-      </div>
+            let buttonClass = "w-full justify-start text-left h-auto py-1.5 sm:py-2 lg:py-3 px-2.5 sm:px-3 lg:px-4 text-xs sm:text-sm lg:text-base font-semibold transition-all duration-200 rounded-lg sm:rounded-xl border-2 ";
+
+            if (!showResult) {
+              if (isLockedWrong) {
+                buttonClass += "bg-destructive/10 border-destructive text-gray-1200 opacity-80 cursor-not-allowed";
+              } else {
+                buttonClass += isSelected
+                  ? "bg-secondary/15 border-secondary text-gray-1200 shadow-md scale-[1.02]"
+                  : "bg-card border-border text-gray-900 hover:border-secondary/50 hover:bg-muted/50 hover:scale-[1.01]";
+              }
+            } else {
+              if (isCorrectAnswer) {
+                buttonClass += "bg-emerald-50 border-emerald-400 text-gray-1200 animate-pulse-success";
+              } else if (isSelected && !isCorrect) {
+                buttonClass += "bg-rose-50 border-rose-400 text-gray-1200 animate-shake";
+              } else {
+                buttonClass += "bg-card border-border text-gray-1200 opacity-100";
+              }
+            }
+
+            return (
+              <Button
+                key={index}
+                onClick={() => onAnswerSelect(index)}
+                disabled={showResult || isLockedWrong}
+                className={buttonClass}
+                variant="outline"
+              >
+                <span className="mr-3 font-bold text-muted-foreground">
+                  {String.fromCharCode(65 + index)}.
+                </span>
+                {option}
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Hint Section */}
       {showHint && (
@@ -213,13 +214,12 @@ export const QuestionCard = ({
 
       {/* Action Buttons with inline result status */}
       <div
-        className={`flex flex-wrap items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl p-1.5 sm:p-2 border-2 ${
-          showResult
+        className={`flex flex-wrap items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl p-1.5 sm:p-2 border-2 ${showResult
             ? isCorrect
               ? "bg-emerald-100/70 border-emerald-300"
               : "bg-rose-100/70 border-rose-300"
             : "border-muted/30"
-        }`}
+          }`}
       >
         <Button
           onClick={onSkip}
@@ -245,9 +245,8 @@ export const QuestionCard = ({
         <div className="flex-1 text-center">
           {!battleMode && showResult && (
             <span
-              className={`font-extrabold text-sm sm:text-base lg:text-lg tracking-wide ${
-                isCorrect ? "text-emerald-700" : "text-rose-700"
-              }`}
+              className={`font-extrabold text-sm sm:text-base lg:text-lg tracking-wide ${isCorrect ? "text-emerald-700" : "text-rose-700"
+                }`}
             >
               {isCorrect ? "Correct" : "Wrong"}
             </span>

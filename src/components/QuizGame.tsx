@@ -10,10 +10,11 @@ import { MonkeyProgress } from "./MonkeyProgress";
 import { ResultScreen } from "./ResultScreen";
 import { CoinAnimation } from "./CoinAnimation";
 import { BattleSummary } from "./BattleSummary";
-import { ScribbleBoard } from "./ScribbleBoard";
+import { ScribbleBoard, type ScribbleBoardHandle } from "./ScribbleBoard";
 import { TableBoard } from "./TableBoard";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Pen, Grid, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateDailySet, getDailyProgress, saveDailyProgressSnapshot } from "@/services/progress";
 // removed Achievement modal usage; use Treasure page instead
@@ -21,11 +22,14 @@ import { incrementTotals } from "@/services/totals";
 import { resolveBattleResults, saveBattleMatch, saveBattlePerformance } from "@/services/battle";
 import type { Winner } from "@/services/battle";
 import { getProfile } from "@/services/profile";
+import { logPracticeSession, logChapterModeRun, getSeenQuestionIds, markSeenQuestionIds, ensureChapterSpeedUnlock, ensureChapterModeUnlock, grantChapterModeUnlock } from "@/services/practice";
 import { logSpeedRun } from "@/services/speed";
 import { getLocalYMD } from "@/lib/date";
+import { createRun, completeRun } from "@/services/taskRuns";
 import { grantPracticeRewards, grantCompeteRewards } from "@/services/rewards";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { toLabel } from "@/data/chaptersMap";
 
 interface QuizGameProps {
   difficulty?: Difficulty;
@@ -33,6 +37,7 @@ interface QuizGameProps {
   topic?: 'mixed' | 'addition' | 'subtraction' | 'multiplication' | 'division' | 'fractions' | 'algebra';
   topics?: string[]; // normalized later
   lobbyCode?: string; // for battle-friends
+  chapter?: string;
 }
 
 // Stable guest ID for realtime presence when unauthenticated
@@ -139,39 +144,61 @@ function pickDailyQuestions(all: Question[], count = 10): Question[] {
   return idxs.slice(0, Math.min(count, all.length)).map((i) => all[i]);
 }
 
+// Utility: make array unique by derived key
+function uniqueBy<T>(arr: T[], key: (t: T) => string | number): T[] {
+  const out: T[] = [];
+  const seen = new Set<string | number>();
+  for (const item of arr) {
+    const k = key(item);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(item);
+  }
+  return out;
+}
+
 // Local fallback using localStorage for guests/offline. Topics-aware via topicsKey.
-function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string): Question[] {
-  const today = new Date().toISOString().split('T')[0];
+// Uses LOCAL date for rollover and pads to 10 using the provided fallbackPool only (keeps chapter isolation when applicable).
+function fallbackLocal(pool: Question[], difficulty: Difficulty, topicsKey: string, fallbackPool: Question[]): Question[] {
+  const today = getLocalYMD();
   const key = `dailyQuizData:${difficulty}:${topicsKey || 'all'}`;
   const storedData = localStorage.getItem(key);
   if (storedData) {
     try {
       const { date, questions: storedQuestions } = JSON.parse(storedData);
       if (date === today) return storedQuestions as Question[];
-    } catch {}
+    } catch { }
   }
-  let newQuestions = pickDailyQuestions(pool, 10);
-  // If the filtered pool has fewer than 10, pad from the SAME pool (allow repeats) to keep count=10
-  if (newQuestions.length < 10 && pool.length > 0) {
-    const padded = newQuestions.slice();
-    let i = 0;
-    while (padded.length < 10) {
-      padded.push(pool[i % pool.length]);
-      i++;
-    }
-    newQuestions = padded;
+  // Deterministic pick seeded by topicsKey to support multi-variant practice sets
+  const baseSeed = stringToSeed(`${today}:${difficulty}:${topicsKey || 'all'}`);
+  const primary = pickQuestionsWithSeed(pool, Math.min(10, Math.max(0, pool.length)), baseSeed);
+  let result = primary.slice();
+  if (result.length < 10) {
+    const need = 10 - result.length;
+    const candidates = fallbackPool.filter(q => !result.some(r => r.id === q.id));
+    const extras = pickQuestionsWithSeed(candidates, need, baseSeed ^ 0x9e3779b9);
+    result = result.concat(extras);
   }
-  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: newQuestions })); } catch {}
-  return newQuestions;
+  // Final safety: de-duplicate by question text
+  result = uniqueBy(result, q => (q.question || '').trim().toLowerCase());
+  try { localStorage.setItem(key, JSON.stringify({ date: today, questions: result })); } catch { }
+  return result;
 }
 
-export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode }: QuizGameProps) => {
+// Practice progression: unlock Speed when average accuracy across last 3 practice sessions >= threshold
+const SPEED_UNLOCK_THRESHOLD = 0.8; // 80%
+
+export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, topics, lobbyCode, chapter }: QuizGameProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const practiceMode = mode === 'practice' && location.pathname.startsWith('/play');
   const { user, guest } = useAuth();
   const userId = user?.id ?? getGuestIdStable();
   const today = useMemo(() => getLocalYMD(), []);
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const taskId = query.get('task');
+  const topicsCsvParam = query.get('topics') || null;
+  const pvParam = query.get('pv');
   const [displayName, setDisplayName] = useState<string>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -183,6 +210,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [showHint, setShowHint] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [coinAnimations, setCoinAnimations] = useState<Array<{ id: number; amount: number }>>([]);
+  // Run tracking for live tasks
+  const runIdRef = useRef<string | null>(null);
+  const runCompletedRef = useRef<boolean>(false);
+  const gameStartAtRef = useRef<number>(Date.now());
+  const [role, setRole] = useState<string>('');
   const [blinkHeart, setBlinkHeart] = useState(false);
   const [secondChance, setSecondChance] = useState(false);
   const [secondChanceOpen, setSecondChanceOpen] = useState(false);
@@ -224,12 +256,18 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   const [withinTimeList, setWithinTimeList] = useState<boolean[]>([]);
   // Practice/Speed: track per-question correctness for the review panel
   const [answerCorrectList, setAnswerCorrectList] = useState<boolean[]>([]);
+  // Practice mode: limit how many times AI Solve can be used per session
+  const [practiceSolveUses, setPracticeSolveUses] = useState(0);
+  const practiceSolveUsesRef = useRef(0);
   const [practiceRewards, setPracticeRewards] = useState<{ coins_awarded: number; gems_awarded: number; streak_after: number; badges_awarded: string[] } | null>(null);
   const [speedRewards, setSpeedRewards] = useState<{ coins_awarded: number; gems_awarded: number; badges_awarded: string[] } | null>(null);
+  // Mobile only: inline scribble panel under the question
+  const [mobileScribbleOpen, setMobileScribbleOpen] = useState(false);
+  const sbRef = useRef<ScribbleBoardHandle | null>(null);
 
   const [treasureModalOpen, setTreasureModalOpen] = useState(false);
 
-   const inferMathType = (qs: Question[]): string => {
+  const inferMathType = (qs: Question[]): string => {
     let add = 0, sub = 0, mul = 0, div = 0;
     const inc = (h: string, q: string) => {
       const H = (h || '').toLowerCase();
@@ -245,11 +283,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       { k: 'subtraction', v: sub },
       { k: 'multiplication', v: mul },
       { k: 'division', v: div },
-    ].sort((a,b) => b.v - a.v);
+    ].sort((a, b) => b.v - a.v);
     return arr[0].v === 0 ? 'mixed' : arr[0].k;
   };
 
-  
+
 
   // Canonicalize question type and requested topics
   const canonicalize = (t: string): string => {
@@ -308,24 +346,44 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
 
     // 7) Fallback to declared type if present and valid; else default to addition
-    const allowed = new Set(['addition','subtraction','multiplication','division','fractions','algebra']);
+    const allowed = new Set(['addition', 'subtraction', 'multiplication', 'division', 'fractions', 'algebra']);
     const byType = canonicalize((q as any).type || '');
     if (allowed.has(byType)) return byType;
     return 'addition';
   };
-  const selectedTopics = useMemo(() => {
-    const arr = Array.isArray(topics) && topics.length > 0
+  // Raw topics array from props/URL (kept as-is for subtopic matching)
+  const rawTopicsArr = useMemo(() => {
+    return (Array.isArray(topics) && topics.length > 0)
       ? topics
       : (topic && topic !== 'mixed' ? [topic] : []);
-    const set = new Set(arr.map(canonicalize));
-    return set;
   }, [topic, topics]);
+
+  // Legacy topic categories (addition/subtraction/...) for non-chapter filtering
+  const selectedTopics = useMemo(() => {
+    const set = new Set(rawTopicsArr.map(canonicalize));
+    return set;
+  }, [rawTopicsArr]);
+
+  // Per-chapter subtopics (exact topic names) for chapter filtering
+  const selectedSubtopics = useMemo(() => {
+    return new Set(rawTopicsArr.map(s => (s || '').trim().toLowerCase()));
+  }, [rawTopicsArr]);
 
   // Stable key for topics selection used for caching (sorted canonical topics)
   const topicsKey = useMemo(() => {
-    if (!selectedTopics || selectedTopics.size === 0) return 'all';
-    return Array.from(selectedTopics).sort().join('-');
-  }, [selectedTopics]);
+    const useSet = (chapter && chapter.trim()) ? selectedSubtopics : selectedTopics;
+    const base = (!useSet || useSet.size === 0)
+      ? 'all'
+      : Array.from(useSet).sort().join('-');
+    const variant = (() => {
+      if (mode !== 'practice') return 0;
+      if (taskId) return 0; // keep teacher tasks stable
+      const n = parseInt(pvParam || '0');
+      if (Number.isFinite(n)) return Math.max(0, Math.min(2, n % 3));
+      return 0;
+    })();
+    return base + (chapter ? `:ch=${chapter}` : '') + (mode === 'practice' && !taskId ? `:pv=${variant}` : '');
+  }, [selectedTopics, selectedSubtopics, chapter, mode, taskId, pvParam]);
 
   // Storage key for resuming in-progress sessions (scoped by day, difficulty, mode, topics)
   const storageKey = useMemo(() => `quiz:session:${today}:${difficulty}:${mode}:${topicsKey}`, [today, difficulty, mode, topicsKey]);
@@ -337,15 +395,40 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     let cancelled = false;
     async function load() {
       setLoadingDaily(true);
+      // Base pool by difficulty
       const all = questions.filter(q => q.difficulty === difficulty);
-      const filtered = selectedTopics.size
-        ? all.filter(q => selectedTopics.has(guessType(q)))
+      // Optional chapter filter (tolerate slug by mapping to display label)
+      const chapterName = (chapter && chapter.trim()) ? (toLabel(chapter) || chapter) : '';
+      const byChapterRaw = (chapter && chapter.trim())
+        ? all.filter(q => (q.chapter || '').trim().toLowerCase() === chapterName.trim().toLowerCase())
         : all;
-      let pool = filtered.length ? filtered : all; // fallback if empty
+      // De-duplicate by question text to avoid repeats inside a session
+      const byChapter = uniqueBy(byChapterRaw, q => (q.question || '').trim().toLowerCase());
+      // Topic filtering
+      let filtered: Question[];
+      if (chapter && chapter.trim()) {
+        // If subtopics selected, filter within the chapter by exact question.topic
+        filtered = (selectedSubtopics.size > 0)
+          ? byChapter.filter(q => selectedSubtopics.has(((q.topic || '')).trim().toLowerCase()))
+          : byChapter;
+        // Ensure dedupe after subtopic filter as well
+        filtered = uniqueBy(filtered, q => (q.question || '').trim().toLowerCase());
+        // If subtopics selected but yielded zero, fall back to entire chapter (never outside chapter)
+        if ((selectedSubtopics.size > 0) && filtered.length === 0) {
+          filtered = byChapter;
+        }
+      } else {
+        // Legacy category filtering based on inferred type
+        filtered = selectedTopics.size ? byChapter.filter(q => selectedTopics.has(guessType(q))) : byChapter;
+        filtered = uniqueBy(filtered, q => (q.question || '').trim().toLowerCase());
+      }
+      // When a chapter is specified, NEVER fall back to global pool
+      let pool = (chapter && chapter.trim()) ? filtered : (filtered.length ? filtered : all);
 
       // battle-friends: build deterministic set locally and skip server daily logic
       if (mode === 'battle-friends') {
-        const seedStr = `${lobbyCode || 'room'}:${getLocalYMD()}:${difficulty}:${Array.from(selectedTopics).sort().join('-') || 'all'}`;
+        const seedBaseSet = (chapter && chapter.trim()) ? selectedSubtopics : selectedTopics;
+        const seedStr = `${lobbyCode || 'room'}:${getLocalYMD()}:${difficulty}:${Array.from(seedBaseSet).sort().join('-') || 'all'}`;
         const baseSeed = rematchSeedRef.current ?? stringToSeed(seedStr);
         const picked = pickQuestionsWithSeed(pool, 10, baseSeed);
         const deterministic = shuffleQuestionSetDeterministic(picked, baseSeed ^ 0x9e3779b9);
@@ -356,20 +439,55 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         return;
       }
 
-      // If topics are explicitly selected, use topics-aware local daily set (avoid cross-topic backfill)
-      if (selectedTopics.size > 0) {
-        const arr = fallbackLocal(pool, difficulty, topicsKey);
-        if (!cancelled) {
-          setDailyQuestions(arr);
-          setLoadingDaily(false);
+      // Topics-aware local set or chapter path
+      if (chapter && chapter.trim()) {
+        // Authenticated: use DB to avoid repeats within the same day
+        if (userId && !guest) {
+          try {
+            const seen = await getSeenQuestionIds(userId, today, chapterName, difficulty);
+            const unseen = pool.filter(q => !seen.has(q.id));
+            const baseSeed = stringToSeed(`${today}:${difficulty}:${chapter}:${userId}:${Date.now()}`);
+            const pickCount = Math.min(10, pool.length);
+            const primary = pickQuestionsWithSeed(unseen, Math.min(pickCount, unseen.length), baseSeed);
+            let arr = primary.slice();
+            if (arr.length < pickCount) {
+              const need = pickCount - arr.length;
+              const remaining = pool.filter(q => !arr.some(a => a.id === q.id));
+              const extras = pickQuestionsWithSeed(remaining, Math.min(need, remaining.length), baseSeed ^ 0x9e3779b9);
+              arr = arr.concat(extras);
+            }
+            arr = uniqueBy(arr, q => (q.question || '').trim().toLowerCase());
+            await markSeenQuestionIds(userId, today, chapterName, difficulty, arr.map(q => q.id));
+            if (!cancelled) {
+              setDailyQuestions(arr);
+              setLoadingDaily(false);
+            }
+            return;
+          } catch {
+            // fallback local if any DB issue
+            const arr = fallbackLocal(pool, difficulty, topicsKey, byChapter);
+            if (!cancelled) {
+              setDailyQuestions(arr);
+              setLoadingDaily(false);
+            }
+            return;
+          }
+        } else {
+          // Guests: local fallback
+          const arr = fallbackLocal(pool, difficulty, topicsKey, byChapter);
+          if (!cancelled) {
+            setDailyQuestions(arr);
+            setLoadingDaily(false);
+          }
+          return;
         }
-        return;
       }
 
       // No topics filter: use server daily set for authenticated users; fallback to local for guests
-      // Ensure we always have at least 10 by backfilling from the remaining 'all'
+      // Ensure at least 10 by backfilling within chapter when applicable
       if (pool.length < 10) {
-        const backfill = all.filter(q => !pool.includes(q));
+        const scope = (chapter && chapter.trim()) ? byChapter : all;
+        const backfill = scope.filter(q => !pool.includes(q));
         pool = pool.concat(backfill).slice(0, Math.max(10, pool.length));
       }
       if (userId && !guest) {
@@ -377,7 +495,10 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           const ids = await getOrCreateDailySet(userId, today, difficulty, pool);
           if (cancelled) return;
           const mapped = ids.map(id => pool.find(q => q.id === id)).filter(Boolean) as Question[];
-          let arr = mapped.length ? mapped : [];
+          // Deduplicate by ID in case server returns repeated IDs
+          const seen = new Set<number>();
+          let arr = [] as Question[];
+          for (const q of mapped) { if (!seen.has(q.id)) { seen.add(q.id); arr.push(q); } }
           if (arr.length < 10) {
             const need = 10 - arr.length;
             const extras = pool.filter(q => !arr.some(a => a.id === q.id)).slice(0, need);
@@ -388,66 +509,35 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           }
           setDailyQuestions(arr);
         } catch {
-          const arr = fallbackLocal(pool, difficulty, topicsKey);
+          const arr = fallbackLocal(pool, difficulty, topicsKey, all);
           setDailyQuestions(arr);
         }
       } else {
-        const arr = fallbackLocal(pool, difficulty, topicsKey);
+        const arr = fallbackLocal(pool, difficulty, topicsKey, all);
         setDailyQuestions(arr);
       }
       setLoadingDaily(false);
     }
     load();
     return () => { cancelled = true; };
-  }, [difficulty, userId, guest, today, selectedTopics, mode, lobbyCode, rematchNonce]);
+  }, [difficulty, userId, guest, today, selectedTopics, selectedSubtopics, chapter, topicsKey, mode, lobbyCode, rematchNonce]);
 
   const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const total = shuffledQuestions.length || dailyQuestions.length;
   const question = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / total) * 100;
 
-  // When daily set loads or refreshes, try restore session; else shuffle fresh
+  // When daily set loads or refreshes, always start a fresh game run
+  // (we no longer auto-resume abandoned sessions from localStorage).
   useEffect(() => {
-    // In friends battle, we already built a deterministic set in dailyQuestions; don't restore from local
+    // In friends battle, we already built a deterministic set in dailyQuestions; don't clear or reshuffle here
     if (mode === 'battle-friends') {
       setShuffledQuestions(dailyQuestions);
       setCurrentQuestion(0);
       return;
     }
-    const raw = (() => { try { return localStorage.getItem(storageKey); } catch { return null; } })();
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        if (saved && Array.isArray(saved.shuffledQuestions) && saved.shuffledQuestions.length > 0) {
-          if (saved.completed) {
-            try { localStorage.removeItem(storageKey); } catch {}
-            setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
-            setCurrentQuestion(0);
-            return;
-          }
-          setShuffledQuestions(saved.shuffledQuestions as Question[]);
-          setCurrentQuestion(Math.max(0, Math.min(saved.currentQuestion ?? 0, (saved.shuffledQuestions as any[]).length - 1)));
-          setHearts(typeof saved.hearts === 'number' ? saved.hearts : 5);
-          setCoins(typeof saved.coins === 'number' ? saved.coins : 0);
-          setCorrectAnswers(typeof saved.correctAnswers === 'number' ? saved.correctAnswers : 0);
-          setAnswerCorrectList(Array.isArray(saved.answerCorrectList) ? saved.answerCorrectList : []);
-          setWithinTimeList(Array.isArray(saved.withinTimeList) ? saved.withinTimeList : []);
-          setOverallTime(typeof saved.overallTime === 'number' ? saved.overallTime : 0);
-          if (saved.milestones) {
-            const loaded = {
-              m10: !!saved.milestones.m10,
-              m25: !!saved.milestones.m25,
-              m50: !!saved.milestones.m50,
-              m75: !!saved.milestones.m75,
-              m100: !!saved.milestones.m100,
-            };
-            setMilestonesState(loaded);
-            milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
-          }
-          return;
-        }
-      } catch {}
-    }
+    // Clear any stale snapshot for this key so starting a new game never resumes mid-way
+    try { localStorage.removeItem(storageKey); } catch { }
     setShuffledQuestions(shuffleQuestionSet(dailyQuestions));
     setCurrentQuestion(0);
   }, [dailyQuestions, storageKey, mode]);
@@ -467,7 +557,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       milestones: milestonesState,
       completed: gameCompleted,
     };
-    try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch {}
+    try { localStorage.setItem(storageKey, JSON.stringify(snap)); } catch { }
   }, [storageKey, currentQuestion, hearts, coins, correctAnswers, answerCorrectList, withinTimeList, shuffledQuestions, overallTime, milestonesState, gameCompleted]);
 
   // Maintain a completion flag to allow other UI (logo, account menu) to replace navigation
@@ -478,13 +568,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       } else {
         localStorage.removeItem('play:completed');
       }
-    } catch {}
+    } catch { }
   }, [gameCompleted]);
 
   // Cleanup completion flag on unmount
   useEffect(() => {
     return () => {
-      try { localStorage.removeItem('play:completed'); } catch {}
+      try { localStorage.removeItem('play:completed'); } catch { }
     };
   }, []);
 
@@ -499,7 +589,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setBlinkHeart(false);
     setShowResult(false);
     setQuestionTime(0); // Reset question timer
-    
+
     // Set time threshold / limit based on difficulty
     if (question) {
       if (mode === 'battle-ai' || mode === 'battle-friends') {
@@ -542,25 +632,34 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         };
         setMilestonesState(loaded);
         milestonesAwarded.current = { ...milestonesAwarded.current, ...loaded };
-      } catch {}
+      } catch { }
     })();
     return () => { cancelled = true; };
   }, [userId, guest, today, difficulty]);
 
-  // Resolve display name (prefer profile full_name, then metadata; avoid emails; final fallback Player/Guest)
+  // Resolve display name (prefer profile.full_name) and role; avoid emails; fallback Player/Guest
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const metaName = (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || (user?.user_metadata?.user_name as string) || (user?.user_metadata?.username as string) || null;
       if (!userId || guest) {
-        if (!cancelled) setDisplayName(metaName || 'Guest');
+        if (!cancelled) {
+          setDisplayName(metaName || 'Guest');
+          setRole('student');
+        }
         return;
       }
       try {
         const p = await getProfile(userId);
-        if (!cancelled) setDisplayName(p?.full_name || metaName || 'Player');
+        if (!cancelled) {
+          setDisplayName(p?.full_name || metaName || 'Player');
+          setRole(((p as any)?.role as string) || 'student');
+        }
       } catch {
-        if (!cancelled) setDisplayName(metaName || 'Player');
+        if (!cancelled) {
+          setDisplayName(metaName || 'Player');
+          setRole('student');
+        }
       }
     };
     load();
@@ -568,7 +667,119 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
   }, [userId, guest, user]);
 
   // Removed lifetime achievements modal usage; /treasure shows wallet and achievements
-  
+
+  // Create a task run when a student is playing a live task (skip for teacher preview)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!taskId) return; // only when launched with a task id
+      if (!role) return; // wait until role resolves
+      if (role === 'teacher') return; // do not log teacher previews
+      if (runIdRef.current) return; // already created
+      const topicsCsv = (Array.isArray(topics) && topics.length) ? topics.join(',') : (topicsCsvParam || null);
+      const created = await createRun({
+        task_id: taskId,
+        user_id: guest ? null : (user?.id || null),
+        guest_id: guest ? userId : null,
+        mode: mode,
+        difficulty: (difficulty as any) ?? null,
+        topics_csv: topicsCsv,
+        chapter: chapter || null,
+        display_name: (displayName && displayName.trim()) ? displayName : (guest ? 'Guest' : 'Player'),
+      });
+      if (!cancelled && created) {
+        runIdRef.current = created.id;
+        gameStartAtRef.current = Date.now();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId, role]);
+
+  // Complete the run when game is completed
+  useEffect(() => {
+    (async () => {
+      if (!taskId) return;
+      if (!runIdRef.current || runCompletedRef.current) return;
+      if (!gameCompleted) return;
+      const totalQ = shuffledQuestions.length;
+      const correctCount = answerCorrectList.filter(Boolean).length;
+      const timeMs = Date.now() - gameStartAtRef.current;
+      const details = shuffledQuestions.map((q, i) => ({ qid: (q as any).id ?? i, correct: !!answerCorrectList[i] }));
+      const ok = await completeRun(runIdRef.current, {
+        total: totalQ,
+        correct: correctCount,
+        time_ms: timeMs,
+        hearts_left: hearts,
+        coins_earned: coins,
+        details,
+        status: 'completed',
+      });
+      if (ok) runCompletedRef.current = true;
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameCompleted]);
+
+  // Practice completion: persist session summary to DB for server-side unlock checks
+  useEffect(() => {
+    if (!gameCompleted) return;
+    if (mode !== 'practice') return;
+    if (!userId || guest) return;
+    const totalQ = (shuffledQuestions.length || dailyQuestions.length);
+    if (totalQ <= 0) return;
+    const correctCount = answerCorrectList.filter(Boolean).length;
+    const topicsCsv = topicsCsvParam;
+    const chapterName = chapter || null;
+    const localDate = getLocalYMD();
+    (async () => {
+      try {
+        await logPracticeSession({
+          user_id: userId,
+          date: localDate,
+          difficulty,
+          topics_csv: topicsCsv,
+          chapter: chapterName,
+          topic: inferMathType(shuffledQuestions) || 'mixed',
+          total: totalQ,
+          correct: correctCount,
+          used_seconds: overallTime,
+        });
+        // NEW: Log to chapter_mode_runs for unlock tracking
+        if (chapterName) {
+          try {
+            await logChapterModeRun({
+              user_id: userId,
+              chapter: chapterName,
+              mode: 'practice',
+              difficulty,
+              total: totalQ,
+              correct: correctCount,
+            });
+          } catch { }
+        }
+        // Persist lifetime per-chapter unlock if eligible
+        if (chapterName) {
+          try { await ensureChapterSpeedUnlock(userId, chapterName, 0.8, 3); } catch { }
+        }
+      } catch { }
+    })();
+  }, [gameCompleted]);
+
+  // Best-effort mark as abandoned on unload/navigation while in-progress
+  useEffect(() => {
+    const handler = () => {
+      if (!taskId) return;
+      const id = runIdRef.current;
+      if (!id || runCompletedRef.current) return;
+      const totalQ = shuffledQuestions.length;
+      const correctCount = answerCorrectList.filter(Boolean).length;
+      const timeMs = Date.now() - gameStartAtRef.current;
+      try { completeRun(id, { total: totalQ, correct: correctCount, time_ms: timeMs, status: 'abandoned' }); } catch { }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
   // Timer effects (keep overall timer even in practice to measure used_seconds; no per-question timer in practice)
   useEffect(() => {
     if (mode === 'battle-ai') return; // no overall timer in battle AI
@@ -578,7 +789,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }, 1000);
     return () => clearInterval(overallInterval);
   }, [practiceMode, mode, treasureModalOpen]);
-  
+
   useEffect(() => {
     if (practiceMode || mode === 'battle-ai') return; // no per-question timer in practice or battle AI
     if (treasureModalOpen) return; // pause per-question timer while modal open
@@ -593,11 +804,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           return newTime;
         });
       }, 1000);
-      
+
       return () => clearInterval(questionInterval);
     }
   }, [showResult, gameCompleted, currentQuestion, questionTimeLimit, practiceMode, mode, treasureModalOpen]);
-  
+
   // Overall time limit check (disabled in practice mode)
   useEffect(() => {
     if (practiceMode) return;
@@ -629,7 +840,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         if (!ended && opponentId) {
           toast({ title: 'Opponent left', description: 'Match ended.', duration: 4000 });
           ended = true;
-          try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+          try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch { }
           setFriendsDone(true);
           setGameCompleted(true);
           // compute with whatever answers we have so far
@@ -703,7 +914,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     });
 
     return () => {
-      try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch {}
+      try { ch.send({ type: 'broadcast', event: 'end', payload: {} }); } catch { }
       ch.unsubscribe();
       matchChannelRef.current = null;
     };
@@ -743,28 +954,28 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const seed = (Math.floor(Math.random() * 2147483647) ^ stringToSeed(`${Date.now()}:${userId}:${lobbyCode}`)) >>> 0;
     rematchSeedRef.current = seed;
     setRematchWaiting(true);
-    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
+    try { ch.send({ type: 'broadcast', event: 'rematch_request', payload: { seed, from: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
   };
 
   const acceptRematch = () => {
     const ch = matchChannelRef.current;
     const seed = rematchSeedRef.current ?? (stringToSeed(`${Date.now()}:${lobbyCode}`));
-    try { ch?.send({ type: 'broadcast', event: 'rematch_accept', payload: { seed } }); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'rematch_accept', payload: { seed } }); } catch { }
     startRematch(seed);
   };
 
   const declineRematch = () => {
     const ch = matchChannelRef.current;
-    try { ch?.send({ type: 'broadcast', event: 'rematch_decline', payload: {} }); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'rematch_decline', payload: {} }); } catch { }
     setRematchInviteFrom(null);
   };
 
   const handleLeaveFriends = () => {
     const ch = matchChannelRef.current;
-    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch {}
-    try { ch?.unsubscribe(); } catch {}
+    try { ch?.send({ type: 'broadcast', event: 'leave', payload: { name: displayName || (guest ? 'Guest' : 'Player') } }); } catch { }
+    try { ch?.unsubscribe(); } catch { }
     // Navigate away with replace so Back doesn't return to finished game
-    try { localStorage.removeItem('play:completed'); } catch {}
+    try { localStorage.removeItem('play:completed'); } catch { }
     navigate('/modes', { replace: true });
   };
 
@@ -775,7 +986,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     if (!userId) return;
     try {
       matchChannelRef.current.track({ id: userId, name: displayName || (guest ? 'Guest' : 'Player') });
-    } catch {}
+    } catch { }
   }, [displayName, mode, userId, guest]);
 
   // Compute points and winners for friends battle
@@ -823,8 +1034,21 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       date: localDate,
       question_coins: 0, // Practice: NO per-question coins, only streak rewards
     }).then(result => {
-      if (result) setPracticeRewards(result);
-    }).catch(() => {});
+      if (result) {
+        setPracticeRewards(result);
+        const awarded = Number(result.coins_awarded || 0);
+        if (awarded > 0) {
+          // Reflect practice coins in this session and in the local wallet snapshot
+          setCoins(prev => prev + awarded);
+          addToWallet(awarded);
+          try {
+            if (userId && !guest) {
+              incrementTotals(userId, awarded, 0).catch(() => { });
+            }
+          } catch { }
+        }
+      }
+    }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, shuffledQuestions, overallTime]);
 
   // Compete (AI): after battle resolved and marked done, grant rewards once
@@ -843,8 +1067,30 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       date: localDate,
       difficulty,
       result,
-    }).catch(() => {});
-  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
+    }).catch(() => { });
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const chAI = chapter || null;
+    const totalQ = shuffledQuestions.length || 10;
+    const correct = (studentCorrectList || []).filter(Boolean).length;
+    if (chAI) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: chAI,
+          mode: 'battle-ai',
+          difficulty,
+          total: totalQ,
+          correct: correct,
+        }).catch(() => { });
+      } catch { }
+    }
+    // Persist lifetime per-chapter unlock for AI mode if eligible
+    if (chAI) {
+      try { ensureChapterModeUnlock(userId, chAI, 'battle-ai', 0.8, 3); } catch { }
+      // Check if Friends should unlock (AI avg >= 80% over last 3 sessions)
+      try { ensureChapterModeUnlock(userId, chAI, 'battle-friends', 0.8, 3); } catch { }
+    }
+  }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty, shuffledQuestions, studentCorrectList, chapter]);
 
   // Compete (Friends): grant rewards once when computed
   const friendsGrantRef = useRef<boolean>(false);
@@ -856,7 +1102,27 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     friendsGrantRef.current = true;
     const localDate = getLocalYMD();
     const result: 'win' | 'loss' | 'draw' = playerPoints > aiScore ? 'win' : (playerPoints < aiScore ? 'loss' : 'draw');
-    grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => {});
+    grantCompeteRewards({ user_id: userId, type: 'friends', date: localDate, difficulty, result }).catch(() => { });
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const chFR = chapter || null;
+    const totalQ = shuffledQuestions.length || 10;
+    const correct = (studentCorrectList || []).filter(Boolean).length;
+    if (chFR) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: chFR,
+          mode: 'battle-friends',
+          difficulty,
+          total: totalQ,
+          correct: correct,
+        }).catch(() => { });
+      } catch { }
+    }
+    // Persist lifetime per-chapter unlock for Friends mode if eligible
+    if (chFR) {
+      try { ensureChapterModeUnlock(userId, chFR, 'battle-friends', 0.8, 3); } catch { }
+    }
   }, [mode, battleDone, userId, guest, playerPoints, aiScore, difficulty]);
 
   // Speed: after completion, log run and capture rewards (coins, gems, badges)
@@ -885,8 +1151,27 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     } as const;
     logSpeedRun(payload).then(res => {
       if (res) setSpeedRewards(res);
-    }).catch(() => {});
-  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions]);
+    }).catch(() => { });
+    // NEW: Log to chapter_mode_runs for unlock tracking
+    const ch = chapter || null;
+    if (ch) {
+      try {
+        logChapterModeRun({
+          user_id: userId,
+          chapter: ch,
+          mode: 'speed',
+          difficulty,
+          total: totalQ,
+          correct: correctAnswers,
+        }).catch(() => { });
+      } catch { }
+    }
+    // No adhoc task_runs insert; schema requires a valid task_id
+    // Still ensure speed unlock computation
+    try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'speed', 0.8, 3).catch(() => { }); } } catch { }
+    // Check if AI should unlock (Speed avg >= 80% over last 3 sessions)
+    try { if (chapter) { ensureChapterModeUnlock(userId, chapter, 'battle-ai', 0.8, 3).catch(() => { }); } } catch { }
+  }, [mode, gameCompleted, userId, guest, correctAnswers, coins, difficulty, shuffledQuestions, chapter, overallTime]);
 
   const triggerCoinAnimation = (amount: number) => {
     const id = Date.now();
@@ -902,9 +1187,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       const curr = Number(localStorage.getItem('player:coins') || '0');
       const next = Math.max(0, curr + amount);
       localStorage.setItem('player:coins', String(next));
-    } catch {}
+    } catch { }
   };
-  
+
   const handleTimeUp = () => {
     // Auto-skip question when time runs out
     if (showResult || gameCompleted) return;
@@ -917,7 +1202,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       next[currentQuestion] = false;
       return next;
     });
-    
+
     // Loses a heart
     const newHearts = hearts - 1;
     setHearts(newHearts);
@@ -942,7 +1227,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setStudentTimesList(prev => { const next = prev.slice(); next[idx] = elapsed; return next; });
     try {
       matchChannelRef.current?.send({ type: 'broadcast', event: 'answer', payload: { idx, correct: isLocalCorrect, timeMs: elapsed } });
-    } catch {}
+    } catch { }
 
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
@@ -952,7 +1237,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     } else {
       setFriendsDone(true);
       setGameCompleted(true);
-      try { matchChannelRef.current?.send({ type: 'broadcast', event: 'done', payload: {} }); } catch {}
+      try { matchChannelRef.current?.send({ type: 'broadcast', event: 'done', payload: {} }); } catch { }
       // Wait briefly; actual compute happens when we receive opponent 'done' OR presence reports leave
       setTimeout(() => { if (opponentDone) computeFriendsResults(); }, 200);
     }
@@ -977,7 +1262,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         const studentShouldWin = Math.random() < studentWinProbRef.current;
         // Decide AI correctness and speed
         const aiWillBeCorrect = studentShouldWin ? Math.random() < 0.5 : true; // sometimes let AI be wrong even if student should win
-        let aiElapsed = Math.max(1200, Math.min(8000, Math.round(studentElapsed + (studentShouldWin ? 500 + Math.random()*1500 : -500 - Math.random()*1500))));
+        let aiElapsed = Math.max(1200, Math.min(8000, Math.round(studentElapsed + (studentShouldWin ? 500 + Math.random() * 1500 : -500 - Math.random() * 1500))));
         let studentWinsRound = false;
         if (!aiWillBeCorrect) {
           // AI wrong => student wins the point implicitly
@@ -1019,7 +1304,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }, 2000);
         if (userId && !guest && mode !== 'speed') {
           // Persist only for non-speed here. Speed session is logged at completion.
-          incrementTotals(userId, earned, 0).catch(() => {});
+          incrementTotals(userId, earned, 0).catch(() => { });
         }
       }
       // Increment correct count and award milestones
@@ -1027,7 +1312,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         const newCount = prev + 1;
         const ratio = newCount / total; // 0..1 for the daily set of 10
         if (userId && !guest && mode !== 'speed') {
-          incrementTotals(userId, 0, 1).catch(() => {});
+          incrementTotals(userId, 0, 1).catch(() => { });
         }
         // 10% milestone: internal flag only for speed logging
         if (!milestonesAwarded.current.m10 && ratio >= 0.10) {
@@ -1056,10 +1341,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }
         return newCount;
       });
-      // Restore one heart ONLY if correct on first try (not during second chance)
-      if (!secondChance && hearts < 5) {
-        setHearts(h => Math.min(5, h + 1));
-      }
+      // Do not restore hearts on correct answers (hearts are lost permanently within a run)
       setBlinkHeart(false);
       setSecondChance(false);
     } else {
@@ -1090,7 +1372,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         }
         // if studentShouldWin, we treat as both wrong: no AI point
       }
-      setHearts(prev => Math.max(0, prev - 1));
+      setHearts(prev => {
+        const next = Math.max(0, prev - 1);
+        if (next === 0) {
+          setGameCompleted(true);
+        }
+        return next;
+      });
       setBlinkHeart(false);
       setSecondChance(false);
     }
@@ -1170,7 +1458,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
         });
         // Lifetime totals: count correct answers from this battle (no coins here)
-        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch { }
         // Internal milestone flags for logging only
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
         if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
@@ -1227,7 +1515,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           ai_points: res.aiPoints,
           result: res.studentPoints > res.aiPoints ? 'win' : res.studentPoints < res.aiPoints ? 'loss' : 'draw',
         });
-        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch {}
+        try { incrementTotals(userId, 0, sc.filter(Boolean).length); } catch { }
         const ratio = sc.length ? (sc.filter(Boolean).length / sc.length) : 0;
         if (ratio >= 0.10) { setMilestonesState(s => ({ ...s, m10: true })); }
         if (ratio >= 0.25) { setMilestonesState(s => ({ ...s, m25: true })); }
@@ -1254,6 +1542,20 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     }
   };
 
+  // Practice mode: track AI Solve usage (shared across mobile/desktop Scribble)
+  const handleSolveAttempt = () => {
+    if (mode !== 'practice') {
+      // No limit outside practice
+      return true;
+    }
+    if (practiceSolveUsesRef.current >= 3) {
+      return false;
+    }
+    practiceSolveUsesRef.current += 1;
+    setPracticeSolveUses(practiceSolveUsesRef.current);
+    return true;
+  };
+
   const handleRestart = () => {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -1276,6 +1578,8 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     setWithinTimeList([]);
     setPracticeRewards(null);
     setSpeedRewards(null);
+    setPracticeSolveUses(0);
+    practiceSolveUsesRef.current = 0;
     questionStartAtRef.current = Date.now();
     // Reset battle state
     setStudentCorrectList([]);
@@ -1300,7 +1604,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       milestones: milestonesState as Record<string, boolean>,
       completed: gameCompleted,
     };
-    saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => {});
+    saveDailyProgressSnapshot(userId, today, difficulty, snapshot).catch(() => { });
   }, [userId, guest, today, difficulty, correctAnswers, coins, milestonesState, gameCompleted]);
 
   // Persist last seen progress snapshot for Treasure page (local)
@@ -1308,7 +1612,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     try {
       localStorage.setItem('player:lastProgressCorrect', String(correctAnswers));
       localStorage.setItem('player:lastProgressTotal', String(total));
-    } catch {}
+    } catch { }
   }, [correctAnswers, total]);
 
   // When a Speed run completes, log it to the server (coins, correct, milestones, fast_flawless)
@@ -1331,15 +1635,15 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       m75: m.m75,
       m100: m.m100,
       fast_flawless: ff,
-    }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => {});
+    }).then((res) => { if (res) setSpeedRewards(res); }).catch(() => { });
   }, [mode, gameCompleted, userId, guest, correctAnswers, total, withinTimeList, milestonesState, coins, difficulty]);
 
   if (loadingDaily) {
-    return <div className="min-h-screen flex items-center justify-center">Loading daily set...</div>;
+    return <div className="min-h-[100svh] md:min-h-screen flex items-center justify-center">Loading daily set...</div>;
   }
 
   if (!shuffledQuestions.length) {
-    return <div className="min-h-screen flex items-center justify-center">No questions available.</div>;
+    return <div className="min-h-[100svh] md:min-h-screen flex items-center justify-center">No questions available.</div>;
   }
 
   // Battle AI: start screen and summary
@@ -1347,7 +1651,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     const aiTypeLabel = difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI');
     if (!battleStarted) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+        <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
           <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl sm:text-3xl font-black">Battle AI</h1>
@@ -1361,7 +1665,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
               <div className="lg:col-span-7 min-w-0">
-                <div className="bg-white/90 border-2 border-secondary/20 rounded-3xl p-10 shadow-2xl flex items-center justify-center">
+                <div className="bg-white/90 border-2 border-secondary/20 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl flex items-center justify-center">
                   <button onClick={() => { setBattleStarted(true); questionStartAtRef.current = Date.now(); }} className="px-10 py-3 rounded-full bg-green-600 hover:bg-green-700 text-white font-extrabold shadow-lg">
                     Start Game
                   </button>
@@ -1395,7 +1699,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           aiPoints={aiScore}
           rows={rows}
           onRestart={handleRestart}
-          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch {}; navigate('/modes', { replace: true }); }}
+          onLeave={() => { try { localStorage.removeItem('play:completed'); } catch { }; navigate('/modes', { replace: true }); }}
         />
       );
     }
@@ -1426,6 +1730,9 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
       />
     );
   }
+  if (hearts === 0) {
+    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver />;
+  }
 
   if (gameCompleted && mode !== 'battle-friends') {
     return (
@@ -1445,17 +1752,13 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
     );
   }
 
-  if (hearts === 0) {
-    return <ResultScreen coins={coins} correctAnswers={correctAnswers} onRestart={handleRestart} gameOver />;
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 relative overflow-hidden flex flex-col">
       {/* Decorative background elements */}
       <div className="absolute top-20 left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-20 right-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
       <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-accent/10 rounded-full blur-2xl" />
-      
+
       {/* Coin Animations */}
       {coinAnimations.map(anim => (
         <CoinAnimation key={anim.id} amount={anim.amount} />
@@ -1463,11 +1766,11 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
 
       {/* Game Header (hidden in Battle AI) */}
       {mode !== 'battle-ai' && (
-        <GameHeader 
-          hearts={hearts} 
-          coins={coins} 
-          progress={progress} 
-          blinkHeart={blinkHeart} 
+        <GameHeader
+          hearts={hearts}
+          coins={coins}
+          progress={progress}
+          blinkHeart={blinkHeart}
           coinGain={coinGain}
           overallTime={overallTime}
           overallTimeLimit={overallTimeLimit}
@@ -1476,7 +1779,7 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           onTreasureClick={() => setTreasureModalOpen(true)}
         />
       )}
-      
+
       {/* In-game Treasure quick modal is available via header chest while playing */}
 
       {/* Battle header (visible during match) */}
@@ -1493,17 +1796,18 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
         </div>
       )}
 
-      {/* Main Game Area */}
-      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-3 sm:pb-4 lg:pb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto">
-          {/* Left: AI Panel in Battle-AI, else Monkey Progress */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-start min-w-0">
+      {/* Main   */}
+      <div className="container mx-auto px-2 sm:px-3 pt-14 sm:pt-16 lg:pt-20 pb-0 md:pb-6 flex flex-col flex-1 min-h-0" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6 max-w-5xl xl:max-w-6xl mx-auto h-full min-h-0">
+          
+          {/* Left: AI Panel in Battle-AI, else Monkey Progress (hidden on mobile) */}
+          <div className="lg:col-span-2 hidden lg:flex justify-center lg:justify-start min-w-0">
             {mode === 'battle-ai' ? (
-            <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
-              <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
-              <div className="text-sm font-bold">AI Answer:</div>
-              <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
-            </div>
+              <div className="w-full max-w-[200px] bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 p-4 shadow-lg flex flex-col items-center gap-3">
+                <img src="/assets/AIimage.png" alt="AI" className="w-full h-28 object-cover rounded-lg" />
+                <div className="text-sm font-bold">AI Answer:</div>
+                <div className="px-3 py-1.5 rounded-md border bg-gray-50 text-gray-600 text-xs font-semibold shadow-sm">Answer Masked</div>
+              </div>
             ) : mode === 'practice' || mode === 'speed' ? (
               <div className="w-full max-w-[200px]" aria-hidden="true" />
             ) : (
@@ -1512,35 +1816,152 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </div>
           {/* Center: Question */}
           <div className="lg:col-span-7 min-w-0">
-            <QuestionCard
-              question={question}
-              selectedAnswer={selectedAnswer}
-              showResult={showResult}
-              isCorrect={isCorrect}
-              onAnswerSelect={handleAnswerSelect}
-              onCheckAnswer={handleCheckAnswer}
-              onNext={mode === 'battle-ai' ? handleNextBattle : (mode === 'battle-friends' ? handleNextFriends : handleNext)}
-              onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
-              onHint={handleHint}
-              showHint={showHint}
-              coins={coins}
-              questionReward={questionReward}
-              questionNumber={currentQuestion + 1}
-              totalQuestions={total}
-              questionTime={mode !== 'battle-ai' && !practiceMode ? questionTime : undefined}
-              questionTimeLimit={mode !== 'battle-ai' && !practiceMode ? questionTimeLimit : undefined}
-              showTimer={mode !== 'battle-ai' && !practiceMode}
-              lockedWrongIndex={lockedWrongIndex}
-              secondChance={secondChance}
-              difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
-              battleMode={mode === 'battle-ai' || mode === 'battle-friends'}
-              showCoinInfo={mode !== 'practice'}
-              hintFree={mode === 'practice'}
-              showDifficultyBadge={mode !== 'practice'}
-              disableSkipHint={mode === 'battle-friends'}
-              requireSelectionForNext={mode !== 'battle-friends'}
-            />
+            <div
+              className="flex flex-col min-h-0 overflow-y-auto lg:overflow-visible"
+              style={{ height: 'calc(100dvh - (env(safe-area-inset-top, 0px) + 56px))' }}
+            >
+              <div className="mobile-qcard">
+                <QuestionCard
+                  question={question}
+                  selectedAnswer={selectedAnswer}
+                  showResult={showResult}
+                  isCorrect={isCorrect}
+                  onAnswerSelect={handleAnswerSelect}
+                  onCheckAnswer={handleCheckAnswer}
+                  onNext={mode === 'battle-ai' ? handleNextBattle : (mode === 'battle-friends' ? handleNextFriends : handleNext)}
+                  onSkip={mode === 'battle-ai' ? handleSkipBattle : handleSkip}
+                  onHint={handleHint}
+                  showHint={showHint}
+                  coins={coins}
+                  questionReward={questionReward}
+                  questionNumber={currentQuestion + 1}
+                  totalQuestions={total}
+                  questionTime={mode !== 'battle-ai' && !practiceMode ? questionTime : undefined}
+                  questionTimeLimit={mode !== 'battle-ai' && !practiceMode ? questionTimeLimit : undefined}
+                  showTimer={mode !== 'battle-ai' && !practiceMode}
+                  lockedWrongIndex={lockedWrongIndex}
+                  secondChance={secondChance}
+                  difficultyLabel={mode === 'battle-ai' ? (difficulty === 'easy' ? 'Steady AI' : (difficulty === 'moderate' ? 'Smart AI' : 'Speed AI')) : undefined}
+                  battleMode={mode === 'battle-ai' || mode === 'battle-friends'}
+                  showCoinInfo={mode !== 'practice'}
+                  hintFree={mode === 'practice'}
+                  showDifficultyBadge={mode !== 'practice'}
+                  disableSkipHint={mode === 'battle-friends'}
+                  requireSelectionForNext={mode !== 'battle-friends'}
+                  hideOptions={mobileScribbleOpen}
+                />
+              </div>
+            {/* Mobile scribble collapsed bar (inline) */}
+            {(mode === 'practice' || mode === 'speed') && !mobileScribbleOpen && (
+              <div className="block lg:hidden mt-auto">
+                <button
+                  onClick={() => setMobileScribbleOpen(true)}
+                  className="w-full flex items-center justify-between rounded-2xl border-2 border-primary/20 bg-white/90 backdrop-blur px-4 py-3 shadow"
+                >
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <Pen className="w-4 h-4 text-primary" /> Scribble Board
+                  </span>
+                  <span className="inline-flex items-center gap-3 text-gray-500">
+                    <Grid className="w-4 h-4" />
+                    <RotateCcw className="w-4 h-4" />
+                    <ChevronUp className="w-4 h-4" />
+                  </span>
+                </button>
+              </div>
+            )}
 
+            {/* Mobile scribble expanded inline block */}
+            {(mode === 'practice' || mode === 'speed') && mobileScribbleOpen && (
+              <div className="block lg:hidden mt-auto">
+                <div className="rounded-2xl border-2 border-primary/20 bg-white/95 backdrop-blur shadow flex flex-col">
+                  {/* Collapse / title bar placed directly below the question card and above the scribble canvas */}
+                  <div className="px-3 pt-3 pb-1">
+                    <button
+                      onClick={() => setMobileScribbleOpen(false)}
+                      className="w-full flex items-center justify-between rounded-2xl border bg-white/90 px-4 py-2 text-sm shadow"
+                    >
+                      <span className="inline-flex items-center gap-2 text-gray-800 font-semibold">
+                        <Grid className="w-4 h-4 text-primary" /> Scribble Board
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="px-3 pb-3 flex-1 flex flex-col min-h-0">
+                    {/* Scribble area with optional tables overlay */}
+                    <div className="relative flex-1 min-h-[180px]">
+                      <ScribbleBoard
+                        ref={sbRef as unknown as any}
+                        question={question}
+                        fullHeight={false}
+                        showHeader={false}
+                        onOpenTables={() => setShowTable(true)}
+                        canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                        onSolveAttempt={handleSolveAttempt}
+                      />
+                      {showTable && (
+                        <div className="absolute inset-0 z-10 overflow-auto">
+                          <TableBoard onClose={() => setShowTable(false)} />
+                        </div>
+                      )}
+                    </div>
+                    {/* Tools row placed below the canvas */}
+                    <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="inline-flex items-center gap-2 font-bold text-sm">
+                        <Grid className="w-4 h-4 text-primary" /> Scribble Tools
+                      </div>
+                      <div className="inline-flex items-center gap-2">
+                        <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.setPen()} title="Pen">
+                          <Pen className="w-4 h-4 text-primary" />
+                        </button>
+                        <button className="h-8 w-8 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50" onClick={() => sbRef.current?.clear()} title="Clear">
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => sbRef.current?.solve()}
+                          title="Solve"
+                          disabled={mode === 'practice' && practiceSolveUses >= 3}
+                        >
+                          ✨ Solve
+                        </button>
+                        <button className="h-8 px-3 inline-flex items-center justify-center rounded-full border bg-white hover:bg-gray-50 text-sm font-semibold" onClick={() => setShowTable(true)} title="Tables 2–12">
+                          Tables 2–12
+                        </button>
+                      </div>
+                    </div>
+                    {/* Quick answer chips */}
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      {(question?.options || []).map((opt, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleAnswerSelect(idx)}
+                          className={(function () {
+                            const isSelected = selectedAnswer === idx;
+                            const isCorrectAnswer = question && idx === question.correctAnswer;
+                            let base = 'px-3 py-1.5 rounded-xl border text-sm shadow-sm ';
+                            if (!showResult) {
+                              return base + (isSelected
+                                ? 'bg-primary/10 border-primary/40 font-semibold'
+                                : 'bg-gray-50 border-gray-200');
+                            }
+                            if (isCorrectAnswer) {
+                              return base + 'bg-emerald-50 border-emerald-400 font-semibold';
+                            }
+                            if (isSelected && !isCorrect) {
+                              return base + 'bg-rose-50 border-rose-400 font-semibold';
+                            }
+                            return base + 'bg-gray-50 border-gray-200';
+                          })()}
+                        >
+                          {String.fromCharCode(65 + idx)}. {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            </div>
           </div>
 
           {/* Right column: User panel or tools (hidden on xl in favor of fixed sidebar) */}
@@ -1554,10 +1975,16 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
                 </div>
               </div>
             ) : (mode === 'practice' || mode === 'speed') ? (
-              <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
+              <div className="sticky top-14 sm:top-16 lg:top-20 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
                 <div className="relative flex-1">
                   {/* Scribble is always visible and fills available height */}
-                  <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+                  <ScribbleBoard
+                    question={question}
+                    fullHeight
+                    onOpenTables={() => setShowTable(true)}
+                    canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                    onSolveAttempt={handleSolveAttempt}
+                  />
                   {/* Tables overlay above Scribble only */}
                   {showTable && (
                     <div className="absolute inset-0 z-10 overflow-auto">
@@ -1570,12 +1997,19 @@ export const QuizGame = ({ difficulty = 'moderate', mode = 'practice', topic, to
           </div>
         </div>
       </div>
+      {/* Inline mobile scribble handled in the center column above */}
       {/* Fixed right sidebar on xl screens to utilize full right viewport space */}
       {(mode === 'practice' || mode === 'speed') && (
-        <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40">
+        <div className="hidden xl:flex fixed top-14 sm:top-16 lg:top-20 right-0 bottom-0 w-[min(28rem,32vw)] p-3 z-40" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }}>
           <div className="flex flex-col w-full h-full">
             <div className="relative flex-1">
-              <ScribbleBoard question={question} fullHeight onOpenTables={() => setShowTable(true)} />
+              <ScribbleBoard
+                question={question}
+                fullHeight
+                onOpenTables={() => setShowTable(true)}
+                canSolve={mode !== 'practice' || practiceSolveUses < 3}
+                onSolveAttempt={handleSolveAttempt}
+              />
               {showTable && (
                 <div className="absolute inset-0 z-10 overflow-auto">
                   <TableBoard onClose={() => setShowTable(false)} />

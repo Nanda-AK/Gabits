@@ -82,13 +82,15 @@ begin
   v_from := (p_season || '-01')::date;
   v_to := (v_from + interval '1 month' - interval '1 day')::date;
   
-  -- Get top 3 from XP leaderboard for the season
+  -- Get top 3 from XP leaderboard for the season (50 coins = 1 XP, 1 gem = 2 XP, 1 badge = 1 XP)
   for v_top3 in
     select 
-      row_number() over (order by sum(coins_delta + 5*gems_delta + 10*badges_delta) desc) as r,
+      row_number() over (
+        order by ((sum(coins_delta) / 50) + 2*sum(gems_delta) + sum(badges_delta)) desc
+      ) as r,
       re.user_id,
       coalesce(p.full_name, 'Player') as name,
-      sum(coins_delta + 5*gems_delta + 10*badges_delta)::int as xp
+      ((sum(coins_delta) / 50) + 2*sum(gems_delta) + sum(badges_delta))::int as xp
     from public.reward_events re
     left join public.profiles p on p.id = re.user_id
     where re.date >= v_from and re.date <= v_to

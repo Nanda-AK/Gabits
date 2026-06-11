@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins } from "lucide-react";
@@ -51,10 +51,11 @@ const Treasure = () => {
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const [anyStreak, setAnyStreak] = useState<number | null>(null);
   const [todayAward, setTodayAward] = useState<{ claimed_by: string; coins_awarded: number; badges_awarded: string[] } | null>(null);
-  const [todayEvents, setTodayEvents] = useState<Array<{ source: string; coins_delta: number; gems_delta: number; badges_delta: number; meta: any }>>([]);
+  const [todayEvents, setTodayEvents] = useState<Array<{ created_at: string; source: string; coins_delta: number; gems_delta: number; badges_delta: number; meta: any }>>([]);
 
   const weekLabels = useMemo(() => ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], []);
   const [weekDays, setWeekDays] = useState<Array<{ label: string; date: string; done: boolean }>>([]);
+  const weekProgressLoadingRef = useRef(false);
 
   // Build current week (Mon-Sun) dates using LOCAL dates (not UTC) to match daily_progress.date
   useEffect(() => {
@@ -74,6 +75,8 @@ const Treasure = () => {
   // Fetch completions for current week from daily_streak_awards (claimed streak days only)
   const fetchWeekProgress = useCallback(async () => {
     if (!user || guest || weekDays.length === 0) return;
+    if (weekProgressLoadingRef.current) return;
+    weekProgressLoadingRef.current = true;
     const start = weekDays[0].date;
     const end = weekDays[6].date;
     const { data, error } = await supabase
@@ -82,9 +85,13 @@ const Treasure = () => {
       .eq('user_id', user.id)
       .gte('date', start)
       .lte('date', end);
-    if (error || !data) return;
+    if (error || !data) {
+      weekProgressLoadingRef.current = false;
+      return;
+    }
     const setDates = new Set((data as Array<{ date: string }>).map(r => r.date));
     setWeekDays(prev => prev.map(w => ({ ...w, done: setDates.has(w.date) })));
+    weekProgressLoadingRef.current = false;
   }, [user?.id, guest, weekDays]);
 
   useEffect(() => {
@@ -130,9 +137,13 @@ const Treasure = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, guest, weekDays, fetchWeekProgress]);
+  }, [user?.id, guest, weekDays[0]?.date, weekDays[6]?.date, fetchWeekProgress]);
 
-  // Load today's reward events (dynamic breakdown)
+  // Removed: Today's Completed Task is now shown via dashboard modal
+
+  // Removed realtime: no Today breakdown in Treasure page anymore
+
+  // Load today's reward events (for the Today Reward Breakdown section)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -140,48 +151,15 @@ const Treasure = () => {
       const today = getLocalYMD();
       const { data } = await supabase
         .from('reward_events')
-        .select('source, coins_delta, gems_delta, badges_delta, meta')
+        .select('created_at, source, coins_delta, gems_delta, badges_delta, meta')
         .eq('user_id', user.id)
         .eq('date', today)
+        .order('created_at', { ascending: true })
         .order('id', { ascending: true });
       if (!cancelled) setTodayEvents((data as any[]) ?? []);
     })();
     return () => { cancelled = true; };
   }, [user, guest]);
-
-  // Realtime subscription for today's reward_events
-  useEffect(() => {
-    if (!user || guest) return;
-    const today = getLocalYMD();
-    const channel = supabase
-      .channel('reward_events_today')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reward_events',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const date = (payload.new as any)?.date || (payload.old as any)?.date;
-          if (date === today) {
-            // Re-fetch today's breakdown
-            (async () => {
-              const { data } = await supabase
-                .from('reward_events')
-                .select('source, coins_delta, gems_delta, badges_delta, meta')
-                .eq('user_id', user.id)
-                .eq('date', today)
-                .order('id', { ascending: true });
-              setTodayEvents((data as any[]) ?? []);
-            })();
-          }
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id, guest]);
 
   // Load current streak and today's daily streak award (who claimed base coins)
   useEffect(() => {
@@ -271,8 +249,8 @@ const Treasure = () => {
   // Note: Weekly progress data not yet tracked server-side; showing required UI only
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
-      <div className="container mx-auto px-4 py-10 max-w-3xl">
+    <div className="min-h-[100svh] md:min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-white">
+      <div className="container mx-auto px-4 pt-16 sm:pt-10 pb-10 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent flex items-center gap-2">
             <img src={todayAward ? "/treasure_open.png" : "/treasure_close.png"} className="w-8 h-8"/> My Treasure
@@ -410,7 +388,7 @@ const Treasure = () => {
                 </div>
               )}
             </CardContent>
-          </Card>/
+          </Card>
 
           {/* Stage Boost Tokens */}
           {!guest && user && boostTokens && boostTokens.available > 0 && (
@@ -432,6 +410,8 @@ const Treasure = () => {
             </Card>
           )}
         </div>
+
+        {/* Removed: Today's Completed Task card (handled by Dashboard modal) */}
 
         {/* Seasonal Winners (Last Month) */}
         {seasonWinners.length > 0 && (

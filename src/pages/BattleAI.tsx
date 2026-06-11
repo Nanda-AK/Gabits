@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Bot, Sparkles } from "lucide-react";
-import { aiTaunt } from "@/services/openrouter";
+import { aiTaunt } from "@/services/grok";
 
 const DiffBtn: React.FC<{ v: 'easy' | 'moderate' | 'difficult'; cur: string; onPick: (v: any) => void; children?: ReactNode }> = ({ v, cur, onPick, children }) => (
   <Button variant={cur === v ? 'default' : 'outline'} className="w-full h-12 text-lg" onClick={() => onPick(v)}>
@@ -60,7 +60,7 @@ const BattleAI = () => {
           {/* Topic Selection (Checkboxes) */}
           <div>
             <p className="text-sm mb-2">Select Topics</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: 'addition', label: 'Addition' },
                 { key: 'subtraction', label: 'Subtraction' },
@@ -69,8 +69,8 @@ const BattleAI = () => {
                 { key: 'fractions', label: 'Fractions' },
                 { key: 'algebra', label: 'Algebra' },
               ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 p-3 rounded-lg border bg-white/60">
-                  <Checkbox checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
+                <label key={key} className="flex items-center gap-3.5 p-3.5 rounded-lg border border-gray-200 bg-white/70 hover:bg-gray-50 transition shadow-sm">
+                  <Checkbox className="h-5 w-5" checked={topics.includes(key)} onCheckedChange={() => toggleTopic(key)} />
                   <span className="text-sm font-medium">{label}</span>
                 </label>
               ))}
